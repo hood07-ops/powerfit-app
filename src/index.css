@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+  background: #000;
+  color: white;
+}
+
+input,
+select,
+textarea {
+  background: #27272a;
+  color: white;
+  border: 1px solid #3f3f46;
+  outline: none;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #a1a1aa;
+}
+
+button {
+  cursor: pointer;
+}
+
+.glass {
+  background: rgba(15, 15, 15, 0.92);
+  border: 1px solid rgba(220, 38, 38, 0.35);
+  box-shadow: 0 0 35px rgba(220, 38, 38, 0.25);
+}
+
+.title-shadow {
+  text-shadow: 0 0 18px rgba(220, 38, 38, 0.8);
+}
+
+.logo-spin {
+  animation: floatLogo 4s ease-in-out infinite;
+}
+
+@keyframes floatLogo {
+  0% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+
+  100% {
+    transform: translateY(0);
+  }
+}
