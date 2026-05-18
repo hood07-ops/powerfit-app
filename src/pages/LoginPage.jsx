@@ -32,7 +32,25 @@ if (error) {
   setLoading(false)
   return
 }
+if (data?.user) {
+  const { error: alumnoError } = await supabase
+    .from('alumnos')
+    .insert([
+      {
+        nombre: name,
+        email: email,
+        user_id: data.user.id,
+        plan: 'Basico',
+        estado_pago: 'Pendiente',
+      }
+    ])
 
+  if (alumnoError) {
+    setMessage(alumnoError.message)
+    setLoading(false)
+    return
+  }
+}
 if (data?.user) {
   const { error: alumnoError } = await supabase.from('alumnos').insert([
     {
