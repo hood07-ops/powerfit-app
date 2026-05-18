@@ -23,10 +23,33 @@ export default function LoginPage({ onLogin }) {
     try {
       if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+  email,
+  password,
+})
 
+if (error) {
+  setMessage(error.message)
+  setLoading(false)
+  return
+}
+
+if (data?.user) {
+  const { error: alumnoError } = await supabase.from('alumnos').insert([
+    {
+      nombre: name,
+      email: email,
+      user_id: data.user.id,
+      plan: 'Basico',
+      estado_pago: 'Pendiente',
+    }
+  ])
+
+  if (alumnoError) {
+    setMessage(alumnoError.message)
+    setLoading(false)
+    return
+  }
+}
         if (error) {
           setMessage(error.message)
           setLoading(false)
