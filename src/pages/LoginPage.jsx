@@ -15,17 +15,75 @@ export default function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false)
 
   async function handleAuth(e) {
-    e.preventDefault()
+  e.preventDefault()
 
-    setLoading(true)
-    setMessage('')
+  setLoading(true)
+  setMessage('')
 
-    try {
-      if (mode === 'register') {
-        const { data, error } = await supabase.auth.signUp({
-  email,
-  password,
-})
+  try {
+    if (mode === 'register') {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (error) {
+        setMessage(error.message)
+        setLoading(false)
+        return
+      }
+
+      if (data?.user) {
+        const { error: alumnoError } = await supabase
+          .from('alumnos')
+          .insert([
+            {
+              nombre: name,
+              email: email,
+              user_id: data.user.id,
+              plan: 'Basico',
+              estado_pago: 'Pendiente',
+              fecha_pago: null,
+              fecha_vencimiento: null,
+              monto: 0,
+            },
+          ])
+
+        if (alumnoError) {
+          setMessage(alumnoError.message)
+          setLoading(false)
+          return
+        }
+      }
+
+      setMessage('Cuenta creada correctamente. Ahora inicia sesión.')
+      setMode('login')
+      setLoading(false)
+      return
+    }
+
+    if (mode === 'login') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        setMessage(error.message)
+        setLoading(false)
+        return
+      }
+
+      if (data?.user) {
+        onLogin(data.user)
+      }
+    }
+  } catch (err) {
+    setMessage('Error inesperado')
+  }
+
+  setLoading(false)
+}
 
 if (error) {
   setMessage(error.message)
@@ -44,7 +102,13 @@ if (data?.user) {
         estado_pago: 'Pendiente',
       }
     ])
-
+    
+if (alumnoError) {
+  setMessage(alumnoError.message)
+  setLoading(false)
+  return
+}
+}
   if (alumnoError) {
     setMessage(alumnoError.message)
     setLoading(false)
