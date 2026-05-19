@@ -32,12 +32,10 @@ export default function App() {
   }, [user])
 
   async function checkSession() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+    const { data } = await supabase.auth.getSession()
 
-    if (session?.user) {
-      setUser(session.user)
+    if (data?.session?.user) {
+      setUser(data.session.user)
     }
   }
 
@@ -96,14 +94,6 @@ export default function App() {
   const isAdmin =
     studentProfile?.role?.toLowerCase() === 'admin'
 
-  const totalAlumnos = students.length
-  const pagados = students.filter((a) => a.estado_pago === 'Pagado').length
-  const pendientes = students.filter((a) => a.estado_pago !== 'Pagado').length
-  const totalMensual = students.reduce(
-    (sum, a) => sum + Number(a.monto || 0),
-    0
-  )
-
   return (
     <div className="min-h-screen bg-black text-white p-6">
       <div className="flex justify-between items-center mb-8">
@@ -111,6 +101,7 @@ export default function App() {
           <h1 className="text-5xl font-black text-red-600">
             BOXEO RAPA NUI
           </h1>
+
           <p className="text-2xl text-zinc-300 mt-2">
             Sistema Administrativo Deportivo · PowerFit 360
           </p>
@@ -118,6 +109,7 @@ export default function App() {
 
         <div className="text-right">
           <p className="text-xl font-bold">Usuario</p>
+
           <p className="text-green-400 font-bold">
             {isAdmin ? 'administrador' : 'alumno'}
           </p>
@@ -182,18 +174,7 @@ export default function App() {
       {section === 'Dashboard' && (
         <>
           {isAdmin ? (
-            <div className="space-y-6">
-              <h2 className="text-4xl font-black text-yellow-400">
-                Panel Administrador
-              </h2>
-
-              <div className="grid md:grid-cols-4 gap-4">
-                <Card title="Alumnos" value={totalAlumnos} />
-                <Card title="Pagados" value={pagados} />
-                <Card title="Pendientes" value={pendientes} />
-                <Card title="Monto total" value={`$${totalMensual}`} />
-              </div>
-            </div>
+            <AdminDashboard students={students} />
           ) : studentProfile ? (
             <FichaAlumno student={studentProfile} />
           ) : (
@@ -208,6 +189,8 @@ export default function App() {
           )}
         </>
       )}
+
+      {section === 'Rutinas' && <RutinasPage />}
 
       {section === 'Pagos' && isAdmin && (
         <AdminPagos
@@ -225,8 +208,6 @@ export default function App() {
         />
       )}
 
-      {section === 'Rutinas' && <RutinasPage />}
-
       {section === 'Asistencia' && isAdmin && <AsistenciaPage />}
 
       {section === 'Estadisticas' && isAdmin && <EstadisticasPage />}
@@ -234,11 +215,24 @@ export default function App() {
   )
 }
 
-function Card({ title, value }) {
+function AdminDashboard({ students }) {
+  const total = students.length
+  const pagados = students.filter((a) => a.estado_pago === 'Pagado').length
+  const pendientes = students.filter((a) => a.estado_pago !== 'Pagado').length
+  const totalMonto = students.reduce((s, a) => s + Number(a.monto || 0), 0)
+
   return (
-    <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
-      <p className="text-zinc-400">{title}</p>
-      <p className="text-3xl font-black text-white mt-2">{value}</p>
+    <div className="space-y-6">
+      <h2 className="text-4xl font-black text-yellow-400">
+        Panel Administrador
+      </h2>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card title="Alumnos" value={total} />
+        <Card title="Pagados" value={pagados} />
+        <Card title="Pendientes" value={pendientes} />
+        <Card title="Monto total" value={`$${totalMonto}`} />
+      </div>
     </div>
   )
 }
@@ -261,16 +255,9 @@ function FichaAlumno({ student }) {
         <Info label="Fecha pago" value={student.fecha_pago} />
         <Info label="Vencimiento" value={student.fecha_vencimiento} />
         <Info label="Monto" value={`$${student.monto || 0}`} />
+        <Info label="XP" value={student.xp || 0} />
+        <Info label="Premium" value={student.bloques_premium || 0} />
       </div>
-    </div>
-  )
-}
-
-function Info({ label, value }) {
-  return (
-    <div>
-      <p className="text-zinc-400">{label}</p>
-      <p className="font-bold">{value || '-'}</p>
     </div>
   )
 }
@@ -287,11 +274,11 @@ function AdminPagos({ students, updateAlumno, loading }) {
           <thead className="bg-zinc-800">
             <tr>
               <th className="p-4">Alumno</th>
-              <th className="p-4">Plan</th>
               <th className="p-4">Monto</th>
               <th className="p-4">Estado</th>
               <th className="p-4">Fecha pago</th>
               <th className="p-4">Vencimiento</th>
+              <th className="p-4">Premium</th>
             </tr>
           </thead>
 
@@ -299,16 +286,6 @@ function AdminPagos({ students, updateAlumno, loading }) {
             {students.map((student) => (
               <tr key={student.id} className="border-t border-zinc-800">
                 <td className="p-4 font-bold">{student.nombre}</td>
-
-                <td className="p-4">
-                  <input
-                    defaultValue={student.plan || ''}
-                    onBlur={(e) =>
-                      updateAlumno(student.id, { plan: e.target.value })
-                    }
-                    className="bg-zinc-800 p-2 rounded"
-                  />
-                </td>
 
                 <td className="p-4">
                   <input
@@ -331,11 +308,7 @@ function AdminPagos({ students, updateAlumno, loading }) {
                         estado_pago: e.target.value,
                       })
                     }
-                    className={`p-2 rounded font-bold ${
-                      student.estado_pago === 'Pagado'
-                        ? 'bg-green-700'
-                        : 'bg-red-700'
-                    }`}
+                    className="bg-zinc-800 p-2 rounded"
                   >
                     <option value="Pendiente">Pendiente</option>
                     <option value="Pagado">Pagado</option>
@@ -368,13 +341,26 @@ function AdminPagos({ students, updateAlumno, loading }) {
                     className="bg-zinc-800 p-2 rounded"
                   />
                 </td>
+
+                <td className="p-4">
+                  <input
+                    type="number"
+                    defaultValue={student.bloques_premium || 0}
+                    onBlur={(e) =>
+                      updateAlumno(student.id, {
+                        bloques_premium: Number(e.target.value || 0),
+                      })
+                    }
+                    className="bg-zinc-800 p-2 rounded w-24"
+                  />
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {loading && <p className="text-yellow-400">Guardando cambios...</p>}
+      {loading && <p className="text-yellow-400">Guardando...</p>}
     </div>
   )
 }
@@ -418,17 +404,6 @@ function AdminAlumnos({ students, updateAlumno, loading }) {
               />
 
               <input
-                type="date"
-                defaultValue={student.fecha_ingreso || ''}
-                onBlur={(e) =>
-                  updateAlumno(student.id, {
-                    fecha_ingreso: e.target.value || null,
-                  })
-                }
-                className="bg-zinc-800 p-3 rounded"
-              />
-
-              <input
                 defaultValue={student.role || ''}
                 placeholder="role"
                 onBlur={(e) =>
@@ -447,7 +422,25 @@ function AdminAlumnos({ students, updateAlumno, loading }) {
         ))}
       </div>
 
-      {loading && <p className="text-yellow-400">Guardando cambios...</p>}
+      {loading && <p className="text-yellow-400">Guardando...</p>}
+    </div>
+  )
+}
+
+function Card({ title, value }) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+      <p className="text-zinc-400">{title}</p>
+      <p className="text-3xl font-black mt-2">{value}</p>
+    </div>
+  )
+}
+
+function Info({ label, value }) {
+  return (
+    <div>
+      <p className="text-zinc-400">{label}</p>
+      <p className="font-bold">{value || '-'}</p>
     </div>
   )
 }
