@@ -321,7 +321,7 @@ export default function App() {
           </div>
         )}
 
-        {section === 'Dashboard' && !isAdmin && (
+        {section === 'Dashboard' && (
           <div className="space-y-8">
             {studentProfile ? (
               <StudentDashboard
