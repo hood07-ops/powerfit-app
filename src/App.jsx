@@ -23,6 +23,7 @@ export default function App() {
   const [attendance, setAttendance] = useState([])
   const [records, setRecords] = useState([])
   const [profiles, setProfiles] = useState([])
+  const [studentProfile, setStudentProfile] = useState(null)
 
   const [selectedProfile, setSelectedProfile] = useState(null)
 
@@ -50,6 +51,7 @@ export default function App() {
     getAttendance()
     getRecords()
     getProfiles()
+    getStudentProfile()
   }
 
   async function getStudents() {
@@ -61,6 +63,19 @@ export default function App() {
     setStudents(data || [])
   }
 
+  async function getStudentProfile() {
+  if (!user) return
+
+  const { data, error } = await supabase
+    .from('alumnos')
+    .select('*')
+    .eq('user_id', user.id)
+    .single()
+
+  if (!error) {
+    setStudentProfile(data)
+  }
+}
   async function getPayments() {
     const { data } = await supabase
       .from('pagos')
