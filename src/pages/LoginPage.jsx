@@ -29,6 +29,9 @@ export default function LoginPage({ onLogin }) {
     setMessage('')
 
     try {
+      // =========================
+      // REGISTRO
+      // =========================
       if (mode === 'register') {
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -72,21 +75,30 @@ export default function LoginPage({ onLogin }) {
           }
         }
 
-        setMessage('Cuenta creada correctamente. Revisa tu correo para ingresar.')
+        setMessage('Cuenta creada correctamente. Ahora inicia sesión.')
         setMode('login')
         setLoading(false)
         return
       }
 
+      // =========================
+      // LOGIN NORMAL
+      // =========================
       if (mode === 'login') {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-        })
+        const { data, error } =
+          await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
 
         if (error) {
-          setMessage(error.message)
-        } else {
-          setMessage('Revisa tu correo para ingresar')
+          setMessage('Correo o contraseña incorrectos')
+          setLoading(false)
+          return
+        }
+
+        if (data?.user) {
+          onLogin(data.user)
         }
 
         setLoading(false)
@@ -140,7 +152,6 @@ export default function LoginPage({ onLogin }) {
 
               <input
                 type="date"
-                placeholder="Fecha de ingreso"
                 value={fechaIngreso}
                 onChange={(e) => setFechaIngreso(e.target.value)}
                 className="w-full p-4 rounded-2xl bg-zinc-800 border border-zinc-700"
@@ -189,14 +200,14 @@ export default function LoginPage({ onLogin }) {
 
               <input
                 type="text"
-                placeholder="Contacto de emergencia"
+                placeholder="Contacto emergencia"
                 value={contactoEmergencia}
                 onChange={(e) => setContactoEmergencia(e.target.value)}
                 className="w-full p-4 rounded-2xl bg-zinc-800 border border-zinc-700"
               />
 
               <textarea
-                placeholder="Observaciones médicas, lesiones o datos importantes"
+                placeholder="Observaciones"
                 value={observaciones}
                 onChange={(e) => setObservaciones(e.target.value)}
                 className="w-full p-4 rounded-2xl bg-zinc-800 border border-zinc-700 min-h-24"
@@ -213,16 +224,14 @@ export default function LoginPage({ onLogin }) {
             required
           />
 
-          {mode === 'register' && (
-            <input
-              type="password"
-              placeholder="Contraseña"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-4 rounded-2xl bg-zinc-800 border border-zinc-700"
-              required
-            />
-          )}
+          <input
+            type="password"
+            placeholder="Contraseña"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-4 rounded-2xl bg-zinc-800 border border-zinc-700"
+            required
+          />
 
           <button
             type="submit"
@@ -232,7 +241,7 @@ export default function LoginPage({ onLogin }) {
             {loading
               ? 'Cargando...'
               : mode === 'login'
-              ? 'Enviar link de ingreso'
+              ? 'Ingresar'
               : 'Crear cuenta'}
           </button>
         </form>
