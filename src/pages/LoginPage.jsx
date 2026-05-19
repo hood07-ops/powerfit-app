@@ -1,169 +1,122 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
-
-import logo from '../assets/logo.jpg'
-import rongo from '../assets/rongo.jpg'
+import { supabase } from '../supabaseClient'
 
 export default function LoginPage({ onLogin }) {
   const [mode, setMode] = useState('login')
-  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleAuth(e) {
     e.preventDefault()
-
     setLoading(true)
     setMessage('')
 
-    try {
-      if (mode === 'register') {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-        })
+    // REGISTRO
+    if (mode === 'signup') {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+      })
 
-        if (error) {
-          setMessage(error.message)
-          setLoading(false)
-          return
-        }
-
-        if (data?.user) {
-          const { error: alumnoError } = await supabase
-            .from('alumnos')
-            .insert([
-              {
-                nombre: name,
-                email: email,
-                user_id: data.user.id,
-                plan: 'Basico',
-                estado_pago: 'Pendiente',
-                fecha_pago: null,
-                fecha_vencimiento: null,
-                monto: 0,
-              },
-            ])
-
-          if (alumnoError) {
-            setMessage(alumnoError.message)
-            setLoading(false)
-            return
-          }
-        }
-
-        setMessage('Cuenta creada correctamente. Ahora inicia sesión.')
+      if (error) {
+        setMessage(error.message)
+      } else {
+        setMessage('Cuenta creada correctamente. Ahora inicia sesión')
         setMode('login')
-        setLoading(false)
-        return
       }
 
-      if (mode === 'login') {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        })
+      setLoading(false)
+      return
+    }
 
-        if (error) {
-          setMessage(error.message)
-          setLoading(false)
-          return
-        }
+    // LOGIN
+    if (mode === 'login') {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-        if (data?.user) {
+      if (error) {
+        setMessage(error.message)
+      } else {
+        setMessage('Inicio de sesión correcto')
+
+        if (onLogin) {
           onLogin(data.user)
         }
       }
-    } catch (err) {
-      setMessage('Error inesperado')
-    }
 
-    setLoading(false)
+      setLoading(false)
+      return
+    }
   }
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-md bg-gray-950 border border-red-600 rounded-2xl p-6 shadow-xl">
-        <div className="text-center mb-6">
-          <img src={logo} alt="Logo" className="mx-auto w-32 mb-4" />
-          <h1 className="text-3xl font-black text-red-600">
-            Boxeo Rapa Nui
-          </h1>
-          <p className="text-gray-400 mt-2">
-            Sistema Administrativo Deportivo · PowerFit 360
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center bg-black text-white">
+      <form
+        onSubmit={handleAuth}
+        className="bg-zinc-900 p-8 rounded-2xl w-full max-w-md shadow-2xl"
+      >
+        <h1 className="text-3xl font-bold mb-6 text-center">
+          POWERFIT 360
+        </h1>
 
-        <form onSubmit={handleAuth} className="space-y-4">
-          {mode === 'register' && (
-            <input
-              type="text"
-              placeholder="Nombre completo"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-white"
-              required
-            />
-          )}
+        <input
+          type="email"
+          placeholder="Correo"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-3 mb-4 rounded bg-zinc-800 border border-zinc-700"
+        />
 
-          <input
-            type="email"
-            placeholder="Correo electrónico"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-white"
-            required
-          />
+        <input
+          type="password"
+          placeholder="Contraseña"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full p-3 mb-4 rounded bg-zinc-800 border border-zinc-700"
+        />
 
-          <input
-            type="password"
-            placeholder="Contraseña"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full p-3 rounded bg-gray-900 border border-gray-700 text-white"
-            required
-          />
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-bold"
-          >
-            {loading
-              ? 'Cargando...'
-              : mode === 'login'
-              ? 'Ingresar'
-              : 'Crear cuenta'}
-          </button>
-        </form>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-red-600 hover:bg-red-700 p-3 rounded font-bold"
+        >
+          {loading
+            ? 'Cargando...'
+            : mode === 'login'
+            ? 'Iniciar sesión'
+            : 'Crear cuenta'}
+        </button>
 
         {message && (
-          <p className="mt-4 text-center text-yellow-400 font-bold">
+          <p className="mt-4 text-center text-sm text-yellow-400">
             {message}
           </p>
         )}
 
-        <div className="text-center mt-6">
+        <div className="mt-6 text-center">
           {mode === 'login' ? (
             <button
-              onClick={() => setMode('register')}
-              className="text-red-400 underline"
+              type="button"
+              onClick={() => setMode('signup')}
+              className="text-blue-400"
             >
-              Crear cuenta nueva
+              Crear una cuenta
             </button>
           ) : (
             <button
+              type="button"
               onClick={() => setMode('login')}
-              className="text-red-400 underline"
+              className="text-blue-400"
             >
               Ya tengo cuenta
             </button>
           )}
         </div>
-      </div>
+      </form>
     </div>
   )
 }
