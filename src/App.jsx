@@ -124,8 +124,8 @@ export default function App() {
     .replace(/[\u0300-\u036f]/g, '')
 
   const isAdmin =
-    normalizedRole.includes('admin') ||
-    normalizedRole.includes('administr')
+    const isAdmin =
+  studentProfile?.role === 'admin'
 
   return (
     <div className="min-h-screen bg-black text-white p-6">
