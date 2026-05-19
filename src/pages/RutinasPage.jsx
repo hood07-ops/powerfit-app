@@ -1,272 +1,294 @@
-import { supabase } from '../supabase'
-import { useEffect, useState } from "react";
+import { useEffect, useState } from 'react'
+import { supabase } from '../lib/supabase'
 
 export default function RutinasPage() {
-  const [selectedBlock, setSelectedBlock] = useState(1);
-  const [seconds, setSeconds] = useState(0);
-  const [isRunning, setIsRunning] = useState(false);
-  const [lastTime, setLastTime] = useState(null);
-
-  const bloques = [
-    {
-      id: 1,
-      nombre: "Bloque 1",
-      titulo: "Base Funcional",
-      estado: "Desbloqueado",
-      nivel: "Inicial",
-      descripcion: "Funcional básico, cardio, movilidad y core.",
-      ejercicios: [
-        "Sentadillas x 20",
-        "Flexiones x 10",
-        "Abdominales x 20",
-        "Burpees x 10",
-        "Trote en el lugar 1 min",
-      ],
-    },
-    {
-      id: 2,
-      nombre: "Bloque 2",
-      titulo: "Fuerza y Resistencia",
-      estado: "Bloqueado",
-      nivel: "Medio",
-      descripcion: "Trabajo de fuerza, pliometría y resistencia muscular.",
-      ejercicios: [
-        "Zancadas x 20",
-        "Plancha 45 seg",
-        "Saltos al cajón x 12",
-        "Remo con mancuerna x 12",
-        "Mountain climbers x 30",
-      ],
-    },
-    {
-      id: 3,
-      nombre: "Bloque 3",
-      titulo: "Combate PowerFit",
-      estado: "Bloqueado",
-      nivel: "Avanzado",
-      descripcion: "Boxeo, kickboxing, desplazamientos y golpes combinados.",
-      ejercicios: [
-        "Jab cross x 2 min",
-        "Low kick x 20",
-        "Defensa + contraataque",
-        "Sombra 3 rounds",
-        "Core explosivo x 3 series",
-      ],
-    },
-  ];
-
-  const bloqueActivo = bloques.find((b) => b.id === selectedBlock);
+  const [student, setStudent] = useState(null)
+  const [ranking, setRanking] = useState([])
+  const [tiempos, setTiempos] = useState([])
+  const [asistencias, setAsistencias] = useState([])
+  const [message, setMessage] = useState('')
 
   useEffect(() => {
-    let timer;
+    loadData()
+  }, [])
 
-    if (isRunning) {
-      timer = setInterval(() => {
-        setSeconds((prev) => prev + 1);
-      }, 1000);
-    }
+  async function loadData() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    return () => clearInterval(timer);
-  }, [isRunning]);
+    if (!user) return
 
-  const formatTime = (totalSeconds) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const secs = totalSeconds % 60;
+    const { data: alumno } = await supabase
+      .from('alumnos')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
 
-    return `${String(minutes).padStart(2, "0")}:${String(secs).padStart(
-      2,
-      "0"
-    )}`;
-  };
+    setStudent(alumno)
 
-  const startTraining = () => {
-    setSeconds(0);
-    setLastTime(null);
-    setIsRunning(true);
-  };
+    const { data: rankData } = await supabase
+      .from('alumnos')
+      .select('id,nombre,xp,estado_pago')
+      .order('xp', { ascending: false })
 
-  const finishTraining = () => {
-    setIsRunning(false);
-    setLastTime(seconds);
-  };
+    setRanking(rankData || [])
 
-  const resetTraining = () => {
-    setIsRunning(false);
-    setSeconds(0);
-    setLastTime(null);
-  };
+    const { data: tiemposData } = await supabase
+      .from('tiempos_bloques')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-  const changeBlock = (id) => {
-  setSelectedBlock(id);
-  resetTraining();
-};
+    setTiempos(tiemposData || [])
 
-const guardarTiempo = async (bloque, segundos) => {
-  const user = await supabase.auth.getUser()
+    const { data: asistenciasData } = await supabase
+      .from('asistencia')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
 
-  const { error } = await supabase
-    .from('tiempos_bloques')
-    .insert([
+    setAsistencias(asistenciasData || [])
+  }
+
+  async function marcarAsistencia() {
+    if (!student) return
+
+    const { error } = await supabase.from('asistencia').insert([
       {
-        user_id: user.data.user.id,
-        bloque: bloque,
-        tiempo_segundos: segundos
-      }
+        alumno_id: student.id,
+        user_id: student.user_id,
+      },
     ])
 
-  if (error) {
-    console.log(error)
-  } else {
-    console.log('Tiempo guardado')
-  }
-}
+    if (error) {
+      setMessage('Error al marcar asistencia')
+      return
+    }
 
-return (
-    <div className="min-h-screen bg-black text-white p-6">
-      <div className="mb-8">
-        <h1 className="text-4xl font-black text-white">
-          Rutinas PowerFit 360
-        </h1>
-        <p className="text-gray-400 mt-2">
-          Primero realiza tu activación. Cuando estés listo, presiona{" "}
-          <span className="text-red-500 font-bold">Comenzar Bloque</span> para
-          registrar solo el tiempo del trabajo principal.
+    await supabase
+      .from('alumnos')
+      .update({ xp: Number(student.xp || 0) + 10 })
+      .eq('id', student.id)
+
+    setMessage('Asistencia registrada +10 XP')
+    loadData()
+  }
+
+  async function guardarTiempo(bloque, segundos) {
+    if (!student) return
+
+    const { error } = await supabase.from('tiempos_bloques').insert([
+      {
+        user_id: student.user_id,
+        bloque,
+        tiempo_segundos: segundos,
+      },
+    ])
+
+    if (error) {
+      setMessage('Error al guardar tiempo')
+      return
+    }
+
+    await supabase
+      .from('alumnos')
+      .update({ xp: Number(student.xp || 0) + 20 })
+      .eq('id', student.id)
+
+    setMessage(`${bloque} guardado +20 XP`)
+    loadData()
+  }
+
+  if (!student) {
+    return <div className="text-white">Cargando rutinas...</div>
+  }
+
+  const acceso = student.estado_pago === 'Pagado'
+  const checkinUrl = `${window.location.origin}/?checkin=1`
+
+  return (
+    <div className="space-y-8">
+      <div
+        className={`p-6 rounded-3xl border ${
+          acceso
+            ? 'bg-green-950 border-green-500'
+            : 'bg-red-950 border-red-500'
+        }`}
+      >
+        <h2 className="text-3xl font-black">Estado de acceso</h2>
+        <p className="text-xl mt-2">
+          {acceso ? 'Rutinas desbloqueadas' : 'Pago pendiente o vencido'}
+        </p>
+        <p className="mt-2 text-zinc-300">
+          Estado pago: {student.estado_pago || 'Pendiente'}
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-5 mb-8">
-        {bloques.map((bloque) => (
-          <button
-            key={bloque.id}
-            onClick={() => changeBlock(bloque.id)}
-            className={`text-left rounded-2xl p-5 border transition-all ${
-              selectedBlock === bloque.id
-                ? "bg-red-600 border-red-400 scale-105"
-                : "bg-gray-900 border-gray-800 hover:bg-gray-800"
-            }`}
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-2xl font-black">{bloque.nombre}</h2>
-              <span
-                className={`text-xs px-3 py-1 rounded-full ${
-                  bloque.estado === "Desbloqueado"
-                    ? "bg-green-600"
-                    : "bg-gray-700"
-                }`}
-              >
-                {bloque.estado}
-              </span>
-            </div>
-
-            <h3 className="text-lg font-bold">{bloque.titulo}</h3>
-            <p className="text-sm text-gray-300 mt-2">{bloque.descripcion}</p>
-
-            <div className="mt-4">
-              <p className="text-xs text-gray-400">Nivel</p>
-              <p className="font-bold">{bloque.nivel}</p>
-            </div>
-          </button>
-        ))}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Card title="XP" value={student.xp || 0} />
+        <Card title="Asistencias" value={asistencias.length} />
+        <Card title="Tiempos" value={tiempos.length} />
+        <Card title="Plan" value={student.plan || 'Basico'} />
       </div>
 
-      <div className="bg-gray-950 border border-gray-800 rounded-3xl p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-3xl font-black">
-              {bloqueActivo.nombre}: {bloqueActivo.titulo}
-            </h2>
-            <p className="text-gray-400 mt-1">{bloqueActivo.descripcion}</p>
-          </div>
-
-          <div className="bg-black border border-red-700 rounded-2xl px-6 py-4 text-center">
-            <p className="text-gray-400 text-sm">Tiempo del bloque</p>
-            <p className="text-4xl font-black text-red-500">
-              {formatTime(seconds)}
-            </p>
-          </div>
+      {message && (
+        <div className="bg-yellow-600 text-black font-bold p-4 rounded-2xl">
+          {message}
         </div>
+      )}
 
-        <div className="flex flex-wrap gap-3 mb-6">
-          <button
-            onClick={startTraining}
-            disabled={isRunning}
-            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-700 px-6 py-3 rounded-xl font-bold"
-          >
-            Comenzar Bloque
-          </button>
+      <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-700">
+        <h3 className="text-3xl font-black text-yellow-400 mb-4">
+          Check-in / Asistencia
+        </h3>
 
-          <button
-            onClick={finishTraining}
-            disabled={!isRunning}
-            className="bg-red-600 hover:bg-red-700 disabled:bg-gray-700 px-6 py-3 rounded-xl font-bold"
-          >
-            Terminar Bloque
-          </button>
+        <button
+          onClick={marcarAsistencia}
+          className="bg-green-600 px-6 py-4 rounded-2xl font-bold"
+        >
+          Marcar asistencia
+        </button>
 
-          <button
-            onClick={resetTraining}
-            className="bg-gray-800 hover:bg-gray-700 px-6 py-3 rounded-xl font-bold"
-          >
-            Reiniciar
-          </button>
+        <div className="mt-6">
+          <p className="text-zinc-400 mb-3">QR de check-in</p>
+          <img
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(
+              checkinUrl
+            )}`}
+            alt="QR Check-in"
+            className="bg-white p-3 rounded-2xl"
+          />
         </div>
+      </div>
 
-        {lastTime !== null && (
-          <div className="mb-6 bg-green-950 border border-green-700 rounded-2xl p-4">
-            <p className="text-green-400 font-bold">
-              Bloque finalizado. Tiempo registrado: {formatTime(lastTime)}
-            </p>
-          </div>
-        )}
-
+      {acceso ? (
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="bg-black rounded-2xl p-5 border border-gray-800">
-            <h3 className="text-xl font-black mb-4">Ejercicios</h3>
+          <RoutineCard
+            title="PowerFit 360"
+            color="text-yellow-400"
+            items={[
+              'Calentamiento funcional',
+              'Circuito fuerza',
+              'Pliometría',
+              'Cardio HIIT',
+              'Core & movilidad',
+            ]}
+            onSave={() => guardarTiempo('PowerFit 360', 1200)}
+          />
 
-            <div className="space-y-3">
-              {bloqueActivo.ejercicios.map((ejercicio, index) => (
-                <div
-                  key={index}
-                  className="bg-gray-900 rounded-xl px-4 py-3 flex justify-between items-center"
-                >
-                  <span>{ejercicio}</span>
-                  <span className="text-red-500 font-bold">{index + 1}</span>
-                </div>
-              ))}
-            </div>
+          <RoutineCard
+            title="Boxeo Competitivo"
+            color="text-red-400"
+            items={[
+              'Técnica ofensiva',
+              'Sparring técnico',
+              'Defensa activa',
+              'Trabajo de saco',
+              'Condicionamiento',
+            ]}
+            onSave={() => guardarTiempo('Boxeo Competitivo', 1500)}
+          />
+        </div>
+      ) : (
+        <div className="bg-zinc-900 rounded-3xl p-8 border border-red-700">
+          <h3 className="text-3xl font-black text-red-500">
+            Acceso bloqueado
+          </h3>
+          <p className="text-zinc-300 mt-4 text-lg">
+            Regulariza tu mensualidad para desbloquear las rutinas.
+          </p>
+        </div>
+      )}
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-700">
+          <h3 className="text-3xl font-black text-blue-400 mb-4">
+            Ranking XP
+          </h3>
+
+          <div className="space-y-3">
+            {ranking.slice(0, 10).map((alumno, index) => (
+              <div
+                key={alumno.id}
+                className="flex justify-between bg-zinc-800 p-3 rounded-xl"
+              >
+                <span>
+                  #{index + 1} {alumno.nombre}
+                </span>
+                <span className="font-bold text-yellow-400">
+                  {alumno.xp || 0} XP
+                </span>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className="bg-black rounded-2xl p-5 border border-gray-800">
-            <h3 className="text-xl font-black mb-4">Estado del entrenamiento</h3>
+        <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-700">
+          <h3 className="text-3xl font-black text-purple-400 mb-4">
+            Gráfico de progreso
+          </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-900 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Estado</p>
-                <p className="text-lg font-black">
-                  {isRunning ? "En curso" : "Detenido"}
-                </p>
+          <div className="space-y-4">
+            {tiempos.slice(0, 6).map((t) => (
+              <div key={t.id}>
+                <div className="flex justify-between text-sm mb-1">
+                  <span>{t.bloque}</span>
+                  <span>{t.tiempo_segundos}s</span>
+                </div>
+
+                <div className="bg-zinc-800 rounded-full h-4">
+                  <div
+                    className="bg-purple-500 h-4 rounded-full"
+                    style={{
+                      width: `${Math.min(
+                        100,
+                        Number(t.tiempo_segundos || 0) / 20
+                      )}%`,
+                    }}
+                  />
+                </div>
               </div>
+            ))}
 
-              <div className="bg-gray-900 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Último tiempo</p>
-                <p className="text-lg font-black">
-                  {lastTime !== null ? formatTime(lastTime) : "Sin registro"}
-                </p>
-              </div>
-
-              <div className="bg-gray-900 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Bloque</p>
-                <p className="text-lg font-black">{bloqueActivo.nombre}</p>
-              </div>
-
-              <div className="bg-gray-900 rounded-xl p-4">
-                <p className="text-gray-400 text-sm">Nivel</p>
-                <p className="text-lg font-black">{bloqueActivo.nivel}</p>
-              </div>
-            </div>
+            {tiempos.length === 0 && (
+              <p className="text-zinc-400">
+                Aún no hay tiempos registrados.
+              </p>
+            )}
           </div>
         </div>
       </div>
     </div>
-  );
+  )
+}
+
+function Card({ title, value }) {
+  return (
+    <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
+      <p className="text-zinc-400">{title}</p>
+      <p className="text-3xl font-black mt-2">{value}</p>
+    </div>
+  )
+}
+
+function RoutineCard({ title, color, items, onSave }) {
+  return (
+    <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-700">
+      <h3 className={`text-2xl font-black ${color}`}>{title}</h3>
+
+      <ul className="mt-4 space-y-2 text-zinc-300">
+        {items.map((item) => (
+          <li key={item}>• {item}</li>
+        ))}
+      </ul>
+
+      <button
+        onClick={onSave}
+        className="mt-6 bg-red-600 px-5 py-3 rounded-2xl font-bold"
+      >
+        Finalizar bloque
+      </button>
+    </div>
+  )
 }
