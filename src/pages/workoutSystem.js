@@ -1,101 +1,96 @@
-export const metodos = [
-  "AMRAP",
-  "TABATA",
-  "EMOM",
-  "21-15-9",
-  "FUERZA",
-  "PIRAMIDE",
-]
-
-export const ejercicios = {
-  cardio: [
-    "Bike",
-    "Remo",
-    "Saltar cuerda",
-    "Trote",
-    "Sprint",
-    "Jumping Jacks",
-  ],
-
-  gimnasia: [
-    "Pull Up",
-    "Push Up",
-    "Sit Up",
-    "Burpees",
-    "Hollow Rock",
-    "Superman",
-    "Box Jump",
-  ],
-
-  kettlebell: [
-    "KB Swing",
-    "KB Clean",
-    "KB Snatch",
-    "KB Press",
-    "KB Front Rack",
-    "KB Lateral",
-  ],
-
-  fuerza: [
-    "Thruster",
-    "Deadlift",
-    "Push Jerk",
-    "Front Squat",
-    "Back Squat",
-    "Overhead Squat",
-    "Hip Thrust",
-    "Press Banca",
-  ],
-
-  core: [
-    "Plancha",
-    "Oblicuos",
-    "Russian Twist",
-    "Rodilla al pecho",
-    "Crunch",
-  ],
+function random(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function randomItem(arr) {
-  return arr[Math.floor(Math.random() * arr.length)]
-}
+const fighter = [
+  "Heavy Bag",
+  "Pull Up",
+  "Burpees",
+  "Sprint",
+  "Shadow Boxing",
+  "Push Up",
+  "Footwork Drill",
+  "Jump Rope",
+];
 
-export function generarEntrenamiento() {
+const fuerza = [
+  "Deadlift",
+  "Front Squat",
+  "Push Jerk",
+  "Hip Thrust",
+  "Thruster",
+  "Bench Press",
+  "Back Squat",
+];
+
+const cardio = [
+  "Bike",
+  "Remo",
+  "Mountain Climbers",
+  "High Knees",
+  "Jumping Jacks",
+];
+
+const kettlebell = [
+  "KB Swing",
+  "KB Snatch",
+  "KB Clean",
+  "KB Press",
+  "KB Front Rack",
+];
+
+export function generarEntrenamiento(objetivo, nivel) {
+
+  let pool = [...fighter, ...cardio];
+
+  if (objetivo === "fuerza") {
+    pool = [...fuerza, ...kettlebell];
+  }
+
+  if (objetivo === "perdida_grasa") {
+    pool = [...cardio, ...fighter];
+  }
+
+  if (objetivo === "fighter") {
+    pool = [...fighter, ...cardio, ...kettlebell];
+  }
+
   return {
+
     activacion: {
       metodo: "EMOM 8",
       ejercicios: [
-        `5 ${randomItem(ejercicios.gimnasia)}`,
-        `10 ${randomItem(ejercicios.gimnasia)}`,
+        `5 ${random(pool)}`,
+        `10 ${random(pool)}`,
         `15 Air Squat`,
       ],
     },
 
     bloque1: {
-      metodo: randomItem(metodos),
+      metodo: "TABATA",
       ejercicios: [
-        randomItem(ejercicios.kettlebell),
-        randomItem(ejercicios.gimnasia),
-        randomItem(ejercicios.cardio),
+        random(pool),
+        random(pool),
+        random(pool),
       ],
     },
 
     bloque2: {
-      metodo: randomItem(metodos),
+      metodo: "FUERZA",
       ejercicios: [
-        randomItem(ejercicios.fuerza),
-        randomItem(ejercicios.kettlebell),
-        randomItem(ejercicios.core),
+        random(pool),
+        random(pool),
+        random(pool),
       ],
     },
 
     bloque3: {
       metodo: "AMRAP 15",
       ejercicios: [
-        `10 ${randomItem(ejercicios.cardio)}`,
-        `10 ${randomItem(ejercicios.gimnasia)}`,
-        `10 ${randomItem(ejercicios.kettlebell)}`,
+        `10 ${random(pool)}`,
+        `15 ${random(pool)}`,
+        `20 ${random(pool)}`,
       ],
     },
-  }
+  };
 }

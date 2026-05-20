@@ -1,80 +1,80 @@
-import React, { useEffect, useState } from 'react'
-import { supabase } from '../supabase'
-import { generarEntrenamiento } from '../data/workoutSystem'
+import React, { useEffect, useState } from "react";
+import { supabase } from "../supabase";
+import { generarEntrenamiento } from "./workoutSystem";
 
-console.log('RUTINAS NUEVAS ACTIVAS')
+console.log("RUTINAS NUEVAS ACTIVAS");
 
 export default function RutinasPage({ student }) {
-  const [ranking, setRanking] = useState([])
+  const [ranking, setRanking] = useState([]);
 
-  const entrenamiento = generarEntrenamiento()
+  const entrenamiento = generarEntrenamiento();
 
   const rutinas = [
     {
-      nombre: 'Activación Fighter',
+      nombre: "Activación Fighter",
       metodo: entrenamiento.activacion.metodo,
       ejercicios: entrenamiento.activacion.ejercicios,
-      tipo: 'gratis',
+      tipo: "gratis",
     },
 
     {
-      nombre: 'Bloque Principal',
+      nombre: "Bloque Principal",
       metodo: entrenamiento.bloque1.metodo,
       ejercicios: entrenamiento.bloque1.ejercicios,
-      tipo: 'gratis',
+      tipo: "gratis",
     },
 
     {
-      nombre: 'Bloque Fuerza ATR',
+      nombre: "Bloque Fuerza ATR",
       metodo: entrenamiento.bloque2.metodo,
       ejercicios: entrenamiento.bloque2.ejercicios,
-      tipo: 'premium',
+      tipo: "premium",
     },
 
     {
-      nombre: 'Bloque Final Combat',
+      nombre: "Bloque Final Combat",
       metodo: entrenamiento.bloque3.metodo,
       ejercicios: entrenamiento.bloque3.ejercicios,
-      tipo: 'premium',
+      tipo: "premium",
     },
-  ]
+  ];
 
-  const bloquesPremium = Number(student?.bloques_premium || 0)
+  const bloquesPremium = Number(student?.bloques_premium || 0);
 
   const rutinasVisibles = rutinas.filter((r) => {
-    if (r.tipo === 'gratis') return true
-    return bloquesPremium > 0
-  })
+    if (r.tipo === "gratis") return true;
+    return bloquesPremium > 0;
+  });
 
   async function finalizarBloque(nombreRutina) {
-    const nuevoXP = Number(student?.xp || 0) + 40
+    const nuevoXP = Number(student?.xp || 0) + 40;
 
     await supabase
-      .from('alumnos')
+      .from("alumnos")
       .update({
         xp: nuevoXP,
       })
-      .eq('id', student.id)
+      .eq("id", student.id);
 
-    alert(`+40 XP ganados en ${nombreRutina}`)
+    alert(`+40 XP ganados en ${nombreRutina}`);
 
-    window.location.reload()
+    window.location.reload();
   }
 
   async function cargarRanking() {
     const { data } = await supabase
-      .from('alumnos')
-      .select('*')
-      .order('xp', { ascending: false })
+      .from("alumnos")
+      .select("*")
+      .order("xp", { ascending: false });
 
     if (data) {
-      setRanking(data)
+      setRanking(data);
     }
   }
 
   useEffect(() => {
-    cargarRanking()
-  }, [])
+    cargarRanking();
+  }, []);
 
   return (
     <div className="space-y-10">
@@ -103,9 +103,9 @@ export default function RutinasPage({ student }) {
 
               <span
                 className={`px-4 py-2 rounded-full text-sm font-black ${
-                  rutina.tipo === 'gratis'
-                    ? 'bg-green-500'
-                    : 'bg-purple-600'
+                  rutina.tipo === "gratis"
+                    ? "bg-green-500"
+                    : "bg-purple-600"
                 }`}
               >
                 {rutina.tipo.toUpperCase()}
@@ -242,5 +242,5 @@ export default function RutinasPage({ student }) {
 
       </div>
     </div>
-  )
+  );
 }
