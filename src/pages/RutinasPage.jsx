@@ -1,3 +1,4 @@
+import { generarEntrenamiento } from '../data/workoutSystem'
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -112,7 +113,37 @@ export default function RutinasPage() {
   if (!student) {
     return <div className="text-white">Cargando rutinas...</div>
   }
+const entrenamiento = generarEntrenamiento()
 
+const rutinas = [
+  {
+    nombre: "Activación Fighter",
+    metodo: entrenamiento.activacion.metodo,
+    ejercicios: entrenamiento.activacion.ejercicios,
+    tipo: "gratis",
+  },
+
+  {
+    nombre: "Bloque Principal",
+    metodo: entrenamiento.bloque1.metodo,
+    ejercicios: entrenamiento.bloque1.ejercicios,
+    tipo: "gratis",
+  },
+
+  {
+    nombre: "Bloque Fuerza ATR",
+    metodo: entrenamiento.bloque2.metodo,
+    ejercicios: entrenamiento.bloque2.ejercicios,
+    tipo: "premium",
+  },
+
+  {
+    nombre: "Bloque Final Combat",
+    metodo: entrenamiento.bloque3.metodo,
+    ejercicios: entrenamiento.bloque3.ejercicios,
+    tipo: "premium",
+  },
+]
   const bloquesPremium = Number(student.bloques_premium || 0)
 
   const rutinasVisibles = rutinas.filter((r) => {
