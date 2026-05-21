@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from './supabase'
 
+import LoginPage from './pages/LoginPage'
 import RutinasPage from './pages/RutinasPage'
 import GeneradorPage from './pages/GeneradorPage'
 
@@ -33,34 +34,23 @@ export default function App() {
 
     setStudent(alumno || null)
 
-    if (currentUser) {
-      const { data: rmData } = await supabase
-        .from('rm_alumnos')
-        .select('*')
-        .eq('user_id', currentUser.id)
+    const { data: rmData } = await supabase
+      .from('rm_alumnos')
+      .select('*')
+      .eq('user_id', currentUser.id)
 
-      setRms(rmData || [])
-    }
+    setRms(rmData || [])
   }
 
   async function cerrarSesion() {
     await supabase.auth.signOut()
     setUser(null)
     setStudent(null)
-    window.location.reload()
+    setSection('Ficha')
   }
 
   if (!user) {
-    return (
-      <div className="min-h-screen bg-black text-white flex items-center justify-center">
-        <div className="bg-zinc-900 p-8 rounded-3xl border border-red-600 text-center">
-          <h1 className="text-4xl font-black text-red-500 mb-4">
-            POWERFIT 360
-          </h1>
-          <p className="text-zinc-400">Debes iniciar sesión.</p>
-        </div>
-      </div>
-    )
+    return <LoginPage onLogin={setUser} />
   }
 
   const isAdmin = student?.role?.toLowerCase() === 'admin'
@@ -70,21 +60,12 @@ export default function App() {
     <div className="min-h-screen bg-black text-white p-6">
       <div className="flex justify-between items-center mb-8 bg-zinc-900 border border-zinc-700 rounded-3xl p-6">
         <div>
-          <h1 className="text-4xl font-black text-red-500">
-            POWERFIT 360
-          </h1>
-
-          <p className="text-zinc-300 mt-2">
-            {student?.nombre || user.email}
-          </p>
-
+          <h1 className="text-4xl font-black text-red-500">POWERFIT 360</h1>
+          <p className="text-zinc-300 mt-2">{student?.nombre || user.email}</p>
           <p className="text-yellow-400 font-black mt-1">
             {isAdmin ? 'Administrador' : 'Alumno'}
           </p>
-
-          <p className={`font-black mt-1 ${
-            pago === 'Pagado' ? 'text-green-400' : 'text-red-400'
-          }`}>
+          <p className={pago === 'Pagado' ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
             Estado pago: {pago}
           </p>
         </div>
@@ -123,9 +104,7 @@ export default function App() {
 
       {section === 'Ficha' && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-yellow-400 mb-6">
-            Ficha Personal
-          </h2>
+          <h2 className="text-4xl font-black text-yellow-400 mb-6">Ficha Personal</h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
@@ -140,9 +119,7 @@ export default function App() {
             <Info label="Premium" value={student?.bloques_premium || 0} />
           </div>
 
-          <h3 className="text-3xl font-black text-red-500 mt-10 mb-4">
-            Mis RM
-          </h3>
+          <h3 className="text-3xl font-black text-red-500 mt-10 mb-4">Mis RM</h3>
 
           <div className="grid md:grid-cols-2 gap-4">
             {rms.map((rm) => (
@@ -154,39 +131,25 @@ export default function App() {
                 <p>90%: {Math.round(rm.rm_kg * 0.9)} kg</p>
               </div>
             ))}
+
+            {rms.length === 0 && <p className="text-zinc-400">Aún no tienes RM registrados.</p>}
           </div>
         </div>
       )}
 
       {section === 'Pago' && (
         <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-green-400 mb-6">
-            Pago / Deuda
-          </h2>
-
+          <h2 className="text-4xl font-black text-green-400 mb-6">Pago / Deuda</h2>
           <Info label="Estado" value={student?.estado_pago} />
           <Info label="Monto" value={`$${student?.monto || 0}`} />
           <Info label="Fecha pago" value={student?.fecha_pago} />
           <Info label="Vencimiento" value={student?.fecha_vencimiento} />
-
-          {student?.estado_pago !== 'Pagado' && (
-            <p className="text-red-400 font-black mt-6">
-              Tienes pago pendiente o vencido. Regulariza para desbloquear premium.
-            </p>
-          )}
         </div>
       )}
 
       {section === 'Asistencia' && (
         <div className="bg-zinc-900 border border-blue-600 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-blue-400 mb-6">
-            Asistencia QR
-          </h2>
-
-          <p className="text-zinc-300 mb-4">
-            Escanea este QR para registrar asistencia.
-          </p>
-
+          <h2 className="text-4xl font-black text-blue-400 mb-6">Asistencia QR</h2>
           <img
             src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '?checkin=1')}`}
             alt="QR asistencia"
@@ -196,7 +159,6 @@ export default function App() {
       )}
 
       {section === 'Rutinas' && <RutinasPage student={student} />}
-
       {section === 'Generador' && isAdmin && <GeneradorPage />}
     </div>
   )
