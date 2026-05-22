@@ -1,158 +1,409 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
+import { generarEntrenamiento } from './workoutSystem'
 
-const ejerciciosPeso = ['Back Squat', 'Front Squat', 'Deadlift', 'Bench Press', 'Push Press', 'Push Jerk', 'Thruster', 'Clean', 'Snatch']
+export default function GeneradorPage({
+  student,
+  onUpdateStudent,
+}) {
 
-export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
+  const [faseATR, setFaseATR] = useState('acumulacion')
+
   const [rms, setRms] = useState([])
-  const [plan, setPlan] = useState(null)
+
+  const [planificaciones, setPlanificaciones] = useState([])
+
   const [mensaje, setMensaje] = useState('')
 
   useEffect(() => {
+
     cargarRM()
-  }, [])
+    cargarPlanificaciones()
+
+  }, [student])
 
   async function cargarRM() {
+
+    if (!student?.id) return
+
     const { data } = await supabase
       .from('rm_alumnos')
       .select('*')
-      .eq('alumno_id', student?.id)
+      .eq('alumno_id', student.id)
 
     setRms(data || [])
+
   }
 
-  function buscarRM(ejercicio) {
-    return rms.find((r) => r.ejercicio === ejercicio)?.rm_kg || null
+  async function cargarPlanificaciones() {
+
+    if (!student?.id) return
+
+    const { data } = await supabase
+      .from('planificaciones_generadas')
+      .select('*')
+      .eq('alumno_id', student.id)
+      .order('created_at', {
+        ascending: false,
+      })
+
+    setPlanificaciones(data || [])
+
   }
 
-  function carga(ejercicio, porcentaje) {
-    const rm = buscarRM(ejercicio)
-    if (!rm) return 'RM no registrado'
-    return `${Math.round(rm * porcentaje)} kg`
-  }
+  function textoPlan(p) {
 
-  function crearTextoPlan(nuevo) {
     return `
-POWERFIT 360 - PLANIFICACIÓN
+POWERFIT 360
 
-Alumno: ${student?.nombre}
-Objetivo: ${objetivo}
-Nivel: ${nivel}
+${p.titulo}
 
+Alumno: ${student?.nombre || ''}
+
+Objetivo: ${p.objetivo}
+
+Nivel: ${p.nivel}
+
+Fase ATR: ${p.faseATR}
+
+Intensidad: ${p.intensidad}
+
+
+==========================
 ACTIVACIÓN
-${nuevo.activacion.join('\n')}
+==========================
 
+Método: ${p.activacion.metodo}
+
+${p.activacion.ejercicios
+  .map((e) => `• ${e}`)
+  .join('\n')}
+
+
+==========================
 BLOQUE 1
-${nuevo.bloque1.join('\n')}
+==========================
 
-Descanso: 2 minutos
+Método: ${p.bloque1.metodo}
 
+Duración: ${p.bloque1.duracion}
+
+${p.bloque1.ejercicios
+  .map((e) => `• ${e}`)
+  .join('\n')}
+
+
+DESCANSO: 2 MIN
+
+
+==========================
 BLOQUE 2
-${nuevo.bloque2.join('\n')}
+==========================
 
-Descanso: 2 minutos
+Método: ${p.bloque2.metodo}
 
+Duración: ${p.bloque2.duracion}
+
+${p.bloque2.ejercicios
+  .map((e) => `• ${e}`)
+  .join('\n')}
+
+
+DESCANSO: 2 MIN
+
+
+==========================
 BLOQUE 3
-${nuevo.bloque3.join('\n')}
+==========================
 
-Vuelta a la calma: dirigida en clase.
+Método: ${p.bloque3.metodo}
+
+Duración: ${p.bloque3.duracion}
+
+${p.bloque3.ejercicios
+  .map((e) => `• ${e}`)
+  .join('\n')}
+
+
+==========================
+FIN ENTRENAMIENTO
+==========================
 `
+
   }
 
-  function descargarWord(contenido) {
+  function descargarWord(contenido, fecha) {
+
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8" />
+        </head>
+
+        <body>
+          <pre style="font-family: Arial; font-size: 14px;">
+${contenido}
+          </pre>
+        </body>
+      </html>
+    `
+
     const blob = new Blob(
-      [`<html><body><pre>${contenido}</pre></body></html>`],
-      { type: 'application/msword' }
+      [html],
+      {
+        type: 'application/msword',
+      }
     )
 
     const url = URL.createObjectURL(blob)
+
     const a = document.createElement('a')
+
     a.href = url
-    a.download = `planificacion-${student?.nombre || 'alumno'}.doc`
+
+    a.download = `PowerFit-${fecha}.doc`
+
     a.click()
+
     URL.revokeObjectURL(url)
+
   }
 
   async function generar() {
-    if (Number(student?.generaciones_disponibles || 0) <= 0) {
-      setMensaje('Ya usaste tus 6 generaciones de este pago/mes.')
+
+    if (!student) return
+
+    const disponibles =
+      Number(student?.generaciones_disponibles || 0)
+
+    if (disponibles <= 0) {
+
+      setMensaje(
+        'Ya usaste tus 6 generaciones disponibles.'
+      )
+
       return
     }
 
-    const nuevo = {
-      activacion: ['EMOM 8 MIN', '5 Push Up', '10 Air Squat', '15 Sit Up'],
-      bloque1: ['TABATA 40/20', 'Kettlebell Swing', 'Burpees', 'Box Jump'],
-      bloque2: [
-        'FUERZA / HALTEROFILIA',
-        `Back Squat 5x5 @80% → ${carga('Back Squat', 0.8)}`,
-        `Deadlift 5x3 @85% → ${carga('Deadlift', 0.85)}`,
-        `Push Press 4x5 @75% → ${carga('Push Press', 0.75)}`,
-      ],
-      bloque3: ['AMRAP 15 MIN', '10 Heavy Bag', '10 Burpees', '200m Run'],
+    const plan = generarEntrenamiento({
+      objetivo,
+      nivel,
+      faseATR,
+      rms,
+    })
+
+    const contenido = textoPlan(plan)
+
+    const fecha = new Date().toLocaleString()
+
+    const { error } = await supabase
+      .from('planificaciones_generadas')
+      .insert([
+        {
+          user_id: student.user_id,
+          alumno_id: student.id,
+          nombre_alumno: student.nombre,
+          objetivo,
+          nivel,
+          contenido,
+        },
+      ])
+
+    if (error) {
+
+      setMensaje(error.message)
+
+      return
     }
-
-    const contenido = crearTextoPlan(nuevo)
-
-    await supabase.from('planificaciones_generadas').insert([
-      {
-        user_id: student.user_id,
-        alumno_id: student.id,
-        nombre_alumno: student.nombre,
-        objetivo,
-        nivel,
-        contenido,
-      },
-    ])
 
     await supabase
       .from('alumnos')
       .update({
-        generaciones_disponibles: Number(student.generaciones_disponibles || 0) - 1,
+        generaciones_disponibles:
+          disponibles - 1,
       })
       .eq('id', student.id)
 
-    setPlan({ ...nuevo, contenido })
-    descargarWord(contenido)
-    setMensaje('Planificación generada y descargada en Word.')
+    descargarWord(contenido, Date.now())
+
+    setMensaje(
+      'Planificación generada y descargada.'
+    )
+
+    cargarPlanificaciones()
+
     onUpdateStudent?.()
+
+  }
+
+  function descargarGuardada(plan) {
+
+    descargarWord(
+      plan.contenido,
+      plan.created_at
+    )
+
   }
 
   return (
+
     <div className="space-y-8">
+
       <div className="bg-zinc-900 border border-red-600 rounded-3xl p-6">
-        <h1 className="text-4xl font-black text-red-500">Generador PowerFit 360</h1>
-        <p className="text-yellow-400 mt-2 font-black">
-          Generaciones disponibles: {student?.generaciones_disponibles || 0}
+
+        <h1 className="text-4xl font-black text-red-500">
+          GENERADOR POWERFIT IA
+        </h1>
+
+        <p className="text-yellow-400 mt-3 font-black text-xl">
+          Generaciones disponibles:
+          {' '}
+          {student?.generaciones_disponibles || 0}
+          {' '}
+          / 6
         </p>
+
       </div>
 
-      <div className="grid md:grid-cols-2 gap-4">
-        <select value={objetivo} onChange={(e) => setObjetivo(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
-          <option value="fighter">Fighter</option>
-          <option value="fuerza">Fuerza</option>
-          <option value="perdida_grasa">Pérdida grasa</option>
+      <div className="grid md:grid-cols-3 gap-4">
+
+        <select
+          value={objetivo}
+          onChange={(e) =>
+            setObjetivo(e.target.value)
+          }
+          className="bg-zinc-800 p-4 rounded-2xl"
+        >
+
+          <option value="fighter">
+            Fighter
+          </option>
+
+          <option value="fuerza">
+            Fuerza
+          </option>
+
+          <option value="perdida_grasa">
+            Pérdida grasa
+          </option>
+
+          <option value="cardio">
+            Cardio
+          </option>
+
         </select>
 
-        <select value={nivel} onChange={(e) => setNivel(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
-          <option value="basico">Básico</option>
-          <option value="intermedio">Intermedio</option>
-          <option value="avanzado">Avanzado</option>
+        <select
+          value={nivel}
+          onChange={(e) =>
+            setNivel(e.target.value)
+          }
+          className="bg-zinc-800 p-4 rounded-2xl"
+        >
+
+          <option value="basico">
+            Básico
+          </option>
+
+          <option value="intermedio">
+            Intermedio
+          </option>
+
+          <option value="avanzado">
+            Avanzado
+          </option>
+
         </select>
+
+        <select
+          value={faseATR}
+          onChange={(e) =>
+            setFaseATR(e.target.value)
+          }
+          className="bg-zinc-800 p-4 rounded-2xl"
+        >
+
+          <option value="acumulacion">
+            ATR Acumulación
+          </option>
+
+          <option value="transformacion">
+            ATR Transformación
+          </option>
+
+          <option value="realizacion">
+            ATR Realización
+          </option>
+
+        </select>
+
       </div>
 
-      <button onClick={generar} className="w-full bg-red-600 p-4 rounded-2xl font-black">
-        Generar entrenamiento + descargar Word
+      <button
+        onClick={generar}
+        className="w-full bg-red-600 hover:bg-red-700 p-5 rounded-2xl font-black text-xl"
+      >
+        GENERAR ENTRENAMIENTO
       </button>
 
-      {mensaje && <p className="bg-yellow-500 text-black p-4 rounded-2xl font-black">{mensaje}</p>}
+      {mensaje && (
 
-      {plan && (
-        <div className="bg-zinc-900 p-6 rounded-3xl border border-yellow-500 whitespace-pre-wrap">
-          {plan.contenido}
+        <div className="bg-yellow-500 text-black p-4 rounded-2xl font-black">
+          {mensaje}
         </div>
+
       )}
+
+      <div className="space-y-8">
+
+        {planificaciones.map((plan) => (
+
+          <div
+            key={plan.id}
+            className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6"
+          >
+
+            <div className="flex justify-between items-center mb-5">
+
+              <div>
+
+                <h2 className="text-2xl font-black text-yellow-400">
+                  {plan.objetivo?.toUpperCase()}
+                </h2>
+
+                <p className="text-zinc-400">
+                  {new Date(
+                    plan.created_at
+                  ).toLocaleString()}
+                </p>
+
+              </div>
+
+              <button
+                onClick={() =>
+                  descargarGuardada(plan)
+                }
+                className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-2xl font-black"
+              >
+                Descargar Word
+              </button>
+
+            </div>
+
+            <pre className="whitespace-pre-wrap text-sm">
+              {plan.contenido}
+            </pre>
+
+          </div>
+
+        ))}
+
+      </div>
+
     </div>
+
   )
+
 }

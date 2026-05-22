@@ -22,9 +22,7 @@ export default function App() {
   })
 
   useEffect(() => {
-
     cargarUsuario()
-
   }, [])
 
   async function cargarUsuario() {
@@ -34,10 +32,8 @@ export default function App() {
     const currentUser = data?.user
 
     if (!currentUser) {
-
       setUser(null)
       return
-
     }
 
     setUser(currentUser)
@@ -51,22 +47,19 @@ export default function App() {
     setStudent(alumno || null)
 
     if (alumno) {
-
       cargarRms(alumno.id)
-
     }
 
-    const { data: alumnosData, error: alumnosError } = await supabase
-  .from('alumnos')
-  .select('*')
-  .order('id', { ascending: false })
+    const { data: alumnosData, error } = await supabase
+      .from('alumnos')
+      .select('*')
+      .order('id', { ascending: false })
 
-if (alumnosError) {
-  console.log('Error cargando alumnos:', alumnosError.message)
-}
+    if (error) {
+      console.log(error.message)
+    }
 
-setStudents(alumnosData || [])
-
+    setStudents(alumnosData || [])
   }
 
   async function cargarRms(alumnoId) {
@@ -77,21 +70,18 @@ setStudents(alumnosData || [])
       .eq('alumno_id', alumnoId)
 
     setRms(data || [])
-
   }
 
   async function guardarRM() {
 
     if (!student) return
 
-    if (!nuevoRM.ejercicio || !nuevoRM.rm_kg) return
-
     await supabase
       .from('rm_alumnos')
       .insert([
         {
-          user_id: student.user_id,
           alumno_id: student.id,
+          user_id: student.user_id,
           ejercicio: nuevoRM.ejercicio,
           rm_kg: Number(nuevoRM.rm_kg),
         },
@@ -103,7 +93,6 @@ setStudents(alumnosData || [])
     })
 
     cargarRms(student.id)
-
   }
 
   async function actualizarAlumno(id, campo, valor) {
@@ -116,7 +105,6 @@ setStudents(alumnosData || [])
       .eq('id', id)
 
     cargarUsuario()
-
   }
 
   async function cerrarSesion() {
@@ -125,13 +113,10 @@ setStudents(alumnosData || [])
 
     setUser(null)
     setStudent(null)
-
   }
 
   if (!user) {
-
     return <LoginPage onLogin={setUser} />
-
   }
 
   const isAdmin =
@@ -141,7 +126,7 @@ setStudents(alumnosData || [])
 
     <div className="min-h-screen bg-black text-white p-6">
 
-      <div className="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 mb-8 flex justify-between">
+      <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6 mb-8 flex justify-between">
 
         <div>
 
@@ -149,7 +134,7 @@ setStudents(alumnosData || [])
             POWERFIT 360
           </h1>
 
-          <p className="mt-2">
+          <p className="text-xl mt-2">
             {student?.nombre || user.email}
           </p>
 
@@ -157,14 +142,8 @@ setStudents(alumnosData || [])
             {isAdmin ? 'Administrador' : 'Alumno'}
           </p>
 
-          <p
-            className={`font-black ${
-              student?.estado_pago === 'Pagado'
-                ? 'text-green-400'
-                : 'text-red-400'
-            }`}
-          >
-            Estado pago: {student?.estado_pago || 'Pendiente'}
+          <p className="text-green-400 font-black">
+            Estado: {student?.estado_pago || 'Pendiente'}
           </p>
 
         </div>
@@ -186,17 +165,12 @@ setStudents(alumnosData || [])
 
         <Btn text="Generador" set={() => setSection('Generador')} />
 
-        <Btn text="Pago / deuda" set={() => setSection('Pago')} />
+        <Btn text="Pagos" set={() => setSection('Pagos')} />
 
-        <Btn text="Asistencia QR" set={() => setSection('Asistencia')} />
+        <Btn text="QR" set={() => setSection('QR')} />
 
         {isAdmin && (
-
-          <Btn
-            text="ADMIN ALUMNOS"
-            set={() => setSection('Admin')}
-          />
-
+          <Btn text="ADMIN" set={() => setSection('Admin')} />
         )}
 
       </div>
@@ -210,21 +184,21 @@ setStudents(alumnosData || [])
             <Info label="Nombre" value={student?.nombre} />
             <Info label="Correo" value={student?.email} />
             <Info label="Teléfono" value={student?.telefono} />
-            <Info label="Categoría" value={student?.categoria} />
             <Info label="Edad" value={student?.edad} />
             <Info label="Peso" value={student?.peso} />
             <Info label="Altura" value={student?.altura} />
-            <Info label="Plan" value={student?.plan} />
             <Info label="XP" value={student?.xp || 0} />
+            <Info label="Plan" value={student?.plan} />
+            <Info label="Premium" value={student?.bloques_premium || 0} />
             <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
 
           </div>
 
-          <h3 className="text-3xl font-black text-red-500 mt-10 mb-5">
-            MIS RM
-          </h3>
+          <h2 className="text-3xl font-black text-red-500 mt-10 mb-5">
+            RM DEL ALUMNO
+          </h2>
 
-          <div className="grid md:grid-cols-3 gap-3">
+          <div className="grid md:grid-cols-3 gap-4">
 
             <input
               placeholder="Ejercicio"
@@ -269,9 +243,9 @@ setStudents(alumnosData || [])
                 className="bg-zinc-800 p-4 rounded-2xl"
               >
 
-                <h4 className="text-yellow-400 font-black">
+                <h3 className="text-yellow-400 font-black text-xl">
                   {rm.ejercicio}
-                </h4>
+                </h3>
 
                 <p>RM: {rm.rm_kg} KG</p>
 
@@ -302,17 +276,16 @@ setStudents(alumnosData || [])
         />
       )}
 
-      {section === 'Pago' && (
+      {section === 'Pagos' && (
 
-        <Panel title="Pago / deuda">
+        <Panel title="Pagos y estado">
 
           <div className="grid md:grid-cols-2 gap-4">
 
-            <Info label="Estado" value={student?.estado_pago} />
+            <Info label="Estado pago" value={student?.estado_pago} />
             <Info label="Monto" value={`$${student?.monto || 0}`} />
             <Info label="Fecha pago" value={student?.fecha_pago} />
             <Info label="Vencimiento" value={student?.fecha_vencimiento} />
-            <Info label="Premium" value={student?.bloques_premium || 0} />
 
           </div>
 
@@ -320,13 +293,14 @@ setStudents(alumnosData || [])
 
       )}
 
-      {section === 'Asistencia' && (
+      {section === 'QR' && (
 
         <Panel title="Asistencia QR">
 
           <img
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin + '?checkin=1')}`}
+            alt="qr"
             className="bg-white p-4 rounded-2xl"
+            src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin)}`}
           />
 
         </Panel>
@@ -335,7 +309,7 @@ setStudents(alumnosData || [])
 
       {section === 'Admin' && isAdmin && (
 
-        <Panel title="ADMINISTRADOR ALUMNOS">
+        <Panel title="ADMINISTRADOR">
 
           <div className="space-y-8">
 
@@ -346,9 +320,9 @@ setStudents(alumnosData || [])
                 className="bg-zinc-800 rounded-3xl p-6 border border-yellow-500"
               >
 
-                <h3 className="text-3xl font-black text-yellow-400 mb-6">
+                <h2 className="text-3xl font-black text-yellow-400 mb-6">
                   {a.nombre}
-                </h3>
+                </h2>
 
                 <div className="grid md:grid-cols-3 gap-4">
 
@@ -373,14 +347,6 @@ setStudents(alumnosData || [])
                     value={a.telefono || ''}
                     onSave={(v) =>
                       actualizarAlumno(a.id, 'telefono', v)
-                    }
-                  />
-
-                  <AdminInput
-                    label="Categoría"
-                    value={a.categoria || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'categoria', v)
                     }
                   />
 
@@ -531,7 +497,7 @@ setStudents(alumnosData || [])
                       </option>
 
                       <option value="admin">
-                        Administrador
+                        Admin
                       </option>
 
                     </select>
@@ -551,9 +517,7 @@ setStudents(alumnosData || [])
       )}
 
     </div>
-
   )
-
 }
 
 function Btn({ text, set }) {
@@ -562,13 +526,12 @@ function Btn({ text, set }) {
 
     <button
       onClick={set}
-      className="bg-zinc-800 hover:bg-zinc-700 px-6 py-4 rounded-2xl font-bold"
+      className="bg-zinc-800 hover:bg-zinc-700 px-6 py-4 rounded-2xl font-black"
     >
       {text}
     </button>
 
   )
-
 }
 
 function Panel({ title, children }) {
@@ -586,7 +549,6 @@ function Panel({ title, children }) {
     </div>
 
   )
-
 }
 
 function Info({ label, value }) {
@@ -606,7 +568,6 @@ function Info({ label, value }) {
     </div>
 
   )
-
 }
 
 function AdminInput({
@@ -634,5 +595,4 @@ function AdminInput({
     </div>
 
   )
-
 }
