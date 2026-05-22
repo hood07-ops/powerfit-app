@@ -1,96 +1,163 @@
-function random(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
+function pick(arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
 }
 
-const fighter = [
-  "Heavy Bag",
-  "Pull Up",
-  "Burpees",
-  "Sprint",
-  "Shadow Boxing",
-  "Push Up",
-  "Footwork Drill",
-  "Jump Rope",
-];
+function uniquePick(arr, count) {
+  const copy = [...arr]
+  const result = []
 
-const fuerza = [
-  "Deadlift",
-  "Front Squat",
-  "Push Jerk",
-  "Hip Thrust",
-  "Thruster",
-  "Bench Press",
-  "Back Squat",
-];
-
-const cardio = [
-  "Bike",
-  "Remo",
-  "Mountain Climbers",
-  "High Knees",
-  "Jumping Jacks",
-];
-
-const kettlebell = [
-  "KB Swing",
-  "KB Snatch",
-  "KB Clean",
-  "KB Press",
-  "KB Front Rack",
-];
-
-export function generarEntrenamiento(objetivo, nivel) {
-
-  let pool = [...fighter, ...cardio];
-
-  if (objetivo === "fuerza") {
-    pool = [...fuerza, ...kettlebell];
+  while (result.length < count && copy.length > 0) {
+    const index = Math.floor(Math.random() * copy.length)
+    result.push(copy.splice(index, 1)[0])
   }
 
-  if (objetivo === "perdida_grasa") {
-    pool = [...cardio, ...fighter];
-  }
+  return result
+}
 
-  if (objetivo === "fighter") {
-    pool = [...fighter, ...cardio, ...kettlebell];
+export const ejercicios = {
+  fighter: [
+    'Heavy Bag',
+    'Shadow Boxing',
+    'Footwork Drill',
+    'Burpees',
+    'Sprint',
+    'Jump Rope',
+    'Push Up',
+    'Sit Up',
+    'Mountain Climbers',
+  ],
+
+  fuerza: [
+    'Back Squat',
+    'Front Squat',
+    'Deadlift',
+    'Bench Press',
+    'Push Press',
+    'Push Jerk',
+    'Strict Press',
+    'Thruster',
+    'Hip Thrust',
+  ],
+
+  halterofilia: [
+    'Power Clean',
+    'Hang Power Clean',
+    'Clean Pull',
+    'Power Snatch',
+    'Hang Power Snatch',
+    'Snatch Pull',
+    'Front Squat',
+    'Push Jerk',
+    'Split Jerk',
+  ],
+
+  kettlebell: [
+    'Kettlebell Swing',
+    'Kettlebell Clean',
+    'Kettlebell Snatch',
+    'Goblet Squat',
+    'Kettlebell Press',
+    'Farmer Walk',
+  ],
+
+  cardio: [
+    'Bike',
+    'Row',
+    'Run',
+    'Ski Erg',
+    'Jump Rope',
+    'High Knees',
+  ],
+
+  core: [
+    'Plank Hold',
+    'Hollow Hold',
+    'Russian Twist',
+    'Dead Bug',
+    'Bird Dog',
+    'Side Plank',
+  ],
+}
+
+export function calcularCarga(rms, ejercicio, porcentaje) {
+  const rm = rms?.find((r) => r.ejercicio === ejercicio)
+
+  if (!rm) return 'RM no registrado'
+
+  return `${Math.round(Number(rm.rm_kg) * porcentaje)} kg`
+}
+
+export function generarEntrenamiento({ objetivo, nivel, faseATR, rms }) {
+  let intensidad = 'media'
+
+  if (nivel === 'basico') intensidad = 'controlada'
+  if (nivel === 'avanzado') intensidad = 'alta'
+
+  const fuerzaBase = uniquePick(ejercicios.fuerza, 3)
+  const halteroBase = uniquePick(ejercicios.halterofilia, 3)
+  const fighterBase = uniquePick(ejercicios.fighter, 4)
+  const cardioBase = uniquePick(ejercicios.cardio, 2)
+  const coreBase = uniquePick(ejercicios.core, 2)
+
+  let bloqueFuerza = []
+
+  if (objetivo === 'fuerza') {
+    bloqueFuerza = fuerzaBase.map((e) => {
+      const porcentaje = faseATR === 'acumulacion' ? 0.65 : faseATR === 'transformacion' ? 0.75 : 0.85
+      return `${e} — 5x5 @${Math.round(porcentaje * 100)}% → ${calcularCarga(rms, e, porcentaje)}`
+    })
+  } else {
+    bloqueFuerza = halteroBase.map((e) => {
+      const porcentaje = faseATR === 'acumulacion' ? 0.6 : faseATR === 'transformacion' ? 0.7 : 0.8
+      return `${e} — 4x4 @${Math.round(porcentaje * 100)}% → ${calcularCarga(rms, e, porcentaje)}`
+    })
   }
 
   return {
+    titulo: `PowerFit 360 — ${objetivo.toUpperCase()} / ATR ${faseATR.toUpperCase()}`,
+    objetivo,
+    nivel,
+    faseATR,
+    intensidad,
 
     activacion: {
-      metodo: "EMOM 8",
+      metodo: 'EMOM 8 MIN',
+      descripcion: 'Activación técnica y metabólica.',
       ejercicios: [
-        `5 ${random(pool)}`,
-        `10 ${random(pool)}`,
-        `15 Air Squat`,
+        `5 ${pick(ejercicios.fighter)}`,
+        `10 Air Squat`,
+        `10 Sit Up`,
+        `30 sec ${pick(ejercicios.cardio)}`,
       ],
     },
 
     bloque1: {
-      metodo: "TABATA",
+      titulo: 'Bloque 1 — Técnica / Base',
+      metodo: faseATR === 'acumulacion' ? 'EMOM 10 MIN' : 'TABATA 30/15',
+      duracion: '8-10 min',
       ejercicios: [
-        random(pool),
-        random(pool),
-        random(pool),
+        ...fighterBase.slice(0, 2).map((e) => `${e} — técnica controlada`),
+        ...coreBase.map((e) => `${e} — 30 sec`),
       ],
     },
 
     bloque2: {
-      metodo: "FUERZA",
-      ejercicios: [
-        random(pool),
-        random(pool),
-        random(pool),
-      ],
+      titulo: 'Bloque 2 — Fuerza / Halterofilia',
+      metodo: 'FUERZA / %RM',
+      duracion: '10-15 min',
+      ejercicios: bloqueFuerza,
     },
 
     bloque3: {
-      metodo: "AMRAP 15",
+      titulo: 'Bloque 3 — Finalizador Fighter',
+      metodo: faseATR === 'realizacion' ? 'FOR TIME' : 'AMRAP 12 MIN',
+      duracion: '12-15 min',
       ejercicios: [
-        `10 ${random(pool)}`,
-        `15 ${random(pool)}`,
-        `20 ${random(pool)}`,
+        `10 ${fighterBase[0]}`,
+        `12 ${pick(ejercicios.kettlebell)}`,
+        `15 ${fighterBase[1]}`,
+        `200m ${cardioBase[0]}`,
       ],
     },
-  };
+  }
 }

@@ -9,7 +9,9 @@ export default function App() {
 
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
+
   const [students, setStudents] = useState([])
+
   const [section, setSection] = useState('Ficha')
 
   const [rms, setRms] = useState([])
@@ -20,17 +22,22 @@ export default function App() {
   })
 
   useEffect(() => {
+
     cargarUsuario()
+
   }, [])
 
   async function cargarUsuario() {
 
     const { data } = await supabase.auth.getUser()
+
     const currentUser = data?.user
 
     if (!currentUser) {
+
       setUser(null)
       return
+
     }
 
     setUser(currentUser)
@@ -43,16 +50,18 @@ export default function App() {
 
     setStudent(alumno || null)
 
+    if (alumno) {
+
+      cargarRms(alumno.id)
+
+    }
+
     const { data: alumnosData } = await supabase
       .from('alumnos')
       .select('*')
       .order('nombre')
 
     setStudents(alumnosData || [])
-
-    if (alumno) {
-      cargarRms(alumno.id)
-    }
 
   }
 
@@ -116,7 +125,9 @@ export default function App() {
   }
 
   if (!user) {
+
     return <LoginPage onLogin={setUser} />
+
   }
 
   const isAdmin =
@@ -165,35 +176,20 @@ export default function App() {
 
       <div className="flex flex-wrap gap-4 mb-8">
 
-        <Btn
-          text="Ficha"
-          set={() => setSection('Ficha')}
-        />
+        <Btn text="Ficha" set={() => setSection('Ficha')} />
 
-        <Btn
-          text="Rutinas"
-          set={() => setSection('Rutinas')}
-        />
+        <Btn text="Rutinas" set={() => setSection('Rutinas')} />
 
-        <Btn
-          text="Generador"
-          set={() => setSection('Generador')}
-        />
+        <Btn text="Generador" set={() => setSection('Generador')} />
 
-        <Btn
-          text="Pago / deuda"
-          set={() => setSection('Pago')}
-        />
+        <Btn text="Pago / deuda" set={() => setSection('Pago')} />
 
-        <Btn
-          text="Asistencia QR"
-          set={() => setSection('Asistencia')}
-        />
+        <Btn text="Asistencia QR" set={() => setSection('Asistencia')} />
 
         {isAdmin && (
 
           <Btn
-            text="Admin alumnos"
+            text="ADMIN ALUMNOS"
             set={() => setSection('Admin')}
           />
 
@@ -220,11 +216,11 @@ export default function App() {
 
           </div>
 
-          <h3 className="text-3xl font-black text-red-500 mt-8">
+          <h3 className="text-3xl font-black text-red-500 mt-10 mb-5">
             MIS RM
           </h3>
 
-          <div className="grid md:grid-cols-3 gap-3 mt-4">
+          <div className="grid md:grid-cols-3 gap-3">
 
             <input
               placeholder="Ejercicio"
@@ -273,21 +269,13 @@ export default function App() {
                   {rm.ejercicio}
                 </h4>
 
-                <p>
-                  RM: {rm.rm_kg} kg
-                </p>
+                <p>RM: {rm.rm_kg} KG</p>
 
-                <p>
-                  70%: {Math.round(rm.rm_kg * 0.7)} kg
-                </p>
+                <p>70%: {Math.round(rm.rm_kg * 0.7)} KG</p>
 
-                <p>
-                  80%: {Math.round(rm.rm_kg * 0.8)} kg
-                </p>
+                <p>80%: {Math.round(rm.rm_kg * 0.8)} KG</p>
 
-                <p>
-                  90%: {Math.round(rm.rm_kg * 0.9)} kg
-                </p>
+                <p>90%: {Math.round(rm.rm_kg * 0.9)} KG</p>
 
               </div>
 
@@ -345,16 +333,16 @@ export default function App() {
 
         <Panel title="ADMINISTRADOR ALUMNOS">
 
-          <div className="space-y-6">
+          <div className="space-y-8">
 
             {students.map((a) => (
 
               <div
                 key={a.id}
-                className="bg-zinc-800 rounded-3xl p-6"
+                className="bg-zinc-800 rounded-3xl p-6 border border-yellow-500"
               >
 
-                <h3 className="text-2xl font-black text-yellow-400 mb-5">
+                <h3 className="text-3xl font-black text-yellow-400 mb-6">
                   {a.nombre}
                 </h3>
 
@@ -389,6 +377,33 @@ export default function App() {
                     value={a.categoria || ''}
                     onSave={(v) =>
                       actualizarAlumno(a.id, 'categoria', v)
+                    }
+                  />
+
+                  <AdminInput
+                    label="Edad"
+                    type="number"
+                    value={a.edad || 0}
+                    onSave={(v) =>
+                      actualizarAlumno(a.id, 'edad', Number(v))
+                    }
+                  />
+
+                  <AdminInput
+                    label="Peso"
+                    type="number"
+                    value={a.peso || 0}
+                    onSave={(v) =>
+                      actualizarAlumno(a.id, 'peso', Number(v))
+                    }
+                  />
+
+                  <AdminInput
+                    label="Altura"
+                    type="number"
+                    value={a.altura || 0}
+                    onSave={(v) =>
+                      actualizarAlumno(a.id, 'altura', Number(v))
                     }
                   />
 
@@ -507,7 +522,10 @@ export default function App() {
                       className="w-full bg-zinc-800 p-3 rounded-xl"
                     >
 
-                      <option value="">Alumno</option>
+                      <option value="">
+                        Alumno
+                      </option>
+
                       <option value="admin">
                         Administrador
                       </option>
