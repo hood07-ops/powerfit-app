@@ -1,101 +1,115 @@
 import { useEffect, useState } from 'react'
+import './App.css'
+
 import { supabase } from './supabase'
 
 import LoginPage from './pages/LoginPage'
 import RutinasPage from './pages/RutinasPage'
+import EstadisticasPage from './pages/EstadisticasPage'
+import AsistenciaPage from './pages/AsistenciaPage'
 import GeneradorPage from './pages/GeneradorPage'
+import AlumnoFichaPage from './pages/AlumnoFichaPage'
+import MetodosPage from './pages/MetodosPage'
+
+function Btn({ text, set }) {
+  return (
+    <button
+      onClick={set}
+      className="bg-zinc-800 hover:bg-red-600 px-4 py-3 rounded-2xl font-black"
+    >
+      {text}
+    </button>
+  )
+}
 
 export default function App() {
 
   const [user, setUser] = useState(null)
+
   const [student, setStudent] = useState(null)
 
   const [students, setStudents] = useState([])
 
-  const [section, setSection] = useState('Ficha')
+  const [loading, setLoading] = useState(true)
 
-  const [rms, setRms] = useState([])
+  const [section, setSection] = useState('Rutinas')
 
-  const [nuevoRM, setNuevoRM] = useState({
-    ejercicio: '',
-    rm_kg: '',
-  })
+  const [isAdmin, setIsAdmin] = useState(false)
 
   useEffect(() => {
-    cargarUsuario()
+
+    checkUser()
+
   }, [])
 
-  async function cargarUsuario() {
+  async function checkUser() {
 
-    const { data } = await supabase.auth.getUser()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
 
-    const currentUser = data?.user
+    if (session?.user) {
 
-    if (!currentUser) {
-      setUser(null)
-      return
+      setUser(session.user)
+
+      await cargarUsuario(session.user)
+
     }
 
-    setUser(currentUser)
+    setLoading(false)
 
-    const { data: alumno } = await supabase
-      .from('alumnos')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .single()
-
-    setStudent(alumno || null)
-
-    if (alumno) {
-      cargarRms(alumno.id)
-    }
-
-    const { data: alumnosData, error } = await supabase
-      .from('alumnos')
-      .select('*')
-      .order('id', { ascending: false })
-
-    if (error) {
-      console.log(error.message)
-    }
-
-    setStudents(alumnosData || [])
   }
 
-  async function cargarRms(alumnoId) {
+  async function cargarUsuario(usuario) {
 
     const { data } = await supabase
-      .from('rm_alumnos')
+      .from('alumnos')
       .select('*')
-      .eq('alumno_id', alumnoId)
+      .eq('user_id', usuario.id)
+      .single()
 
-    setRms(data || [])
+    if (data) {
+
+      setStudent(data)
+
+      if (data.role === 'admin') {
+
+        setIsAdmin(true)
+
+        cargarTodosLosAlumnos()
+
+      }
+
+    }
+
   }
 
-  async function guardarRM() {
+  async function cargarTodosLosAlumnos() {
 
-    if (!student) return
+    const { data } = await supabase
+      .from('alumnos')
+      .select('*')
+      .order('id', {
+        ascending: false,
+      })
 
-    await supabase
-      .from('rm_alumnos')
-      .insert([
-        {
-          alumno_id: student.id,
-          user_id: student.user_id,
-          ejercicio: nuevoRM.ejercicio,
-          rm_kg: Number(nuevoRM.rm_kg),
-        },
-      ])
+    setStudents(data || [])
 
-    setNuevoRM({
-      ejercicio: '',
-      rm_kg: '',
-    })
-
-    cargarRms(student.id)
   }
 
-  async function actualizarAlumno(id, campo, valor) {
+  async function cerrarSesion() {
+
+    await supabase.auth.signOut()
+
+    window.location.reload()
+
+  }
+
+  async function actualizarEstado(
+    id,
+    campo,
+    valor
+  ) {
 
     await supabase
       .from('alumnos')
@@ -104,495 +118,303 @@ export default function App() {
       })
       .eq('id', id)
 
-    cargarUsuario()
+    cargarTodosLosAlumnos()
+
   }
 
-  async function cerrarSesion() {
+  if (loading) {
 
-    await supabase.auth.signOut()
+    return (
+      <div className="text-white p-10">
+        Cargando...
+      </div>
+    )
 
-    setUser(null)
-    setStudent(null)
   }
 
   if (!user) {
-    return <LoginPage onLogin={setUser} />
-  }
 
-  const isAdmin =
-    student?.role?.toLowerCase() === 'admin'
+    return (
+      <LoginPage />
+    )
+
+  }
 
   return (
 
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="min-h-screen bg-black text-white p-4">
 
-      <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6 mb-8 flex justify-between">
+      <div className="bg-zinc-900 border border-red-600 rounded-3xl p-5 mb-6">
 
-        <div>
+        <div className="flex flex-wrap justify-between items-center gap-4">
 
-          <h1 className="text-4xl font-black text-red-500">
-            POWERFIT 360
-          </h1>
+          <div>
 
-          <p className="text-xl mt-2">
-            {student?.nombre || user.email}
-          </p>
+            <h1 className="text-4xl font-black text-red-500">
+              POWERFIT 360
+            </h1>
 
-          <p className="text-yellow-400 font-black">
-            {isAdmin ? 'Administrador' : 'Alumno'}
-          </p>
+            <p className="text-zinc-400 mt-2">
+              {student?.nombre}
+            </p>
 
-          <p className="text-green-400 font-black">
-            Estado: {student?.estado_pago || 'Pendiente'}
-          </p>
+            <p className="text-yellow-400 font-black">
+              {isAdmin
+                ? 'ADMINISTRADOR'
+                : 'ALUMNO'}
+            </p>
+
+          </div>
+
+          <button
+            onClick={cerrarSesion}
+            className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl font-black"
+          >
+            Cerrar sesión
+          </button>
 
         </div>
 
-        <button
-          onClick={cerrarSesion}
-          className="bg-red-600 hover:bg-red-700 px-6 py-4 rounded-2xl font-black"
-        >
-          Cerrar sesión
-        </button>
-
       </div>
 
-      <div className="flex flex-wrap gap-4 mb-8">
+      <div className="flex flex-wrap gap-3 mb-8">
 
-        <Btn text="Ficha" set={() => setSection('Ficha')} />
+        <Btn
+          text="Rutinas"
+          set={() =>
+            setSection('Rutinas')
+          }
+        />
 
-        <Btn text="Rutinas" set={() => setSection('Rutinas')} />
+        <Btn
+          text="Generador IA"
+          set={() =>
+            setSection('Generador')
+          }
+        />
 
-        <Btn text="Generador" set={() => setSection('Generador')} />
+        <Btn
+          text="Asistencia QR"
+          set={() =>
+            setSection('Asistencia')
+          }
+        />
 
-        <Btn text="Pagos" set={() => setSection('Pagos')} />
+        <Btn
+          text="Estadísticas"
+          set={() =>
+            setSection('Stats')
+          }
+        />
 
-        <Btn text="QR" set={() => setSection('QR')} />
+        <Btn
+          text="Métodos"
+          set={() =>
+            setSection('Metodos')
+          }
+        />
 
         {isAdmin && (
-          <Btn text="ADMIN" set={() => setSection('Admin')} />
+
+          <Btn
+            text="ADMIN"
+            set={() =>
+              setSection('Admin')
+            }
+          />
+
         )}
 
       </div>
 
-      {section === 'Ficha' && (
-
-        <Panel title="Ficha personal">
-
-          <div className="grid md:grid-cols-2 gap-4">
-
-            <Info label="Nombre" value={student?.nombre} />
-            <Info label="Correo" value={student?.email} />
-            <Info label="Teléfono" value={student?.telefono} />
-            <Info label="Edad" value={student?.edad} />
-            <Info label="Peso" value={student?.peso} />
-            <Info label="Altura" value={student?.altura} />
-            <Info label="XP" value={student?.xp || 0} />
-            <Info label="Plan" value={student?.plan} />
-            <Info label="Premium" value={student?.bloques_premium || 0} />
-            <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
-
-          </div>
-
-          <h2 className="text-3xl font-black text-red-500 mt-10 mb-5">
-            RM DEL ALUMNO
-          </h2>
-
-          <div className="grid md:grid-cols-3 gap-4">
-
-            <input
-              placeholder="Ejercicio"
-              value={nuevoRM.ejercicio}
-              onChange={(e) =>
-                setNuevoRM({
-                  ...nuevoRM,
-                  ejercicio: e.target.value,
-                })
-              }
-              className="bg-zinc-800 p-4 rounded-2xl"
-            />
-
-            <input
-              type="number"
-              placeholder="RM KG"
-              value={nuevoRM.rm_kg}
-              onChange={(e) =>
-                setNuevoRM({
-                  ...nuevoRM,
-                  rm_kg: e.target.value,
-                })
-              }
-              className="bg-zinc-800 p-4 rounded-2xl"
-            />
-
-            <button
-              onClick={guardarRM}
-              className="bg-red-600 rounded-2xl font-black"
-            >
-              Guardar RM
-            </button>
-
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-4 mt-6">
-
-            {rms.map((rm) => (
-
-              <div
-                key={rm.id}
-                className="bg-zinc-800 p-4 rounded-2xl"
-              >
-
-                <h3 className="text-yellow-400 font-black text-xl">
-                  {rm.ejercicio}
-                </h3>
-
-                <p>RM: {rm.rm_kg} KG</p>
-
-                <p>70%: {Math.round(rm.rm_kg * 0.7)} KG</p>
-
-                <p>80%: {Math.round(rm.rm_kg * 0.8)} KG</p>
-
-                <p>90%: {Math.round(rm.rm_kg * 0.9)} KG</p>
-
-              </div>
-
-            ))}
-
-          </div>
-
-        </Panel>
-
-      )}
-
       {section === 'Rutinas' && (
-        <RutinasPage student={student} />
+
+        <RutinasPage
+          student={student}
+        />
+
       )}
 
       {section === 'Generador' && (
+
         <GeneradorPage
           student={student}
-          onUpdateStudent={cargarUsuario}
+          onUpdateStudent={
+            cargarUsuario
+          }
         />
-      )}
-
-      {section === 'Pagos' && (
-
-        <Panel title="Pagos y estado">
-
-          <div className="grid md:grid-cols-2 gap-4">
-
-            <Info label="Estado pago" value={student?.estado_pago} />
-            <Info label="Monto" value={`$${student?.monto || 0}`} />
-            <Info label="Fecha pago" value={student?.fecha_pago} />
-            <Info label="Vencimiento" value={student?.fecha_vencimiento} />
-
-          </div>
-
-        </Panel>
 
       )}
 
-      {section === 'QR' && (
+      {section === 'Asistencia' && (
 
-        <Panel title="Asistencia QR">
-
-          <img
-            alt="qr"
-            className="bg-white p-4 rounded-2xl"
-            src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(window.location.origin)}`}
-          />
-
-        </Panel>
+        <AsistenciaPage
+          student={student}
+        />
 
       )}
 
-      {section === 'Admin' && isAdmin && (
+      {section === 'Stats' && (
 
-        <Panel title="ADMINISTRADOR">
+        <EstadisticasPage
+          student={student}
+        />
 
-          <div className="space-y-8">
+      )}
 
-            {students.map((a) => (
+      {section === 'Metodos' && (
 
-              <div
-                key={a.id}
-                className="bg-zinc-800 rounded-3xl p-6 border border-yellow-500"
-              >
+        <MetodosPage />
 
-                <h2 className="text-3xl font-black text-yellow-400 mb-6">
-                  {a.nombre}
-                </h2>
+      )}
 
-                <div className="grid md:grid-cols-3 gap-4">
+      {section === 'Admin' &&
+        isAdmin && (
 
-                  <AdminInput
-                    label="Nombre"
-                    value={a.nombre || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'nombre', v)
-                    }
-                  />
+          <div className="space-y-6">
 
-                  <AdminInput
-                    label="Correo"
-                    value={a.email || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'email', v)
-                    }
-                  />
+            <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
 
-                  <AdminInput
-                    label="Teléfono"
-                    value={a.telefono || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'telefono', v)
-                    }
-                  />
+              <h2 className="text-4xl font-black text-yellow-400 mb-6">
+                PANEL ADMIN
+              </h2>
 
-                  <AdminInput
-                    label="Edad"
-                    type="number"
-                    value={a.edad || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'edad', Number(v))
-                    }
-                  />
+              <div className="space-y-5">
 
-                  <AdminInput
-                    label="Peso"
-                    type="number"
-                    value={a.peso || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'peso', Number(v))
-                    }
-                  />
+                {students.map((a) => (
 
-                  <AdminInput
-                    label="Altura"
-                    type="number"
-                    value={a.altura || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'altura', Number(v))
-                    }
-                  />
+                  <div
+                    key={a.id}
+                    className="bg-zinc-800 rounded-3xl p-5"
+                  >
 
-                  <AdminInput
-                    label="Fecha ingreso"
-                    type="date"
-                    value={a.fecha_ingreso || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'fecha_ingreso', v)
-                    }
-                  />
+                    <div className="grid md:grid-cols-4 gap-4">
 
-                  <AdminInput
-                    label="Fecha pago"
-                    type="date"
-                    value={a.fecha_pago || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'fecha_pago', v)
-                    }
-                  />
+                      <div>
 
-                  <AdminInput
-                    label="Vencimiento"
-                    type="date"
-                    value={a.fecha_vencimiento || ''}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'fecha_vencimiento', v)
-                    }
-                  />
+                        <p className="text-zinc-400">
+                          Alumno
+                        </p>
 
-                  <AdminInput
-                    label="Monto"
-                    type="number"
-                    value={a.monto || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'monto', Number(v))
-                    }
-                  />
+                        <p className="font-black text-xl">
+                          {a.nombre}
+                        </p>
 
-                  <AdminInput
-                    label="XP"
-                    type="number"
-                    value={a.xp || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(a.id, 'xp', Number(v))
-                    }
-                  />
+                      </div>
 
-                  <AdminInput
-                    label="Premium"
-                    type="number"
-                    value={a.bloques_premium || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(
-                        a.id,
-                        'bloques_premium',
-                        Number(v)
-                      )
-                    }
-                  />
+                      <div>
 
-                  <AdminInput
-                    label="Generaciones"
-                    type="number"
-                    value={a.generaciones_disponibles || 0}
-                    onSave={(v) =>
-                      actualizarAlumno(
-                        a.id,
-                        'generaciones_disponibles',
-                        Number(v)
-                      )
-                    }
-                  />
+                        <p className="text-zinc-400">
+                          Estado Pago
+                        </p>
 
-                  <div className="bg-zinc-900 rounded-2xl p-4">
+                        <select
+                          value={
+                            a.estado_pago ||
+                            'pendiente'
+                          }
+                          onChange={(e) =>
+                            actualizarEstado(
+                              a.id,
+                              'estado_pago',
+                              e.target.value
+                            )
+                          }
+                          className="bg-black p-3 rounded-xl w-full"
+                        >
 
-                    <p className="text-zinc-400 mb-2">
-                      Estado pago
-                    </p>
+                          <option value="pagado">
+                            Pagado
+                          </option>
 
-                    <select
-                      value={a.estado_pago || 'Pendiente'}
-                      onChange={(e) =>
-                        actualizarAlumno(
-                          a.id,
-                          'estado_pago',
-                          e.target.value
-                        )
-                      }
-                      className="w-full bg-zinc-800 p-3 rounded-xl"
-                    >
+                          <option value="pendiente">
+                            Pendiente
+                          </option>
 
-                      <option>Pendiente</option>
-                      <option>Pagado</option>
-                      <option>Vencido</option>
+                          <option value="vencido">
+                            Vencido
+                          </option>
 
-                    </select>
+                        </select>
+
+                      </div>
+
+                      <div>
+
+                        <p className="text-zinc-400">
+                          Premium
+                        </p>
+
+                        <select
+                          value={
+                            a.bloques_premium
+                          }
+                          onChange={(e) =>
+                            actualizarEstado(
+                              a.id,
+                              'bloques_premium',
+                              Number(
+                                e.target.value
+                              )
+                            )
+                          }
+                          className="bg-black p-3 rounded-xl w-full"
+                        >
+
+                          <option value={0}>
+                            No
+                          </option>
+
+                          <option value={1}>
+                            Sí
+                          </option>
+
+                        </select>
+
+                      </div>
+
+                      <div>
+
+                        <p className="text-zinc-400">
+                          Generaciones
+                        </p>
+
+                        <input
+                          type="number"
+                          value={
+                            a.generaciones_disponibles ||
+                            0
+                          }
+                          onChange={(e) =>
+                            actualizarEstado(
+                              a.id,
+                              'generaciones_disponibles',
+                              Number(
+                                e.target.value
+                              )
+                            )
+                          }
+                          className="bg-black p-3 rounded-xl w-full"
+                        />
+
+                      </div>
+
+                    </div>
 
                   </div>
 
-                  <div className="bg-zinc-900 rounded-2xl p-4">
-
-                    <p className="text-zinc-400 mb-2">
-                      Rol
-                    </p>
-
-                    <select
-                      value={a.role || ''}
-                      onChange={(e) =>
-                        actualizarAlumno(
-                          a.id,
-                          'role',
-                          e.target.value
-                        )
-                      }
-                      className="w-full bg-zinc-800 p-3 rounded-xl"
-                    >
-
-                      <option value="">
-                        Alumno
-                      </option>
-
-                      <option value="admin">
-                        Admin
-                      </option>
-
-                    </select>
-
-                  </div>
-
-                </div>
+                ))}
 
               </div>
 
-            ))}
+            </div>
 
           </div>
 
-        </Panel>
-
-      )}
-
-    </div>
-  )
-}
-
-function Btn({ text, set }) {
-
-  return (
-
-    <button
-      onClick={set}
-      className="bg-zinc-800 hover:bg-zinc-700 px-6 py-4 rounded-2xl font-black"
-    >
-      {text}
-    </button>
-
-  )
-}
-
-function Panel({ title, children }) {
-
-  return (
-
-    <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
-
-      <h2 className="text-4xl font-black text-yellow-400 mb-6">
-        {title}
-      </h2>
-
-      {children}
+        )}
 
     </div>
 
   )
-}
 
-function Info({ label, value }) {
-
-  return (
-
-    <div className="bg-zinc-800 p-4 rounded-2xl">
-
-      <p className="text-zinc-400">
-        {label}
-      </p>
-
-      <p className="text-xl font-black">
-        {value || '-'}
-      </p>
-
-    </div>
-
-  )
-}
-
-function AdminInput({
-  label,
-  value,
-  onSave,
-  type = 'text',
-}) {
-
-  return (
-
-    <div className="bg-zinc-900 rounded-2xl p-4">
-
-      <p className="text-zinc-400 mb-2">
-        {label}
-      </p>
-
-      <input
-        type={type}
-        defaultValue={value}
-        onBlur={(e) => onSave(e.target.value)}
-        className="w-full bg-zinc-800 p-3 rounded-xl"
-      />
-
-    </div>
-
-  )
 }
