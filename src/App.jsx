@@ -56,12 +56,16 @@ export default function App() {
 
     }
 
-    const { data: alumnosData } = await supabase
-      .from('alumnos')
-      .select('*')
-      .order('nombre')
+    const { data: alumnosData, error: alumnosError } = await supabase
+  .from('alumnos')
+  .select('*')
+  .order('id', { ascending: false })
 
-    setStudents(alumnosData || [])
+if (alumnosError) {
+  console.log('Error cargando alumnos:', alumnosError.message)
+}
+
+setStudents(alumnosData || [])
 
   }
 
