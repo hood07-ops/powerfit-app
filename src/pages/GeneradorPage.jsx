@@ -2,18 +2,21 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarEntrenamiento } from './workoutSystem'
 
+const ADMIN_WHATSAPP = '56900000000' // CAMBIA ESTE NÚMERO POR EL TUYO
+
 export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
-  const [cantidad, setCantidad] = useState(2)
+  const [cantidad, setCantidad] = useState(1)
   const [rms, setRms] = useState([])
   const [planificaciones, setPlanificaciones] = useState([])
+  const [planAbierto, setPlanAbierto] = useState(null)
   const [mensaje, setMensaje] = useState('')
 
   useEffect(() => {
     cargarRM()
-    cargarPlanificaciones()
+    cargarPlanificacionesMes()
   }, [student])
 
   async function cargarRM() {
@@ -27,13 +30,19 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     setRms(data || [])
   }
 
-  async function cargarPlanificaciones() {
+  async function cargarPlanificacionesMes() {
     if (!student?.id) return
+
+    const hoy = new Date()
+    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString()
+    const inicioMesSiguiente = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1).toISOString()
 
     const { data } = await supabase
       .from('planificaciones_generadas')
       .select('*')
       .eq('alumno_id', student.id)
+      .gte('created_at', inicioMes)
+      .lt('created_at', inicioMesSiguiente)
       .order('created_at', { ascending: false })
 
     setPlanificaciones(data || [])
@@ -41,13 +50,10 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
 
   function textoPlan(p, numero) {
     return `
-==========================
-PLANIFICACIÓN ${numero}
-==========================
-
 POWERFIT 360
-${p.titulo}
+PLANIFICACIÓN ${numero}
 
+Fecha: ${new Date().toLocaleString()}
 Alumno: ${student?.nombre || ''}
 Objetivo: ${p.objetivo}
 Nivel: ${p.nivel}
@@ -98,7 +104,7 @@ ${contenido}
     const a = document.createElement('a')
 
     a.href = url
-    a.download = `PowerFit-360-${student?.nombre || 'alumno'}-${Date.now()}.doc`
+    a.download = `PowerFit-${student?.nombre || 'alumno'}-${Date.now()}.doc`
     a.click()
 
     URL.revokeObjectURL(url)
@@ -108,14 +114,10 @@ ${contenido}
     if (!student) return
 
     const disponibles = Number(student?.generaciones_disponibles || 0)
-    const cantidadFinal = Math.min(
-  Number(cantidad || 1),
-  disponibles,
-  2
-)
+    const cantidadFinal = Math.min(Number(cantidad || 1), disponibles, 2)
 
     if (cantidadFinal <= 0) {
-      setMensaje('Ya usaste tus 6 generaciones disponibles.')
+      setMensaje('No tienes generaciones disponibles. Compra +2 por $5.000.')
       return
     }
 
@@ -129,7 +131,7 @@ ${contenido}
         rms,
       })
 
-      const contenido = textoPlan(plan, i)
+      const contenido = textoPlan(plan, planificaciones.length + i)
 
       const { data, error } = await supabase
         .from('planificaciones_generadas')
@@ -161,20 +163,30 @@ ${contenido}
       })
       .eq('id', student.id)
 
-    const contenidoWord = nuevosPlanes
-      .map((p) => p.contenido)
-      .join('\n\n\n')
-
+    const contenidoWord = nuevosPlanes.map((p) => p.contenido).join('\n\n')
     descargarWord(contenidoWord)
 
-    setMensaje(`${cantidadFinal} planificaciones generadas y descargadas.`)
-
-    await cargarPlanificaciones()
+    setMensaje(`${cantidadFinal} planificación(es) generada(s) y descargada(s).`)
+    await cargarPlanificacionesMes()
     onUpdateStudent?.()
   }
 
-  function descargarGuardada(plan) {
-    descargarWord(plan.contenido)
+  async function solicitarCompra() {
+    if (!student) return
+
+    await supabase.from('solicitudes_compra').insert([
+      {
+        user_id: student.user_id,
+        alumno_id: student.id,
+        nombre_alumno: student.nombre,
+        monto: 5000,
+        generaciones: 2,
+        estado: 'pendiente',
+      },
+    ])
+
+    const texto = `Hola, soy ${student.nombre}. Quiero comprar +2 planificaciones PowerFit por $5.000.`
+    window.open(`https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`, '_blank')
   }
 
   return (
@@ -185,47 +197,35 @@ ${contenido}
         </h1>
 
         <p className="text-yellow-400 mt-3 font-black text-xl">
-          Generaciones disponibles: {student?.generaciones_disponibles || 0} / 6
+          Disponibles: {student?.generaciones_disponibles || 0}
+        </p>
+
+        <p className="text-zinc-400 mt-2">
+          Planificaciones visibles este mes: {planificaciones.length}
         </p>
       </div>
 
       <div className="grid md:grid-cols-4 gap-4">
-        <select
-          value={objetivo}
-          onChange={(e) => setObjetivo(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
+        <select value={objetivo} onChange={(e) => setObjetivo(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
           <option value="fighter">Fighter</option>
           <option value="fuerza">Fuerza</option>
           <option value="perdida_grasa">Pérdida grasa</option>
           <option value="cardio">Cardio</option>
         </select>
 
-        <select
-          value={nivel}
-          onChange={(e) => setNivel(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
+        <select value={nivel} onChange={(e) => setNivel(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
           <option value="basico">Básico</option>
           <option value="intermedio">Intermedio</option>
           <option value="avanzado">Avanzado</option>
         </select>
 
-        <select
-          value={faseATR}
-          onChange={(e) => setFaseATR(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
+        <select value={faseATR} onChange={(e) => setFaseATR(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
           <option value="acumulacion">ATR Acumulación</option>
           <option value="transformacion">ATR Transformación</option>
           <option value="realizacion">ATR Realización</option>
         </select>
 
-        <select
-          value={cantidad}
-          onChange={(e) => setCantidad(Number(e.target.value))}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
+        <select value={cantidad} onChange={(e) => setCantidad(Number(e.target.value))} className="bg-zinc-800 p-4 rounded-2xl">
           <option value={1}>1 planificación</option>
           <option value={2}>2 planificaciones</option>
         </select>
@@ -235,7 +235,14 @@ ${contenido}
         onClick={generar}
         className="w-full bg-red-600 hover:bg-red-700 p-5 rounded-2xl font-black text-xl"
       >
-        GENERAR PLANIFICACIONES
+        GENERAR PLANIFICACIÓN
+      </button>
+
+      <button
+        onClick={solicitarCompra}
+        className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
+      >
+        COMPRAR +2 PLANIFICACIONES — $5.000
       </button>
 
       {mensaje && (
@@ -244,37 +251,62 @@ ${contenido}
         </div>
       )}
 
-      <div className="space-y-8">
+      <div className="grid md:grid-cols-2 gap-6">
         {planificaciones.map((plan) => (
-          <div
-            key={plan.id}
-            className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6"
-          >
-            <div className="flex justify-between items-center mb-5">
-              <div>
-                <h2 className="text-2xl font-black text-yellow-400">
-                  {plan.objetivo?.toUpperCase()}
-                </h2>
+          <div key={plan.id} className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
+            <h2 className="text-2xl font-black text-yellow-400">
+              {plan.objetivo?.toUpperCase()}
+            </h2>
 
-                <p className="text-zinc-400">
-                  {new Date(plan.created_at).toLocaleString()}
-                </p>
-              </div>
+            <p className="text-zinc-400 mt-2">
+              Fecha: {new Date(plan.created_at).toLocaleString()}
+            </p>
+
+            <div className="flex gap-3 mt-5">
+              <button
+                onClick={() => setPlanAbierto(plan)}
+                className="bg-red-600 px-5 py-3 rounded-2xl font-black"
+              >
+                Ver planificación
+              </button>
 
               <button
-                onClick={() => descargarGuardada(plan)}
-                className="bg-blue-600 hover:bg-blue-700 px-5 py-3 rounded-2xl font-black"
+                onClick={() => descargarWord(plan.contenido)}
+                className="bg-blue-600 px-5 py-3 rounded-2xl font-black"
               >
-                Descargar Word
+                Word
               </button>
             </div>
-
-            <pre className="whitespace-pre-wrap text-sm">
-              {plan.contenido}
-            </pre>
           </div>
         ))}
       </div>
+
+      {planAbierto && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
+          <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6 max-w-4xl max-h-[85vh] overflow-auto">
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-3xl font-black text-yellow-400">
+                Planificación
+              </h2>
+
+              <button
+                onClick={() => setPlanAbierto(null)}
+                className="bg-red-600 px-4 py-2 rounded-xl font-black"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <p className="text-zinc-400 mb-4">
+              Fecha: {new Date(planAbierto.created_at).toLocaleString()}
+            </p>
+
+            <pre className="whitespace-pre-wrap text-sm">
+              {planAbierto.contenido}
+            </pre>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
