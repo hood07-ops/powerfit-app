@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarEntrenamiento } from './workoutSystem'
+const ADMIN_WHATSAPP = '56988497852'
 
 export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
@@ -167,7 +168,36 @@ ${contenido}
     await cargarPlanificacionesMes()
     onUpdateStudent?.()
   }
+async function solicitarCompra() {
+  if (!student) return
 
+  const { error } = await supabase
+    .from('solicitudes_compra')
+    .insert([
+      {
+        user_id: student.user_id,
+        alumno_id: student.id,
+        nombre_alumno: student.nombre,
+        monto: 5000,
+        generaciones: 2,
+        estado: 'Pendiente',
+      },
+    ])
+
+  if (error) {
+    setMensaje(error.message)
+    return
+  }
+
+  const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar +2 planificaciones PowerFit por $5.000.`
+
+  window.open(
+    `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
+    '_blank'
+  )
+
+  setMensaje('Solicitud enviada correctamente.')
+}
   return (
     <div className="space-y-8">
       <div className="bg-zinc-900 border border-red-600 rounded-3xl p-6">
@@ -232,6 +262,12 @@ ${contenido}
       >
         GENERAR PLANIFICACIÓN
       </button>
+      <button
+  onClick={solicitarCompra}
+  className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
+>
+  COMPRAR +2 PLANIFICACIONES — $5.000
+</button>
 
       {mensaje && (
         <div className="bg-yellow-500 text-black p-4 rounded-2xl font-black">

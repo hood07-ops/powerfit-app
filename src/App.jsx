@@ -34,6 +34,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
   const [students, setStudents] = useState([])
+  const [solicitudes, setSolicitudes] = useState([])
   const [section, setSection] = useState('Ficha')
   const [loading, setLoading] = useState(true)
 
@@ -66,6 +67,13 @@ export default function App() {
 
     setStudent(alumno || null)
 
+    const { data: solicitudesData } = await supabase
+      .from('solicitudes_compra')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    setSolicitudes(solicitudesData || [])
+
     const { data: alumnosData } = await supabase
       .from('alumnos')
       .select('*')
@@ -97,7 +105,31 @@ export default function App() {
     await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
     await cargarUsuario()
   }
+async function aprobarSolicitud(solicitud) {
+  const alumno = students.find((a) => a.id === solicitud.alumno_id)
 
+  if (!alumno) return
+
+  const nuevasGeneraciones =
+    Number(alumno.generaciones_disponibles || 0) +
+    Number(solicitud.generaciones || 2)
+
+  await supabase
+    .from('alumnos')
+    .update({
+      generaciones_disponibles: nuevasGeneraciones,
+    })
+    .eq('id', alumno.id)
+
+  await supabase
+    .from('solicitudes_compra')
+    .update({
+      estado: 'Aprobado',
+    })
+    .eq('id', solicitud.id)
+
+  await cargarUsuario()
+}
   async function cerrarSesion() {
     await supabase.auth.signOut()
     window.location.reload()
@@ -184,7 +216,40 @@ export default function App() {
           <h2 className="text-4xl font-black text-yellow-400 mb-6">
             ADMINISTRADOR — ALUMNOS Y PAGOS
           </h2>
+<div className="bg-zinc-800 rounded-3xl p-5 mb-8 border border-green-600">
+  <h3 className="text-3xl font-black text-green-400 mb-5">
+    Solicitudes de compra
+  </h3>
 
+  <div className="space-y-3">
+    {solicitudes.map((s) => (
+      <div
+        key={s.id}
+        className="grid md:grid-cols-5 gap-3 items-center bg-zinc-900 rounded-2xl p-4"
+      >
+        <p className="font-black">{s.nombre_alumno}</p>
+        <p>${s.monto}</p>
+        <p>+{s.generaciones} generaciones</p>
+        <p>{s.estado}</p>
+
+        {s.estado !== 'Aprobado' && (
+          <button
+            onClick={() => aprobarSolicitud(s)}
+            className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
+          >
+            Aprobar +2
+          </button>
+        )}
+      </div>
+    ))}
+
+    {solicitudes.length === 0 && (
+      <p className="text-zinc-400">
+        No hay solicitudes todavía.
+      </p>
+    )}
+  </div>
+</div>
           <div className="space-y-3">
             {students.map((a) => (
               <div
