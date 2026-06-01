@@ -12,10 +12,12 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [planificaciones, setPlanificaciones] = useState([])
   const [planAbierto, setPlanAbierto] = useState(null)
   const [mensaje, setMensaje] = useState('')
+  const [disponiblesLocal, setDisponiblesLocal] = useState(0)
 
   useEffect(() => {
     cargarRM()
     cargarPlanificacionesMes()
+    setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
   }, [student])
 
   async function cargarRM() {
@@ -112,7 +114,7 @@ ${contenido}
   async function generar() {
     if (!student) return
 
-    const disponibles = Number(student?.generaciones_disponibles || 0)
+    const disponibles = Number(disponiblesLocal || 0)
     const cantidadFinal = Math.min(Number(cantidad || 1), disponibles, 2)
 
     if (cantidadFinal <= 0) {
@@ -161,6 +163,7 @@ ${contenido}
         generaciones_disponibles: disponibles - cantidadFinal,
       })
       .eq('id', student.id)
+      setDisponiblesLocal(disponibles - cantidadFinal)
 
     descargarWord(nuevosPlanes.map((p) => p.contenido).join('\n\n'))
 
@@ -168,36 +171,7 @@ ${contenido}
     await cargarPlanificacionesMes()
     onUpdateStudent?.()
   }
-async function solicitarCompra() {
-  if (!student) return
 
-  const { error } = await supabase
-    .from('solicitudes_compra')
-    .insert([
-      {
-        user_id: student.user_id,
-        alumno_id: student.id,
-        nombre_alumno: student.nombre,
-        monto: 5000,
-        generaciones: 2,
-        estado: 'Pendiente',
-      },
-    ])
-
-  if (error) {
-    setMensaje(error.message)
-    return
-  }
-
-  const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar +2 planificaciones PowerFit por $5.000.`
-
-  window.open(
-    `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
-    '_blank'
-  )
-
-  setMensaje('Solicitud enviada correctamente.')
-}
   return (
     <div className="space-y-8">
       <div className="bg-zinc-900 border border-red-600 rounded-3xl p-6">
@@ -255,18 +229,23 @@ async function solicitarCompra() {
           <option value={2}>2 planificaciones</option>
         </select>
       </div>
-
+{Number(student?.generaciones_disponibles || 0) <= 0 && (
+  <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
+    Ya usaste tus planificaciones disponibles. Compra +2 por $5.000 para seguir generando.
+  </div>
+)}
       <button
-        onClick={generar}
-        className="w-full bg-red-600 hover:bg-red-700 p-5 rounded-2xl font-black text-xl"
-      >
-        GENERAR PLANIFICACIÓN
-      </button>
-      <button
-  onClick={solicitarCompra}
-  className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
->
-  COMPRAR +2 PLANIFICACIONES — $5.000
+  onClick={generar}
+  disabled={Number(student?.generaciones_disponibles || 0) <= 0}
+  className={`w-full p-5 rounded-2xl font-black text-xl ${
+    Number(student?.generaciones_disponibles || 0) <= 0
+      ? 'bg-zinc-700 opacity-40 cursor-not-allowed'
+      : 'bg-red-600 hover:bg-red-700'
+  }`}
+  >
+  {Number(student?.generaciones_disponibles || 0) <= 0
+    ? 'SIN PLANIFICACIONES DISPONIBLES'
+    : 'GENERAR PLANIFICACIÓN'}
 </button>
 
       {mensaje && (
