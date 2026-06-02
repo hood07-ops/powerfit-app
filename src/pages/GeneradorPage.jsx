@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarEntrenamiento } from './workoutSystem'
+
 const ADMIN_WHATSAPP = '56988497852'
 
 export default function GeneradorPage({ student, onUpdateStudent }) {
@@ -19,6 +20,26 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     cargarPlanificacionesMes()
     setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
   }, [student])
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      refrescarGeneraciones()
+    }, 30000)
+
+    return () => clearInterval(intervalo)
+  }, [student])
+
+  async function refrescarGeneraciones() {
+    if (!student?.id) return
+
+    const { data } = await supabase
+      .from('alumnos')
+      .select('generaciones_disponibles')
+      .eq('id', student.id)
+      .single()
+
+    setDisponiblesLocal(Number(data?.generaciones_disponibles || 0))
+  }
 
   async function cargarRM() {
     if (!student?.id) return
@@ -163,13 +184,45 @@ ${contenido}
         generaciones_disponibles: disponibles - cantidadFinal,
       })
       .eq('id', student.id)
-      setDisponiblesLocal(disponibles - cantidadFinal)
+
+    setDisponiblesLocal(disponibles - cantidadFinal)
 
     descargarWord(nuevosPlanes.map((p) => p.contenido).join('\n\n'))
 
     setMensaje(`${cantidadFinal} planificación(es) generada(s), guardada(s) y descargada(s).`)
     await cargarPlanificacionesMes()
     onUpdateStudent?.()
+  }
+
+  async function solicitarCompra() {
+    if (!student) return
+
+    const { error } = await supabase
+      .from('solicitudes_compra')
+      .insert([
+        {
+          user_id: student.user_id,
+          alumno_id: student.id,
+          nombre_alumno: student.nombre,
+          monto: 5000,
+          generaciones: 2,
+          estado: 'Pendiente',
+        },
+      ])
+
+    if (error) {
+      setMensaje(error.message)
+      return
+    }
+
+    const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar +2 planificaciones PowerFit por $5.000.`
+
+    window.open(
+      `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
+      '_blank'
+    )
+
+    setMensaje('Solicitud enviada correctamente.')
   }
 
   return (
@@ -180,7 +233,7 @@ ${contenido}
         </h1>
 
         <p className="text-yellow-400 mt-3 font-black text-xl">
-          Generaciones disponibles: {student?.generaciones_disponibles || 0}
+          Generaciones disponibles: {disponiblesLocal}
         </p>
 
         <p className="text-zinc-400 mt-2">
@@ -229,24 +282,33 @@ ${contenido}
           <option value={2}>2 planificaciones</option>
         </select>
       </div>
-{Number(student?.generaciones_disponibles || 0) <= 0 && (
-  <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
-    Ya usaste tus planificaciones disponibles. Compra +2 por $5.000 para seguir generando.
-  </div>
-)}
+
+      {Number(disponiblesLocal || 0) <= 0 && (
+        <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
+          Ya usaste tus planificaciones disponibles. Compra +2 por $5.000 para seguir generando.
+        </div>
+      )}
+
       <button
-  onClick={generar}
-  disabled={Number(student?.generaciones_disponibles || 0) <= 0}
-  className={`w-full p-5 rounded-2xl font-black text-xl ${
-    Number(student?.generaciones_disponibles || 0) <= 0
-      ? 'bg-zinc-700 opacity-40 cursor-not-allowed'
-      : 'bg-red-600 hover:bg-red-700'
-  }`}
-  >
-  {Number(student?.generaciones_disponibles || 0) <= 0
-    ? 'SIN PLANIFICACIONES DISPONIBLES'
-    : 'GENERAR PLANIFICACIÓN'}
-</button>
+        onClick={generar}
+        disabled={Number(disponiblesLocal || 0) <= 0}
+        className={`w-full p-5 rounded-2xl font-black text-xl ${
+          Number(disponiblesLocal || 0) <= 0
+            ? 'bg-zinc-700 opacity-40 cursor-not-allowed'
+            : 'bg-red-600 hover:bg-red-700'
+        }`}
+      >
+        {Number(disponiblesLocal || 0) <= 0
+          ? 'SIN PLANIFICACIONES DISPONIBLES'
+          : 'GENERAR PLANIFICACIÓN'}
+      </button>
+
+      <button
+        onClick={solicitarCompra}
+        className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
+      >
+        COMPRAR +2 PLANIFICACIONES — $5.000
+      </button>
 
       {mensaje && (
         <div className="bg-yellow-500 text-black p-4 rounded-2xl font-black">
