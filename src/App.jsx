@@ -6,6 +6,8 @@ import LoginPage from './pages/LoginPage'
 import RutinasPage from './pages/RutinasPage'
 import GeneradorPage from './pages/GeneradorPage'
 import MetodosPage from './pages/MetodosPage'
+import RegistroComprasPage from './pages/RegistroComprasPage'
+import RegistroMensualidadesPage from './pages/RegistroMensualidadesPage'
 
 function Btn({ text, set, disabled }) {
   return (
@@ -30,11 +32,30 @@ function Info({ label, value }) {
   )
 }
 
+export function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
+  const contenido =
+    encabezado +
+    '\n' +
+    filas.join('\n') +
+    '\n\n' +
+    `${totalLabel},${total}`
+
+  const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+
+  const a = document.createElement('a')
+  a.href = url
+  a.download = nombreArchivo
+  a.click()
+
+  URL.revokeObjectURL(url)
+}
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
   const [students, setStudents] = useState([])
-  const [solicitudes, setSolicitudes] = useState([])
+  const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
   const [loading, setLoading] = useState(true)
 
@@ -67,12 +88,12 @@ export default function App() {
 
     setStudent(alumno || null)
 
-    const { data: solicitudesData } = await supabase
+    const { data: comprasData } = await supabase
       .from('solicitudes_compra')
       .select('*')
       .order('created_at', { ascending: false })
 
-    setSolicitudes(solicitudesData || [])
+    setRegistroCompras(comprasData || [])
 
     const { data: alumnosData } = await supabase
       .from('alumnos')
@@ -105,31 +126,38 @@ export default function App() {
     await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
     await cargarUsuario()
   }
-async function aprobarSolicitud(solicitud) {
-  const alumno = students.find((a) => a.id === solicitud.alumno_id)
 
-  if (!alumno) return
+  async function aprobarSolicitud(solicitud) {
+    const alumno = students.find((a) => a.id === solicitud.alumno_id)
 
-  const nuevasGeneraciones =
-    Number(alumno.generaciones_disponibles || 0) +
-    Number(solicitud.generaciones || 2)
+    if (!alumno) return
 
-  await supabase
-    .from('alumnos')
-    .update({
-      generaciones_disponibles: nuevasGeneraciones,
-    })
-    .eq('id', alumno.id)
+    const nuevasGeneraciones =
+      Number(alumno.generaciones_disponibles || 0) +
+      Number(solicitud.generaciones || 2)
 
-  await supabase
-    .from('solicitudes_compra')
-    .update({
-      estado: 'Aprobado',
-    })
-    .eq('id', solicitud.id)
+    await supabase
+      .from('alumnos')
+      .update({ generaciones_disponibles: nuevasGeneraciones })
+      .eq('id', alumno.id)
 
-  await cargarUsuario()
-}
+    await supabase
+      .from('solicitudes_compra')
+      .update({ estado: 'Aprobado' })
+      .eq('id', solicitud.id)
+
+    await cargarUsuario()
+  }
+
+  async function eliminarGeneraciones(alumno) {
+    await supabase
+      .from('alumnos')
+      .update({ generaciones_disponibles: 0 })
+      .eq('id', alumno.id)
+
+    await cargarUsuario()
+  }
+
   async function cerrarSesion() {
     await supabase.auth.signOut()
     window.location.reload()
@@ -165,7 +193,10 @@ async function aprobarSolicitud(solicitud) {
         <Btn text="Rutinas" disabled={bloqueado} set={() => setSection('Rutinas')} />
         <Btn text="Generador IA" disabled={bloqueado} set={() => setSection('Generador')} />
         <Btn text="Métodos" disabled={bloqueado} set={() => setSection('Metodos')} />
+
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
+        {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
+        {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
       </div>
 
       {bloqueado && (
@@ -208,7 +239,9 @@ async function aprobarSolicitud(solicitud) {
       )}
 
       {section === 'Rutinas' && !bloqueado && <RutinasPage student={student} />}
-      {section === 'Generador' && !bloqueado && <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />}
+      {section === 'Generador' && !bloqueado && (
+        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
+      )}
       {section === 'Metodos' && !bloqueado && <MetodosPage />}
 
       {section === 'Admin' && isAdmin && (
@@ -216,40 +249,7 @@ async function aprobarSolicitud(solicitud) {
           <h2 className="text-4xl font-black text-yellow-400 mb-6">
             ADMINISTRADOR — ALUMNOS Y PAGOS
           </h2>
-<div className="bg-zinc-800 rounded-3xl p-5 mb-8 border border-green-600">
-  <h3 className="text-3xl font-black text-green-400 mb-5">
-    Solicitudes de compra
-  </h3>
 
-  <div className="space-y-3">
-    {solicitudes.map((s) => (
-      <div
-        key={s.id}
-        className="grid md:grid-cols-5 gap-3 items-center bg-zinc-900 rounded-2xl p-4"
-      >
-        <p className="font-black">{s.nombre_alumno}</p>
-        <p>${s.monto}</p>
-        <p>+{s.generaciones} generaciones</p>
-        <p>{s.estado}</p>
-
-        {s.estado !== 'Aprobado' && (
-          <button
-            onClick={() => aprobarSolicitud(s)}
-            className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
-          >
-            Aprobar +2
-          </button>
-        )}
-      </div>
-    ))}
-
-    {solicitudes.length === 0 && (
-      <p className="text-zinc-400">
-        No hay solicitudes todavía.
-      </p>
-    )}
-  </div>
-</div>
           <div className="space-y-3">
             {students.map((a) => (
               <div
@@ -321,23 +321,44 @@ async function aprobarSolicitud(solicitud) {
                   Moroso
                 </button>
 
-                <div className="md:col-span-9 text-sm text-zinc-300">
-                  Estado actual:{' '}
-                  <span className={
-                    a.estado_pago === 'Pagado'
-                      ? 'text-green-400 font-black'
-                      : 'text-red-400 font-black'
-                  }>
-                    {a.estado_pago || 'Pendiente'}
+                <div className="md:col-span-9 text-sm text-zinc-300 flex flex-wrap gap-3 items-center">
+                  <span>
+                    Estado actual:{' '}
+                    <strong className={a.estado_pago === 'Pagado' ? 'text-green-400' : 'text-red-400'}>
+                      {a.estado_pago || 'Pendiente'}
+                    </strong>
                   </span>
-                  {' '} | Generaciones: {a.generaciones_disponibles || 0}
-                  {' '} | Premium: {a.bloques_premium || 0}
-                  {' '} | Rol: {a.role || 'alumno'}
+
+                  <span>| Generaciones: {a.generaciones_disponibles || 0}</span>
+                  <span>| Premium: {a.bloques_premium || 0}</span>
+                  <span>| Rol: {a.role || 'alumno'}</span>
+
+                  <button
+                    onClick={() => eliminarGeneraciones(a)}
+                    className="bg-red-800 hover:bg-red-900 px-4 py-2 rounded-xl font-black"
+                  >
+                    Eliminar generaciones
+                  </button>
                 </div>
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {section === 'RegistroCompras' && isAdmin && (
+        <RegistroComprasPage
+          registroCompras={registroCompras}
+          aprobarSolicitud={aprobarSolicitud}
+          descargarCSV={descargarCSV}
+        />
+      )}
+
+      {section === 'RegistroMensualidades' && isAdmin && (
+        <RegistroMensualidadesPage
+          students={students}
+          descargarCSV={descargarCSV}
+        />
       )}
     </div>
   )
