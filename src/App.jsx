@@ -1,3 +1,5 @@
+import MiQRPage from './pages/MiQRPage'
+import CheckInPage from './pages/CheckInPage'
 import { useEffect, useState } from 'react'
 import './App.css'
 import { supabase } from './supabase'
@@ -58,6 +60,8 @@ export default function App() {
   const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
   const [loading, setLoading] = useState(true)
+  const params = new URLSearchParams(window.location.search)
+  const alumnoCheckIn = params.get('checkin')
 
   useEffect(() => {
     checkUser()
@@ -164,6 +168,11 @@ export default function App() {
   }
 
   if (loading) return <div className="min-h-screen bg-black text-white p-10">Cargando...</div>
+ 
+  if (alumnoCheckIn) {
+  return <CheckInPage alumnoId={alumnoCheckIn} />
+}
+
   if (!user) return <LoginPage onLogin={checkUser} />
 
   const isAdmin = student?.role?.toLowerCase() === 'admin'
@@ -193,6 +202,7 @@ export default function App() {
         <Btn text="Rutinas" disabled={bloqueado} set={() => setSection('Rutinas')} />
         <Btn text="Generador IA" disabled={bloqueado} set={() => setSection('Generador')} />
         <Btn text="Métodos" disabled={bloqueado} set={() => setSection('Metodos')} />
+        <Btn text="MI QR" set={() => setSection('MiQR')} />
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
@@ -243,6 +253,9 @@ export default function App() {
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
       )}
       {section === 'Metodos' && !bloqueado && <MetodosPage />}
+      {section === 'MiQR' && (
+  <MiQRPage student={student} />
+)}
 
       {section === 'Admin' && isAdmin && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
