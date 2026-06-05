@@ -1,6 +1,3 @@
-import AsistenciaPage from './pages/AsistenciaPage'
-import MiQRPage from './pages/MiQRPage'
-import CheckInPage from './pages/CheckInPage'
 import { useEffect, useState } from 'react'
 import './App.css'
 import { supabase } from './supabase'
@@ -11,6 +8,8 @@ import GeneradorPage from './pages/GeneradorPage'
 import MetodosPage from './pages/MetodosPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RegistroMensualidadesPage from './pages/RegistroMensualidadesPage'
+import MiQRPage from './pages/MiQRPage'
+import CheckInPage from './pages/CheckInPage'
 import AsistenciaPage from './pages/AsistenciaPage'
 
 function Btn({ text, set, disabled }) {
@@ -38,16 +37,12 @@ function Info({ label, value }) {
 
 export function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
-    encabezado +
-    '\n' +
-    filas.join('\n') +
-    '\n\n' +
-    `${totalLabel},${total}`
+    encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
 
   const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
-
   const a = document.createElement('a')
+
   a.href = url
   a.download = nombreArchivo
   a.click()
@@ -62,6 +57,7 @@ export default function App() {
   const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
   const [loading, setLoading] = useState(true)
+
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
 
@@ -135,7 +131,6 @@ export default function App() {
 
   async function aprobarSolicitud(solicitud) {
     const alumno = students.find((a) => a.id === solicitud.alumno_id)
-
     if (!alumno) return
 
     const nuevasGeneraciones =
@@ -170,10 +165,10 @@ export default function App() {
   }
 
   if (loading) return <div className="min-h-screen bg-black text-white p-10">Cargando...</div>
- 
+
   if (alumnoCheckIn) {
-  return <CheckInPage alumnoId={alumnoCheckIn} />
-}
+    return <CheckInPage alumnoId={alumnoCheckIn} />
+  }
 
   if (!user) return <LoginPage onLogin={checkUser} />
 
@@ -187,7 +182,9 @@ export default function App() {
         <div>
           <h1 className="text-4xl font-black text-red-500">POWERFIT 360</h1>
           <p className="text-zinc-300">{student?.nombre || user.email}</p>
-          <p className="text-yellow-400 font-black">{isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}</p>
+          <p className="text-yellow-400 font-black">
+            {isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}
+          </p>
           <p className={pagoAlDia ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
             Estado pago: {student?.estado_pago || 'Pendiente'}
           </p>
@@ -207,7 +204,7 @@ export default function App() {
         <Btn text="MI QR" set={() => setSection('MiQR')} />
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
-        <Btn text="Asistencias" set={() => setSection('Asistencias')} />
+        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
         {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
       </div>
@@ -252,14 +249,14 @@ export default function App() {
       )}
 
       {section === 'Rutinas' && !bloqueado && <RutinasPage student={student} />}
+
       {section === 'Generador' && !bloqueado && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
       )}
+
       {section === 'Metodos' && !bloqueado && <MetodosPage />}
+
       {section === 'MiQR' && <MiQRPage student={student} />}
-      {section === 'MiQR' && (
-  <MiQRPage student={student} />
-)}
 
       {section === 'Admin' && isAdmin && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
@@ -363,6 +360,8 @@ export default function App() {
         </div>
       )}
 
+      {section === 'Asistencias' && isAdmin && <AsistenciaPage />}
+
       {section === 'RegistroCompras' && isAdmin && (
         <RegistroComprasPage
           registroCompras={registroCompras}
@@ -376,10 +375,6 @@ export default function App() {
           students={students}
           descargarCSV={descargarCSV}
         />
-      )}
-
-      {section === 'Asistencias' && isAdmin && (
-        <AsistenciaPage />
       )}
     </div>
   )
