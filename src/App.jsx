@@ -1,3 +1,4 @@
+import AsistenciaPage from './pages/AsistenciaPage'
 import MiQRPage from './pages/MiQRPage'
 import CheckInPage from './pages/CheckInPage'
 import { useEffect, useState } from 'react'
@@ -10,6 +11,7 @@ import GeneradorPage from './pages/GeneradorPage'
 import MetodosPage from './pages/MetodosPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RegistroMensualidadesPage from './pages/RegistroMensualidadesPage'
+import AsistenciaPage from './pages/AsistenciaPage'
 
 function Btn({ text, set, disabled }) {
   return (
@@ -205,8 +207,10 @@ export default function App() {
         <Btn text="MI QR" set={() => setSection('MiQR')} />
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
+        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
         {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
+        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
       </div>
 
       {bloqueado && (
@@ -253,6 +257,7 @@ export default function App() {
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
       )}
       {section === 'Metodos' && !bloqueado && <MetodosPage />}
+      {section === 'MiQR' && <MiQRPage student={student} />}
       {section === 'MiQR' && (
   <MiQRPage student={student} />
 )}
@@ -372,6 +377,10 @@ export default function App() {
           students={students}
           descargarCSV={descargarCSV}
         />
+      )}
+
+      {section === 'Asistencias' && isAdmin && (
+        <AsistenciaPage />
       )}
     </div>
   )
