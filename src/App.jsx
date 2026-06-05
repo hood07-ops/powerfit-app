@@ -1,3 +1,4 @@
+import AsistenciaResumenPage from './pages/AsistenciaResumenPage'
 import { useEffect, useState } from 'react'
 import './App.css'
 import { supabase } from './supabase'
@@ -205,6 +206,7 @@ export default function App() {
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
         {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
+        {isAdmin && <Btn text="Resumen asistencia" set={() => setSection('ResumenAsistencia')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
         {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
       </div>
@@ -361,6 +363,10 @@ export default function App() {
       )}
 
       {section === 'Asistencias' && isAdmin && <AsistenciaPage />}
+
+      {section === 'ResumenAsistencia' && isAdmin && (
+        <AsistenciaResumenPage />
+      )}
 
       {section === 'RegistroCompras' && isAdmin && (
         <RegistroComprasPage
