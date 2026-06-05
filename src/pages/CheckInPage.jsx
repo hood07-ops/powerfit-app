@@ -5,6 +5,7 @@ export default function CheckInPage({ alumnoId }) {
   const [alumno, setAlumno] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [loading, setLoading] = useState(true)
+  const [yaRegistrado, setYaRegistrado] = useState(false)
 
   useEffect(() => {
     cargarAlumno()
@@ -19,18 +20,44 @@ export default function CheckInPage({ alumnoId }) {
       .eq('id', alumnoId)
       .single()
 
-    if (error) {
+    if (error || !data) {
       setMensaje('No se encontró el alumno.')
       setLoading(false)
       return
     }
 
-    setAlumno(data)
+    const hoy = new Date().toISOString().slice(0, 10)
+    const vencimiento = data.fecha_vencimiento || null
+    let estadoReal = data.estado_pago || 'Pendiente'
+
+    if (vencimiento && vencimiento < hoy) {
+      estadoReal = 'Moroso'
+
+      await supabase
+        .from('alumnos')
+        .update({ estado_pago: 'Moroso' })
+        .eq('id', data.id)
+    }
+
+    const { data: asistenciaHoy } = await supabase
+      .from('asistencias')
+      .select('*')
+      .eq('alumno_id', data.id)
+      .gte('created_at', `${hoy}T00:00:00`)
+      .lte('created_at', `${hoy}T23:59:59`)
+
+    setYaRegistrado((asistenciaHoy || []).length > 0)
+    setAlumno({ ...data, estado_pago: estadoReal })
     setLoading(false)
   }
 
   async function registrarAsistencia() {
     if (!alumno) return
+
+    if (yaRegistrado) {
+      setMensaje('Este alumno ya tiene asistencia registrada hoy.')
+      return
+    }
 
     const { error } = await supabase.from('asistencias').insert([
       {
@@ -48,6 +75,7 @@ export default function CheckInPage({ alumnoId }) {
       return
     }
 
+    setYaRegistrado(true)
     setMensaje('Asistencia registrada correctamente.')
   }
 
@@ -68,6 +96,8 @@ export default function CheckInPage({ alumnoId }) {
   }
 
   const pagado = alumno.estado_pago === 'Pagado'
+  const pendiente = alumno.estado_pago === 'Pendiente'
+  const moroso = alumno.estado_pago === 'Moroso'
 
   return (
     <div className="min-h-screen bg-black text-white p-5">
@@ -75,6 +105,8 @@ export default function CheckInPage({ alumnoId }) {
         className={`rounded-3xl p-6 border ${
           pagado
             ? 'bg-green-950 border-green-500'
+            : pendiente
+            ? 'bg-yellow-950 border-yellow-500'
             : 'bg-red-950 border-red-500'
         }`}
       >
@@ -89,7 +121,15 @@ export default function CheckInPage({ alumnoId }) {
         <div className="mt-6 space-y-3 text-xl">
           <p>
             Estado pago:{' '}
-            <span className={pagado ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
+            <span
+              className={
+                pagado
+                  ? 'text-green-400 font-black'
+                  : pendiente
+                  ? 'text-yellow-400 font-black'
+                  : 'text-red-400 font-black'
+              }
+            >
               {alumno.estado_pago || 'Pendiente'}
             </span>
           </p>
@@ -107,17 +147,42 @@ export default function CheckInPage({ alumnoId }) {
           </p>
         </div>
 
-        {!pagado && (
+        {pagado && (
+          <div className="bg-green-700 p-4 rounded-2xl mt-6 font-black">
+            ALUMNO AL DÍA ✅
+          </div>
+        )}
+
+        {pendiente && (
+          <div className="bg-yellow-600 text-black p-4 rounded-2xl mt-6 font-black">
+            ALUMNO PENDIENTE DE PAGO ⚠️
+          </div>
+        )}
+
+        {moroso && (
           <div className="bg-red-700 p-4 rounded-2xl mt-6 font-black">
-            ALERTA: Alumno no está al día con el pago.
+            ALERTA: ALUMNO MOROSO ❌
+          </div>
+        )}
+
+        {yaRegistrado && (
+          <div className="bg-blue-700 p-4 rounded-2xl mt-6 font-black">
+            Este alumno ya registró asistencia hoy.
           </div>
         )}
 
         <button
           onClick={registrarAsistencia}
-          className="w-full bg-blue-600 hover:bg-blue-700 p-5 rounded-2xl font-black text-xl mt-8"
+          disabled={yaRegistrado}
+          className={`w-full p-5 rounded-2xl font-black text-xl mt-8 ${
+            yaRegistrado
+              ? 'bg-zinc-700 opacity-50 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-700'
+          }`}
         >
-          REGISTRAR ASISTENCIA
+          {yaRegistrado
+            ? 'ASISTENCIA YA REGISTRADA'
+            : 'REGISTRAR ASISTENCIA'}
         </button>
 
         {mensaje && (
