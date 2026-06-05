@@ -210,7 +210,6 @@ export default function App() {
         {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
         {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
-        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
       </div>
 
       {bloqueado && (
