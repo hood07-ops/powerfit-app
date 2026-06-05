@@ -207,7 +207,7 @@ export default function App() {
         <Btn text="MI QR" set={() => setSection('MiQR')} />
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
-        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
+        <Btn text="Asistencias" set={() => setSection('Asistencias')} />
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
         {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
       </div>
