@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 
 export default function AsistenciaPage() {
+  console.log('PAGINA ASISTENCIAS CARGADA')
   const [students, setStudents] = useState([])
   const [asistencias, setAsistencias] = useState([])
   const [selectedStudent, setSelectedStudent] = useState('')
