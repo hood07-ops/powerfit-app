@@ -70,6 +70,28 @@ export default function CheckInPage({ alumnoId }) {
       },
     ])
 
+    const nuevoXP = (alumno.xp || 0) + 10
+
+let nuevoNivel = 'Iniciado'
+
+if (nuevoXP >= 1000) {
+  nuevoNivel = 'Ariki Matato’a'
+} else if (nuevoXP >= 600) {
+  nuevoNivel = 'Matato’a Nui'
+} else if (nuevoXP >= 300) {
+  nuevoNivel = 'Matato’a'
+} else if (nuevoXP >= 100) {
+  nuevoNivel = 'Aito'
+}
+
+await supabase
+  .from('alumnos')
+  .update({
+    xp: nuevoXP,
+    nivel_matatoa: nuevoNivel,
+  })
+  .eq('id', alumno.id)
+
     if (error) {
       setMensaje('Error registrando asistencia: ' + error.message)
       return
