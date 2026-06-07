@@ -55,6 +55,7 @@ export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
   const [students, setStudents] = useState([])
+  const [asistencias, setAsistencias] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
   const [loading, setLoading] = useState(true)
@@ -105,6 +106,12 @@ export default function App() {
 
     setStudents(alumnosData || [])
   }
+
+  const { data: asistenciasData } = await supabase
+  .from('asistencias')
+  .select('*')
+
+setAsistencias(asistenciasData || [])
 
   async function actualizarAlumno(id, campo, valor) {
     await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
@@ -348,6 +355,34 @@ export default function App() {
                   <span>| Generaciones: {a.generaciones_disponibles || 0}</span>
                   <span>| Premium: {a.bloques_premium || 0}</span>
                   <span>| Rol: {a.role || 'alumno'}</span>
+
+<span>
+| Asistencias:{
+  asistencias.filter(
+    x => Number(x.alumno_id) === Number(a.id)
+  ).length
+}
+</span>
+
+<span>
+| Última:{
+  (() => {
+    const registros = asistencias
+      .filter(x => Number(x.alumno_id) === Number(a.id))
+      .sort(
+        (a1, a2) =>
+          new Date(a2.created_at) -
+          new Date(a1.created_at)
+      )
+
+    return registros[0]
+      ? new Date(
+          registros[0].created_at
+        ).toLocaleDateString()
+      : '-'
+  })()
+}
+</span>
 
                   <button
                     onClick={() => eliminarGeneraciones(a)}
