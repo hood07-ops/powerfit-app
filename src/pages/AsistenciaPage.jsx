@@ -33,7 +33,7 @@ export default function AsistenciaPage() {
 
   function descargarCSV() {
     const filas = asistenciasFiltradas.map((a) => {
-      const fecha = new Date(a.created_at)
+      const fecha = new Date(a.fecha)
 
       return [
         a.nombre_alumno,
