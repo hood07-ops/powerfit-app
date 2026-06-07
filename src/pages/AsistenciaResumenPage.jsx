@@ -18,7 +18,7 @@ export default function AsistenciaResumenPage() {
     const { data: asistenciasData } = await supabase
       .from('asistencias')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('fecha', { ascending: false })
 
     setAlumnos(alumnosData || [])
     setAsistencias(asistenciasData || [])
