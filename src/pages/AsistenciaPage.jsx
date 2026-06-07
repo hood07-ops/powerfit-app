@@ -27,12 +27,20 @@ export default function AsistenciaPage() {
   }
 
   async function cargarAsistencias() {
-    const { data } = await supabase
-      .from('asistencias')
-      .select('*')
-      .order('id', { ascending: false })
+  const { data, error } = await supabase
+    .from('asistencias')
+    .select('*')
+    .order('id', { ascending: false })
 
-    setAsistencias(data || [])
+  console.log('ASISTENCIAS DATA:', data)
+  console.log('ASISTENCIAS ERROR:', error)
+
+  if (error) {
+    alert('Error cargando asistencias: ' + error.message)
+    return
+  }
+
+  setAsistencias(data || [])
   }
 
   function descargarCSV() {
