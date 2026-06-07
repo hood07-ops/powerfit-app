@@ -8,6 +8,10 @@ export default function AsistenciaPage() {
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
 
+  function obtenerFecha(item) {
+  return item.fecha || item.created_at
+  }
+
   useEffect(() => {
     cargarAlumnos()
     cargarAsistencias()
@@ -26,7 +30,7 @@ export default function AsistenciaPage() {
     const { data } = await supabase
       .from('asistencias')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
 
     setAsistencias(data || [])
   }
@@ -65,7 +69,7 @@ export default function AsistenciaPage() {
   }
 
   const asistenciasFiltradas = asistencias.filter((a) => {
-    const fecha = String(a.created_at || '').slice(0, 10)
+   const fecha = String(obtenerFecha(a) || '').slice(0, 10)
 
     if (selectedStudent && String(a.alumno_id) !== String(selectedStudent)) {
       return false
@@ -87,7 +91,7 @@ export default function AsistenciaPage() {
     const currentMonth = new Date().getMonth()
 
     return asistenciasFiltradas.filter((item) => {
-      const itemMonth = new Date(item.created_at).getMonth()
+      const itemMonth = new Date(obtenerFecha(item))
       return itemMonth === currentMonth
     }).length
   }, [asistenciasFiltradas])
@@ -249,11 +253,11 @@ export default function AsistenciaPage() {
               </div>
 
               <div>
-                {new Date(item.created_at).toLocaleDateString()}
+                {new Date(obtenerFecha(item)).toLocaleDateString()}
               </div>
 
               <div>
-                {new Date(item.created_at).toLocaleTimeString()}
+                {new Date(obtenerFecha(item)).toLocaleTimeString()}
               </div>
             </div>
           ))}
