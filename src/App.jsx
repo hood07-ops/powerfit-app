@@ -95,7 +95,7 @@ export default function App() {
     const { data: comprasData } = await supabase
       .from('solicitudes_compra')
       .select('*')
-      .order('created_at', { ascending: false })
+      .order('fecha', { ascending: false })
 
     setRegistroCompras(comprasData || [])
 
@@ -371,13 +371,13 @@ setAsistencias(asistenciasData || [])
       .filter(x => Number(x.alumno_id) === Number(a.id))
       .sort(
         (a1, a2) =>
-          new Date(a2.created_at) -
-          new Date(a1.created_at)
+          new Date(a2.fecha) -
+          new Date(a1.fecha)
       )
 
     return registros[0]
       ? new Date(
-          registros[0].created_at
+          registros[0].fecha
         ).toLocaleDateString()
       : '-'
   })()
