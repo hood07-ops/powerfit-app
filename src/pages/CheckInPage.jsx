@@ -11,6 +11,14 @@ export default function CheckInPage({ alumnoId }) {
     cargarAlumno()
   }, [alumnoId])
 
+  function calcularNivel(xp) {
+    if (xp >= 1000) return 'Ariki Matato’a'
+    if (xp >= 600) return 'Matato’a Nui'
+    if (xp >= 300) return 'Matato’a'
+    if (xp >= 100) return 'Aito'
+    return 'Iniciado'
+  }
+
   async function cargarAlumno() {
     if (!alumnoId) return
 
@@ -43,8 +51,8 @@ export default function CheckInPage({ alumnoId }) {
       .from('asistencias')
       .select('*')
       .eq('alumno_id', data.id)
-      .gte('created_at', `${hoy}T00:00:00`)
-      .lte('created_at', `${hoy}T23:59:59`)
+      .gte('fecha', `${hoy}T00:00:00`)
+      .lte('fecha', `${hoy}T23:59:59`)
 
     setYaRegistrado((asistenciaHoy || []).length > 0)
     setAlumno({ ...data, estado_pago: estadoReal })
@@ -59,7 +67,9 @@ export default function CheckInPage({ alumnoId }) {
       return
     }
 
-    const { error } = await supabase.from('asistencias').insert([
+    const fechaActual = new Date().toISOString()
+
+    const { error: asistenciaError } = await supabase.from('asistencias').insert([
       {
         alumno_id: alumno.id,
         user_id: alumno.user_id,
@@ -67,38 +77,40 @@ export default function CheckInPage({ alumnoId }) {
         estado_pago: alumno.estado_pago,
         fecha_vencimiento: alumno.fecha_vencimiento,
         registrado_por: 'qr',
+        fecha: fechaActual,
+        created_at: fechaActual,
       },
     ])
 
-    const nuevoXP = (alumno.xp || 0) + 10
-
-let nuevoNivel = 'Iniciado'
-
-if (nuevoXP >= 1000) {
-  nuevoNivel = 'Ariki Matato’a'
-} else if (nuevoXP >= 600) {
-  nuevoNivel = 'Matato’a Nui'
-} else if (nuevoXP >= 300) {
-  nuevoNivel = 'Matato’a'
-} else if (nuevoXP >= 100) {
-  nuevoNivel = 'Aito'
-}
-
-await supabase
-  .from('alumnos')
-  .update({
-    xp: nuevoXP,
-    nivel_matatoa: nuevoNivel,
-  })
-  .eq('id', alumno.id)
-
-    if (error) {
-      setMensaje('Error registrando asistencia: ' + error.message)
+    if (asistenciaError) {
+      setMensaje('Error registrando asistencia: ' + asistenciaError.message)
       return
     }
 
+    const nuevoXP = Number(alumno.xp || 0) + 10
+    const nuevoNivel = calcularNivel(nuevoXP)
+
+    const { error: xpError } = await supabase
+      .from('alumnos')
+      .update({
+        xp: nuevoXP,
+        nivel_matatoa: nuevoNivel,
+      })
+      .eq('id', alumno.id)
+
+    if (xpError) {
+      setMensaje('Asistencia registrada, pero hubo error sumando XP: ' + xpError.message)
+      return
+    }
+
+    setAlumno({
+      ...alumno,
+      xp: nuevoXP,
+      nivel_matatoa: nuevoNivel,
+    })
+
     setYaRegistrado(true)
-    setMensaje('Asistencia registrada correctamente.')
+    setMensaje(`Asistencia registrada correctamente. +10 XP. Nivel: ${nuevoNivel}`)
   }
 
   if (loading) {
@@ -156,17 +168,11 @@ await supabase
             </span>
           </p>
 
-          <p>
-            Vencimiento: {alumno.fecha_vencimiento || '-'}
-          </p>
-
-          <p>
-            Generaciones disponibles: {alumno.generaciones_disponibles || 0}
-          </p>
-
-          <p>
-            Mensualidad: ${alumno.monto || 0}
-          </p>
+          <p>Vencimiento: {alumno.fecha_vencimiento || '-'}</p>
+          <p>Generaciones disponibles: {alumno.generaciones_disponibles || 0}</p>
+          <p>Mensualidad: ${alumno.monto || 0}</p>
+          <p>XP actual: {alumno.xp || 0}</p>
+          <p>Nivel Matato'a: {alumno.nivel_matatoa || 'Iniciado'}</p>
         </div>
 
         {pagado && (
@@ -202,9 +208,7 @@ await supabase
               : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
-          {yaRegistrado
-            ? 'ASISTENCIA YA REGISTRADA'
-            : 'REGISTRAR ASISTENCIA'}
+          {yaRegistrado ? 'ASISTENCIA YA REGISTRADA' : 'REGISTRAR ASISTENCIA'}
         </button>
 
         {mensaje && (
