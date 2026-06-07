@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../supabase'
 
 export default function AsistenciaPage() {
-  console.log('PAGINA ASISTENCIAS CARGADA')
   const [students, setStudents] = useState([])
   const [asistencias, setAsistencias] = useState([])
   const [selectedStudent, setSelectedStudent] = useState('')
@@ -10,7 +9,7 @@ export default function AsistenciaPage() {
   const [hasta, setHasta] = useState('')
 
   function obtenerFecha(item) {
-  return item.fecha || item.created_at
+    return item.fecha || item.created_at
   }
 
   useEffect(() => {
@@ -28,25 +27,35 @@ export default function AsistenciaPage() {
   }
 
   async function cargarAsistencias() {
-  const { data, error } = await supabase
-    .from('asistencias')
-    .select('*')
-    .order('id', { ascending: false })
+    const { data, error } = await supabase
+      .from('asistencias')
+      .select('*')
+      .order('fecha', { ascending: false })
 
-  console.log('ASISTENCIAS DATA:', data)
-  console.log('ASISTENCIAS ERROR:', error)
+    if (error) {
+      alert('Error cargando asistencias: ' + error.message)
+      return
+    }
 
-  if (error) {
-    alert('Error cargando asistencias: ' + error.message)
-    return
+    setAsistencias(data || [])
   }
 
-  setAsistencias(data || [])
-  }
+  const asistenciasFiltradas = asistencias.filter((a) => {
+    const fecha = String(obtenerFecha(a) || '').slice(0, 10)
+
+    if (selectedStudent && String(a.alumno_id) !== String(selectedStudent)) {
+      return false
+    }
+
+    if (desde && fecha < desde) return false
+    if (hasta && fecha > hasta) return false
+
+    return true
+  })
 
   function descargarCSV() {
     const filas = asistenciasFiltradas.map((a) => {
-      const fecha = new Date(a.fecha)
+      const fecha = new Date(obtenerFecha(a))
 
       return [
         a.nombre_alumno,
@@ -77,19 +86,6 @@ export default function AsistenciaPage() {
     URL.revokeObjectURL(url)
   }
 
-  const asistenciasFiltradas = asistencias.filter((a) => {
-   const fecha = String(obtenerFecha(a) || '').slice(0, 10)
-
-    if (selectedStudent && String(a.alumno_id) !== String(selectedStudent)) {
-      return false
-    }
-
-    if (desde && fecha < desde) return false
-    if (hasta && fecha > hasta) return false
-
-    return true
-  })
-
   const selectedStudentData = students.find(
     (student) => String(student.id) === String(selectedStudent)
   )
@@ -97,11 +93,16 @@ export default function AsistenciaPage() {
   const totalClasses = asistenciasFiltradas.length
 
   const monthlyAttendance = useMemo(() => {
-    const currentMonth = new Date().getMonth()
+    const hoy = new Date()
+    const currentMonth = hoy.getMonth()
+    const currentYear = hoy.getFullYear()
 
     return asistenciasFiltradas.filter((item) => {
-      const itemMonth = new Date(obtenerFecha(item))
-      return itemMonth === currentMonth
+      const itemDate = new Date(obtenerFecha(item))
+      return (
+        itemDate.getMonth() === currentMonth &&
+        itemDate.getFullYear() === currentYear
+      )
     }).length
   }, [asistenciasFiltradas])
 
@@ -127,9 +128,7 @@ export default function AsistenciaPage() {
       </section>
 
       <section className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
-        <h3 className="text-3xl font-bold mb-6">
-          Filtros
-        </h3>
+        <h3 className="text-3xl font-bold mb-6">Filtros</h3>
 
         <div className="grid md:grid-cols-5 gap-4">
           <select
@@ -179,9 +178,7 @@ export default function AsistenciaPage() {
       <section className="grid md:grid-cols-4 gap-5">
         <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
           <p className="text-zinc-400">Asistencias filtradas</p>
-          <h3 className="text-5xl font-black mt-3">
-            {totalClasses}
-          </h3>
+          <h3 className="text-5xl font-black mt-3">{totalClasses}</h3>
         </div>
 
         <div className="bg-zinc-900 rounded-3xl p-6 border border-zinc-800">
@@ -212,9 +209,7 @@ export default function AsistenciaPage() {
             Alumno seleccionado
           </h3>
 
-          <p className="text-xl font-black">
-            {selectedStudentData.nombre}
-          </p>
+          <p className="text-xl font-black">{selectedStudentData.nombre}</p>
 
           <p className="text-zinc-400">
             Estado pago: {selectedStudentData.estado_pago || 'Pendiente'}
@@ -232,44 +227,37 @@ export default function AsistenciaPage() {
         </h3>
 
         <div className="space-y-3">
-          {asistenciasFiltradas.map((item) => (
-            <div
-              key={item.id}
-              className="bg-zinc-950 rounded-2xl p-4 border border-zinc-800 grid md:grid-cols-5 gap-3"
-            >
-              <div>
-                <p className="font-bold">
-                  {item.nombre_alumno}
-                </p>
+          {asistenciasFiltradas.map((item) => {
+            const fecha = new Date(obtenerFecha(item))
 
-                <p className="text-zinc-400">
-                  Alumno ID: {item.alumno_id}
-                </p>
-              </div>
-
+            return (
               <div
-                className={
-                  item.estado_pago === 'Pagado'
-                    ? 'text-green-400 font-bold'
-                    : 'text-red-400 font-bold'
-                }
+                key={item.id}
+                className="bg-zinc-950 rounded-2xl p-4 border border-zinc-800 grid md:grid-cols-5 gap-3"
               >
-                {item.estado_pago || 'Pendiente'}
-              </div>
+                <div>
+                  <p className="font-bold">{item.nombre_alumno}</p>
+                  <p className="text-zinc-400">Alumno ID: {item.alumno_id}</p>
+                </div>
 
-              <div>
-                Vence: {item.fecha_vencimiento || '-'}
-              </div>
+                <div
+                  className={
+                    item.estado_pago === 'Pagado'
+                      ? 'text-green-400 font-bold'
+                      : 'text-red-400 font-bold'
+                  }
+                >
+                  {item.estado_pago || 'Pendiente'}
+                </div>
 
-              <div>
-                {new Date(obtenerFecha(item)).toLocaleDateString()}
-              </div>
+                <div>Vence: {item.fecha_vencimiento || '-'}</div>
 
-              <div>
-                {new Date(obtenerFecha(item)).toLocaleTimeString()}
+                <div>{fecha.toLocaleDateString()}</div>
+
+                <div>{fecha.toLocaleTimeString()}</div>
               </div>
-            </div>
-          ))}
+            )
+          })}
 
           {asistenciasFiltradas.length === 0 && (
             <p className="text-zinc-400">
