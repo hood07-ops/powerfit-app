@@ -11,12 +11,13 @@ export default function CheckInPage({ alumnoId }) {
     cargarAlumno()
   }, [alumnoId])
 
-  function calcularNivel(xp) {
-    if (xp >= 1000) return 'Ariki Matato’a'
-    if (xp >= 600) return 'Matato’a Nui'
-    if (xp >= 300) return 'Matato’a'
-    if (xp >= 100) return 'Aito'
-    return 'Iniciado'
+  function calcularRango(exp) {
+    if (exp >= 2000) return 'Ariki Matato’a'
+    if (exp >= 1000) return 'Matato’a Nui'
+    if (exp >= 600) return 'Matato’a'
+    if (exp >= 300) return 'Oro'
+    if (exp >= 100) return 'Plata'
+    return 'Bronce'
   }
 
   async function cargarAlumno() {
@@ -35,10 +36,9 @@ export default function CheckInPage({ alumnoId }) {
     }
 
     const hoy = new Date().toISOString().slice(0, 10)
-    const vencimiento = data.fecha_vencimiento || null
     let estadoReal = data.estado_pago || 'Pendiente'
 
-    if (vencimiento && vencimiento < hoy) {
+    if (data.fecha_vencimiento && data.fecha_vencimiento < hoy) {
       estadoReal = 'Moroso'
 
       await supabase
@@ -87,46 +87,38 @@ export default function CheckInPage({ alumnoId }) {
       return
     }
 
-    const nuevoXP = Number(alumno.xp || 0) + 10
-    const nuevoNivel = calcularNivel(nuevoXP)
+    const nuevaExperiencia = Number(alumno.experiencia || 0) + 10
+    const nuevoRango = calcularRango(nuevaExperiencia)
 
     const { error: xpError } = await supabase
       .from('alumnos')
       .update({
-        xp: nuevoXP,
-        nivel_matatoa: nuevoNivel,
+        experiencia: nuevaExperiencia,
+        rango: nuevoRango,
       })
       .eq('id', alumno.id)
 
     if (xpError) {
-      setMensaje('Asistencia registrada, pero hubo error sumando XP: ' + xpError.message)
+      setMensaje('Asistencia registrada, pero hubo error sumando experiencia.')
       return
     }
 
     setAlumno({
       ...alumno,
-      xp: nuevoXP,
-      nivel_matatoa: nuevoNivel,
+      experiencia: nuevaExperiencia,
+      rango: nuevoRango,
     })
 
     setYaRegistrado(true)
-    setMensaje(`Asistencia registrada correctamente. +10 XP. Nivel: ${nuevoNivel}`)
+    setMensaje(`Asistencia registrada correctamente. +10 XP. Rango: ${nuevoRango}`)
   }
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-black text-white p-10">
-        Cargando alumno...
-      </div>
-    )
+    return <div className="min-h-screen bg-black text-white p-10">Cargando alumno...</div>
   }
 
   if (!alumno) {
-    return (
-      <div className="min-h-screen bg-black text-white p-10">
-        {mensaje || 'Alumno no encontrado.'}
-      </div>
-    )
+    return <div className="min-h-screen bg-black text-white p-10">{mensaje}</div>
   }
 
   const pagado = alumno.estado_pago === 'Pagado'
@@ -144,68 +136,28 @@ export default function CheckInPage({ alumnoId }) {
             : 'bg-red-950 border-red-500'
         }`}
       >
-        <h1 className="text-4xl font-black mb-6">
-          CHECK-IN POWERFIT
-        </h1>
+        <h1 className="text-4xl font-black mb-6">CHECK-IN POWERFIT</h1>
 
-        <h2 className="text-3xl font-black text-yellow-400">
-          {alumno.nombre}
-        </h2>
+        <h2 className="text-3xl font-black text-yellow-400">{alumno.nombre}</h2>
 
         <div className="mt-6 space-y-3 text-xl">
-          <p>
-            Estado pago:{' '}
-            <span
-              className={
-                pagado
-                  ? 'text-green-400 font-black'
-                  : pendiente
-                  ? 'text-yellow-400 font-black'
-                  : 'text-red-400 font-black'
-              }
-            >
-              {alumno.estado_pago || 'Pendiente'}
-            </span>
-          </p>
-
+          <p>Estado pago: <strong>{alumno.estado_pago || 'Pendiente'}</strong></p>
           <p>Vencimiento: {alumno.fecha_vencimiento || '-'}</p>
           <p>Generaciones disponibles: {alumno.generaciones_disponibles || 0}</p>
           <p>Mensualidad: ${alumno.monto || 0}</p>
-          <p>XP actual: {alumno.xp || 0}</p>
-          <p>Nivel Matato'a: {alumno.nivel_matatoa || 'Iniciado'}</p>
+          <p>XP / Experiencia: {alumno.experiencia || 0}</p>
+          <p>Rango: {alumno.rango || 'Bronce'}</p>
         </div>
 
-        {pagado && (
-          <div className="bg-green-700 p-4 rounded-2xl mt-6 font-black">
-            ALUMNO AL DÍA ✅
-          </div>
-        )}
-
-        {pendiente && (
-          <div className="bg-yellow-600 text-black p-4 rounded-2xl mt-6 font-black">
-            ALUMNO PENDIENTE DE PAGO ⚠️
-          </div>
-        )}
-
-        {moroso && (
-          <div className="bg-red-700 p-4 rounded-2xl mt-6 font-black">
-            ALERTA: ALUMNO MOROSO ❌
-          </div>
-        )}
-
-        {yaRegistrado && (
-          <div className="bg-blue-700 p-4 rounded-2xl mt-6 font-black">
-            Este alumno ya registró asistencia hoy.
-          </div>
-        )}
+        {pagado && <div className="bg-green-700 p-4 rounded-2xl mt-6 font-black">ALUMNO AL DÍA ✅</div>}
+        {pendiente && <div className="bg-yellow-600 text-black p-4 rounded-2xl mt-6 font-black">ALUMNO PENDIENTE ⚠️</div>}
+        {moroso && <div className="bg-red-700 p-4 rounded-2xl mt-6 font-black">ALUMNO MOROSO ❌</div>}
 
         <button
           onClick={registrarAsistencia}
           disabled={yaRegistrado}
           className={`w-full p-5 rounded-2xl font-black text-xl mt-8 ${
-            yaRegistrado
-              ? 'bg-zinc-700 opacity-50 cursor-not-allowed'
-              : 'bg-blue-600 hover:bg-blue-700'
+            yaRegistrado ? 'bg-zinc-700 opacity-50' : 'bg-blue-600 hover:bg-blue-700'
           }`}
         >
           {yaRegistrado ? 'ASISTENCIA YA REGISTRADA' : 'REGISTRAR ASISTENCIA'}
