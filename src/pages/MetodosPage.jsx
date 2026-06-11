@@ -84,6 +84,33 @@ const metodos = [
   },
 ]
 
+function youtubeSearch(nombre) {
+  return `https://www.youtube.com/results?search_query=${encodeURIComponent(
+    `${nombre} technique tutorial`
+  )}`
+}
+
+function crearEjercicio(nombre, categoria, objetivo, ejemplo) {
+  return {
+    nombre,
+    categoria,
+    objetivo,
+    tecnica: [
+      'Preparar posicion inicial estable antes de comenzar.',
+      'Mantener abdomen activo y control del rango de movimiento.',
+      'Ejecutar con ritmo constante sin sacrificar tecnica.',
+      'Detener o bajar intensidad si aparece dolor o perdida clara de postura.',
+    ],
+    errores: [
+      'Apurarse y perder control.',
+      'Compensar con espalda, hombros o rodillas segun el movimiento.',
+      'No respetar el estandar tecnico indicado por el coach.',
+    ],
+    ejemplo,
+    youtube: youtubeSearch(nombre),
+  }
+}
+
 const ejercicios = [
   {
     nombre: 'Deadlift',
@@ -103,6 +130,30 @@ const ejercicios = [
     ejemplo: 'Piramidal: 1-3-5-7-5-3-1 @60-75%.',
     youtube: 'https://www.youtube.com/results?search_query=deadlift+technique+tutorial',
   },
+  crearEjercicio(
+    'Front Squat',
+    'Fuerza',
+    'Fortalecer piernas, core y postura frontal bajo carga.',
+    '4x5 @70% o E2MOM 10 MIN: 3 front squat tecnicos.'
+  ),
+  crearEjercicio(
+    'Bench Press',
+    'Fuerza',
+    'Desarrollar fuerza de empuje horizontal, pecho, hombro anterior y triceps.',
+    '5x5 @75% con pausa controlada en el pecho.'
+  ),
+  crearEjercicio(
+    'Strict Press',
+    'Fuerza',
+    'Construir fuerza estricta de hombros y estabilidad sobre cabeza.',
+    '4x6 strict press con abdomen activo y gluteos firmes.'
+  ),
+  crearEjercicio(
+    'Barbell Row',
+    'Fuerza',
+    'Fortalecer espalda, dorsales y control escapular.',
+    '4x8 barbell row con torso firme y pausa arriba.'
+  ),
   {
     nombre: 'Back Squat',
     categoria: 'Fuerza',
@@ -131,6 +182,42 @@ const ejercicios = [
     ejemplo: 'E2MOM 10 MIN: 3 power clean tecnicos @65-75%.',
     youtube: 'https://www.youtube.com/results?search_query=power+clean+technique+tutorial',
   },
+  crearEjercicio(
+    'Clean Pull',
+    'Halterofilia',
+    'Mejorar potencia del tiron y extension de cadera sin recepcion.',
+    '5x3 clean pull @85-100% del clean tecnico.'
+  ),
+  crearEjercicio(
+    'Power Snatch',
+    'Halterofilia',
+    'Desarrollar velocidad, coordinacion y recepcion sobre cabeza.',
+    'E2MOM 10 MIN: 2-3 power snatch tecnicos.'
+  ),
+  crearEjercicio(
+    'Push Jerk',
+    'Halterofilia',
+    'Transferir potencia de piernas y recibir la barra con bloqueo estable.',
+    '5x3 push jerk @70-80% cuidando recepcion.'
+  ),
+  crearEjercicio(
+    'Thruster',
+    'Halterofilia / Conditioning',
+    'Combinar sentadilla frontal y empuje sobre cabeza en un movimiento continuo.',
+    '21-15-9 thruster y burpees.'
+  ),
+  crearEjercicio(
+    'Hang Power Clean',
+    'Halterofilia',
+    'Practicar potencia desde colgado y recepcion rapida.',
+    'EMOM 8 MIN: 3 hang power clean.'
+  ),
+  crearEjercicio(
+    'High Pull',
+    'Halterofilia',
+    'Entrenar extension explosiva y direccion vertical de la barra.',
+    '4x5 high pull liviano-moderado.'
+  ),
   {
     nombre: 'Push Press',
     categoria: 'Fuerza / Potencia',
@@ -159,6 +246,30 @@ const ejercicios = [
     ejemplo: 'AMRAP 10 MIN: 12 swings, 10 push up, 150m run.',
     youtube: 'https://www.youtube.com/results?search_query=kettlebell+swing+technique+tutorial',
   },
+  crearEjercicio(
+    'Kettlebell Clean',
+    'Kettlebell',
+    'Llevar la kettlebell a rack con potencia de cadera y control de antebrazo.',
+    'EMOM 10 MIN: 6 kettlebell clean por lado.'
+  ),
+  crearEjercicio(
+    'Kettlebell Snatch',
+    'Kettlebell',
+    'Desarrollar potencia, coordinacion y estabilidad sobre cabeza.',
+    'AMRAP 10 MIN: 8 kettlebell snatch alternados y 10 air squat.'
+  ),
+  crearEjercicio(
+    'Goblet Squat',
+    'Kettlebell',
+    'Mejorar patron de sentadilla, postura y fuerza de piernas.',
+    '4 rondas: 12 goblet squat, 10 push up, 30 sec plank.'
+  ),
+  crearEjercicio(
+    'Kettlebell Press',
+    'Kettlebell',
+    'Fortalecer hombro, core y control unilateral.',
+    '4x6 kettlebell press por lado.'
+  ),
   {
     nombre: 'Burpee',
     categoria: 'Peso corporal',
@@ -173,6 +284,42 @@ const ejercicios = [
     ejemplo: 'For time: 50 burpees o intervalos 40/20.',
     youtube: 'https://www.youtube.com/results?search_query=burpee+proper+form+tutorial',
   },
+  crearEjercicio(
+    'Push Up',
+    'Peso corporal',
+    'Fortalecer empuje, core y control de tronco.',
+    'AMRAP 8 MIN: 10 push up, 12 sit up, 150m run.'
+  ),
+  crearEjercicio(
+    'Air Squat',
+    'Peso corporal',
+    'Construir base de sentadilla y resistencia de piernas.',
+    'Tabata air squat 20/10 por 8 rondas.'
+  ),
+  crearEjercicio(
+    'Lunge',
+    'Peso corporal',
+    'Trabajar fuerza unilateral, estabilidad y control de rodilla.',
+    '3 rondas: 12 lunges por pierna y 30 sec plank.'
+  ),
+  crearEjercicio(
+    'Mountain Climber',
+    'Peso corporal',
+    'Elevar pulso y trabajar core dinamico.',
+    'Intervalos 40/20: mountain climber + jumping jack.'
+  ),
+  crearEjercicio(
+    'Jumping Jack',
+    'Peso corporal',
+    'Activar ritmo cardiovascular y coordinacion general.',
+    '2 min jumping jack como entrada en calor.'
+  ),
+  crearEjercicio(
+    'Bear Crawl',
+    'Peso corporal',
+    'Desarrollar core, hombros y coordinacion cruzada.',
+    '4 rondas: 10m bear crawl, 10 push up, 12 air squat.'
+  ),
   {
     nombre: 'Heavy Bag',
     categoria: 'Boxeo',
@@ -187,6 +334,42 @@ const ejercicios = [
     ejemplo: '3 rounds: 45 sec combinaciones, 15 sec defensa activa.',
     youtube: 'https://www.youtube.com/results?search_query=heavy+bag+boxing+technique',
   },
+  crearEjercicio(
+    'Shadow Boxing',
+    'Boxeo',
+    'Practicar tecnica, defensa, respiracion y desplazamientos sin impacto.',
+    '3 rounds de 2 min shadow boxing con foco tecnico.'
+  ),
+  crearEjercicio(
+    'Footwork Drill',
+    'Boxeo',
+    'Mejorar distancia, balance y cambios de angulo.',
+    'EMOM 8 MIN: 40 sec footwork drill + 20 sec pausa.'
+  ),
+  crearEjercicio(
+    'Jab Cross',
+    'Boxeo',
+    'Entrenar combinacion basica, rotacion y retorno a guardia.',
+    '5 rounds: 30 sec jab cross, 30 sec desplazamiento.'
+  ),
+  crearEjercicio(
+    'Slip + Counter',
+    'Boxeo',
+    'Practicar defensa de cintura y contraataque inmediato.',
+    '3 rounds: slip + counter cada 3 segundos.'
+  ),
+  crearEjercicio(
+    'Defense + Counter',
+    'Boxeo',
+    'Integrar bloqueo, esquiva o paso atras con respuesta ofensiva.',
+    'Round tecnico: defensa + counter + salida lateral.'
+  ),
+  crearEjercicio(
+    'Uppercut Hook Combo',
+    'Boxeo',
+    'Trabajar golpes curvos, rotacion y transferencia de peso.',
+    'Heavy bag: uppercut-hook-cross por intervalos 30/30.'
+  ),
   {
     nombre: 'Plank Hold',
     categoria: 'Core',
@@ -201,10 +384,114 @@ const ejercicios = [
     ejemplo: '4 rondas: 30-45 sec plank + 10 dead bug.',
     youtube: 'https://www.youtube.com/results?search_query=plank+proper+form+tutorial',
   },
+  crearEjercicio(
+    'Sit Up',
+    'Core',
+    'Trabajar flexion de tronco y resistencia abdominal.',
+    'AMRAP 10 MIN: 15 sit up, 10 kettlebell swing, 150m run.'
+  ),
+  crearEjercicio(
+    'Hollow Hold',
+    'Core',
+    'Mejorar tension corporal, control de costillas y abdomen profundo.',
+    '4 rondas: 20-30 sec hollow hold.'
+  ),
+  crearEjercicio(
+    'Russian Twist',
+    'Core',
+    'Entrenar rotacion controlada y resistencia del tronco.',
+    '3x20 russian twist controlados.'
+  ),
+  crearEjercicio(
+    'Dead Bug',
+    'Core',
+    'Aprender control lumbo-pelvico y estabilidad respirando.',
+    '3x10 dead bug por lado como activacion.'
+  ),
+  crearEjercicio(
+    'V-Up',
+    'Core',
+    'Desarrollar potencia abdominal y coordinacion tronco-piernas.',
+    '4 rondas: 12 v-up, 30 sec plank.'
+  ),
+  crearEjercicio(
+    'Run',
+    'Cardio',
+    'Mejorar resistencia, velocidad y recuperacion entre esfuerzos.',
+    'Intervalos: 6x200m con descanso caminando.'
+  ),
+  crearEjercicio(
+    'Bike',
+    'Cardio',
+    'Elevar trabajo aerobico o intervalico con bajo impacto articular.',
+    '10 rounds: 30 sec fuerte / 30 sec suave.'
+  ),
+  crearEjercicio(
+    'Row',
+    'Cardio',
+    'Trabajar potencia de piernas, traccion y capacidad aerobica.',
+    'AMRAP 12 MIN: 200m row, 10 burpees, 12 swing.'
+  ),
+  crearEjercicio(
+    'Ski Erg',
+    'Cardio',
+    'Entrenar traccion, core y resistencia con enfasis de tren superior.',
+    'EMOM 10 MIN: 12-15 cal ski erg.'
+  ),
+  crearEjercicio(
+    'Jump Rope',
+    'Cardio / Coordinacion',
+    'Mejorar ritmo, pies, coordinacion y acondicionamiento.',
+    '3 rounds: 1 min jump rope, 10 push up.'
+  ),
+  crearEjercicio(
+    'Shuttle Run',
+    'Cardio / Agilidad',
+    'Entrenar aceleracion, frenado, cambios de direccion y pulso.',
+    '10 rounds: 10m ida/vuelta + 20 sec pausa.'
+  ),
+  crearEjercicio(
+    'Movilidad de cadera + hombros',
+    'Movilidad',
+    'Preparar rangos utiles para sentadillas, bisagras, golpes y trabajo sobre cabeza.',
+    'Activacion: 10 repeticiones controladas antes del bloque principal.'
+  ),
+  crearEjercicio(
+    'World Greatest Stretch',
+    'Movilidad',
+    'Abrir cadera, columna toracica e isquios antes de entrenar.',
+    '2 rondas de 5 repeticiones por lado.'
+  ),
+  crearEjercicio(
+    'Scap Push Up + Squat Hold',
+    'Movilidad / Activacion',
+    'Activar escapulas y posicion profunda de sentadilla.',
+    '10 scap push up + 30 sec squat hold.'
+  ),
+  crearEjercicio(
+    'T-Spine Rotation + Ankle Rocks',
+    'Movilidad',
+    'Mejorar rotacion toracica y movilidad de tobillo.',
+    '10 rotaciones por lado + 10 ankle rocks por lado.'
+  ),
 ]
 
 export default function MetodosPage() {
   const [vista, setVista] = useState('metodos')
+  const [busqueda, setBusqueda] = useState('')
+
+  const textoBusqueda = busqueda.toLowerCase().trim()
+  const ejerciciosFiltrados = ejercicios.filter((ejercicio) =>
+    [
+      ejercicio.nombre,
+      ejercicio.categoria,
+      ejercicio.objetivo,
+      ejercicio.ejemplo,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(textoBusqueda)
+  )
 
   return (
     <div className="space-y-6">
@@ -264,8 +551,21 @@ export default function MetodosPage() {
       )}
 
       {vista === 'ejercicios' && (
-        <div className="grid md:grid-cols-2 gap-4">
-          {ejercicios.map((ejercicio) => (
+        <>
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar ejercicio, categoria o objetivo..."
+              className="w-full bg-black p-4 rounded-xl"
+            />
+            <p className="text-zinc-400 mt-3">
+              Mostrando {ejerciciosFiltrados.length} de {ejercicios.length} ejercicios usados por la IA.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4">
+          {ejerciciosFiltrados.map((ejercicio) => (
             <div key={ejercicio.nombre} className="bg-zinc-900 border border-zinc-700 p-5 rounded-2xl">
               <p className="text-sm font-black text-yellow-400">{ejercicio.categoria}</p>
               <h3 className="text-2xl font-black text-red-400 mt-1">{ejercicio.nombre}</h3>
@@ -304,7 +604,14 @@ export default function MetodosPage() {
               </a>
             </div>
           ))}
-        </div>
+          </div>
+
+          {ejerciciosFiltrados.length === 0 && (
+            <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 text-zinc-400">
+              No encontramos ejercicios con esa busqueda.
+            </div>
+          )}
+        </>
       )}
     </div>
   )
