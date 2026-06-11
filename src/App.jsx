@@ -94,6 +94,16 @@ function alumnoConEstadoAutomatico(alumno) {
   }
 }
 
+function fechaCompra(compra) {
+  return compra.created_at || compra.fecha || compra.fecha_pago || ''
+}
+
+function ordenarCompras(compras) {
+  return [...compras].sort(
+    (a, b) => new Date(fechaCompra(b) || 0) - new Date(fechaCompra(a) || 0)
+  )
+}
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
@@ -118,12 +128,16 @@ export default function App() {
     const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
     setStudent(alumnoActual)
 
-    const { data: comprasData } = await supabase
+    const { data: comprasData, error: comprasError } = await supabase
       .from('solicitudes_compra')
       .select('*')
-      .order('created_at', { ascending: false })
 
-    setRegistroCompras(comprasData || [])
+    if (comprasError) {
+      console.error('Error cargando solicitudes de compra:', comprasError)
+      setRegistroCompras([])
+    } else {
+      setRegistroCompras(ordenarCompras(comprasData || []))
+    }
 
     const { data: alumnosData } = await supabase
       .from('alumnos')
@@ -195,12 +209,25 @@ export default function App() {
   }
 
   async function aprobarSolicitud(solicitud) {
-    const alumno = students.find((a) => a.id === solicitud.alumno_id)
+    let alumno = students.find(
+      (a) => String(a.id) === String(solicitud.alumno_id)
+    )
+
+    if (!alumno) {
+      const { data } = await supabase
+        .from('alumnos')
+        .select('*')
+        .eq('id', solicitud.alumno_id)
+        .single()
+
+      alumno = data
+    }
+
     if (!alumno) return
 
     const nuevasGeneraciones =
       Number(alumno.generaciones_disponibles || 0) +
-      Number(solicitud.generaciones || 2)
+      Number(solicitud.generaciones || 1)
 
     await supabase
       .from('alumnos')
