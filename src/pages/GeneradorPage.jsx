@@ -4,6 +4,38 @@ import { generarEntrenamiento } from './workoutSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
+function descargarWord(contenido, nombreAlumno) {
+  const html = `
+      <html>
+        <head><meta charset="utf-8" /></head>
+        <body>
+          <pre style="font-family: Arial; font-size: 14px; white-space: pre-wrap;">
+${escapeHtml(contenido)}
+          </pre>
+        </body>
+      </html>
+    `
+
+  const blob = new Blob([html], { type: 'application/msword;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+
+  a.href = url
+  a.download = `PowerFit-${nombreAlumno || 'alumno'}-${Date.now()}.doc`
+  a.click()
+
+  URL.revokeObjectURL(url)
+}
+
 export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
@@ -14,52 +46,39 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [planAbierto, setPlanAbierto] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [disponiblesLocal, setDisponiblesLocal] = useState(0)
-
-  useEffect(() => {
-    cargarRM()
-    cargarPlanificacionesMes()
-    setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
-  }, [student])
-
-  useEffect(() => {
-    const intervalo = setInterval(() => {
-      refrescarGeneraciones()
-    }, 30000)
-
-    return () => clearInterval(intervalo)
-  }, [student])
-
-  async function refrescarGeneraciones() {
-    if (!student?.id) return
-
-    const { data } = await supabase
-      .from('alumnos')
-      .select('generaciones_disponibles')
-      .eq('id', student.id)
-      .single()
-
-    setDisponiblesLocal(Number(data?.generaciones_disponibles || 0))
-  }
+  const [generando, setGenerando] = useState(false)
 
   async function cargarRM() {
-    if (!student?.id) return
+    if (!student?.id) {
+      setRms([])
+      return
+    }
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('rm_alumnos')
       .select('*')
       .eq('alumno_id', student.id)
+
+    if (error) {
+      setMensaje(`Error cargando RM: ${error.message}`)
+      setRms([])
+      return
+    }
 
     setRms(data || [])
   }
 
   async function cargarPlanificacionesMes() {
-    if (!student?.id) return
+    if (!student?.id) {
+      setPlanificaciones([])
+      return
+    }
 
     const hoy = new Date()
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString()
     const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1).toISOString()
 
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('planificaciones_generadas')
       .select('*')
       .eq('alumno_id', student.id)
@@ -67,8 +86,51 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
       .lt('created_at', finMes)
       .order('created_at', { ascending: false })
 
+    if (error) {
+      setMensaje(`Error cargando planificaciones: ${error.message}`)
+      setPlanificaciones([])
+      return
+    }
+
     setPlanificaciones(data || [])
   }
+
+  async function refrescarGeneraciones() {
+    if (!student?.id) return 0
+
+    const { data, error } = await supabase
+      .from('alumnos')
+      .select('generaciones_disponibles')
+      .eq('id', student.id)
+      .single()
+
+    if (error) {
+      setMensaje(`Error actualizando generaciones: ${error.message}`)
+      return Number(disponiblesLocal || 0)
+    }
+
+    const disponibles = Number(data?.generaciones_disponibles || 0)
+    setDisponiblesLocal(disponibles)
+    return disponibles
+  }
+
+  useEffect(() => {
+    Promise.resolve().then(() => {
+      cargarRM()
+      cargarPlanificacionesMes()
+      setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id, student?.generaciones_disponibles])
+
+  useEffect(() => {
+    const intervalo = setInterval(() => {
+      refrescarGeneraciones()
+    }, 30000)
+
+    return () => clearInterval(intervalo)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id])
 
   function textoPlan(p, numero) {
     return `
@@ -93,7 +155,7 @@ ${p.bloque1.ejercicios.map((e) => `• ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
-BLOQUE 2 — FUERZA / RM INTELIGENTE
+BLOQUE 2 - FUERZA / RM INTELIGENTE
 Método: ${p.bloque2.metodo}
 Duración: ${p.bloque2.duracion}
 ${p.bloque2.ejercicios.map((e) => `• ${e}`).join('\n')}
@@ -109,89 +171,93 @@ Vuelta a la calma: dirigida en clase.
 `
   }
 
-  function descargarWord(contenido) {
-    const html = `
-      <html>
-        <head><meta charset="utf-8" /></head>
-        <body>
-          <pre style="font-family: Arial; font-size: 14px; white-space: pre-wrap;">
-${contenido}
-          </pre>
-        </body>
-      </html>
-    `
+  async function borrarPlanesInsertados(planes) {
+    const ids = planes.map((plan) => plan.id).filter(Boolean)
+    if (ids.length === 0) return
 
-    const blob = new Blob([html], { type: 'application/msword' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-
-    a.href = url
-    a.download = `PowerFit-${student?.nombre || 'alumno'}-${Date.now()}.doc`
-    a.click()
-
-    URL.revokeObjectURL(url)
+    await supabase.from('planificaciones_generadas').delete().in('id', ids)
   }
 
   async function generar() {
-    if (!student) return
+    if (!student || generando) return
 
-    const disponibles = Number(disponiblesLocal || 0)
-    const cantidadFinal = Math.min(Number(cantidad || 1), disponibles, 2)
+    setGenerando(true)
+    setMensaje('')
 
-    if (cantidadFinal <= 0) {
-      setMensaje('No tienes generaciones disponibles. Debes comprar +2 planificaciones o regularizar tu pago.')
-      return
-    }
+    try {
+      const disponibles = await refrescarGeneraciones()
+      const cantidadSolicitada = Math.max(1, Number(cantidad || 1))
+      const cantidadFinal = Math.min(cantidadSolicitada, disponibles, 2)
 
-    const nuevosPlanes = []
-
-    for (let i = 1; i <= cantidadFinal; i++) {
-      const plan = generarEntrenamiento({
-        objetivo,
-        nivel,
-        faseATR,
-        rms,
-      })
-
-      const contenido = textoPlan(plan, planificaciones.length + i)
-
-      const { data, error } = await supabase
-        .from('planificaciones_generadas')
-        .insert([
-          {
-            user_id: student.user_id,
-            alumno_id: student.id,
-            nombre_alumno: student.nombre,
-            objetivo,
-            nivel,
-            contenido,
-          },
-        ])
-        .select()
-        .single()
-
-      if (error) {
-        setMensaje('Error guardando planificación: ' + error.message)
+      if (cantidadFinal <= 0) {
+        setMensaje('No tienes generaciones disponibles. Debes comprar +2 planificaciones o regularizar tu pago.')
         return
       }
 
-      nuevosPlanes.push(data)
-    }
+      const nuevasFilas = Array.from({ length: cantidadFinal }, (_, index) => {
+        const plan = generarEntrenamiento({
+          objetivo,
+          nivel,
+          faseATR,
+          rms,
+        })
 
-    await supabase
-      .from('alumnos')
-      .update({
-        generaciones_disponibles: disponibles - cantidadFinal,
+        return {
+          user_id: student.user_id,
+          alumno_id: student.id,
+          nombre_alumno: student.nombre,
+          objetivo,
+          nivel,
+          contenido: textoPlan(plan, planificaciones.length + index + 1),
+        }
       })
-      .eq('id', student.id)
 
-    setDisponiblesLocal(disponibles - cantidadFinal)
+      const { data: nuevosPlanes, error: insertError } = await supabase
+        .from('planificaciones_generadas')
+        .insert(nuevasFilas)
+        .select()
 
-    descargarWord(nuevosPlanes.map((p) => p.contenido).join('\n\n'))
+      if (insertError) {
+        setMensaje(`Error guardando planificación: ${insertError.message}`)
+        return
+      }
 
-    setMensaje(`${cantidadFinal} planificación(es) generada(s), guardada(s) y descargada(s).`)
-    await cargarPlanificacionesMes()
-    onUpdateStudent?.()
+      const { data: alumnoActualizado, error: updateError } = await supabase
+        .from('alumnos')
+        .update({
+          generaciones_disponibles: disponibles - cantidadFinal,
+        })
+        .eq('id', student.id)
+        .eq('generaciones_disponibles', disponibles)
+        .select('generaciones_disponibles')
+
+      if (updateError || !alumnoActualizado?.length) {
+        await borrarPlanesInsertados(nuevosPlanes || [])
+        setMensaje(
+          updateError
+            ? `Error descontando generaciones: ${updateError.message}`
+            : 'Tus generaciones cambiaron mientras se creaba el plan. Intenta nuevamente.'
+        )
+        await refrescarGeneraciones()
+        return
+      }
+
+      const disponiblesRestantes = Number(
+        alumnoActualizado[0]?.generaciones_disponibles || 0
+      )
+
+      setDisponiblesLocal(disponiblesRestantes)
+      descargarWord(
+        (nuevosPlanes || []).map((p) => p.contenido).join('\n\n'),
+        student.nombre
+      )
+      setMensaje(`${cantidadFinal} planificación(es) generada(s), guardada(s) y descargada(s).`)
+
+      await cargarPlanificacionesMes()
+      onUpdateStudent?.()
+    } finally {
+      setGenerando(false)
+    }
   }
 
   async function solicitarCompra() {
@@ -219,11 +285,14 @@ ${contenido}
 
     window.open(
       `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
-      '_blank'
+      '_blank',
+      'noopener,noreferrer'
     )
 
     setMensaje('Solicitud enviada correctamente.')
   }
+
+  const sinDisponibles = Number(disponiblesLocal || 0) <= 0
 
   return (
     <div className="space-y-8">
@@ -283,7 +352,7 @@ ${contenido}
         </select>
       </div>
 
-      {Number(disponiblesLocal || 0) <= 0 && (
+      {sinDisponibles && (
         <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
           Ya usaste tus planificaciones disponibles. Compra +2 por $5.000 para seguir generando.
         </div>
@@ -291,23 +360,25 @@ ${contenido}
 
       <button
         onClick={generar}
-        disabled={Number(disponiblesLocal || 0) <= 0}
+        disabled={sinDisponibles || generando}
         className={`w-full p-5 rounded-2xl font-black text-xl ${
-          Number(disponiblesLocal || 0) <= 0
+          sinDisponibles || generando
             ? 'bg-zinc-700 opacity-40 cursor-not-allowed'
             : 'bg-red-600 hover:bg-red-700'
         }`}
       >
-        {Number(disponiblesLocal || 0) <= 0
-          ? 'SIN PLANIFICACIONES DISPONIBLES'
-          : 'GENERAR PLANIFICACIÓN'}
+        {generando
+          ? 'GENERANDO...'
+          : sinDisponibles
+            ? 'SIN PLANIFICACIONES DISPONIBLES'
+            : 'GENERAR PLANIFICACIÓN'}
       </button>
 
       <button
         onClick={solicitarCompra}
         className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
       >
-        COMPRAR +2 PLANIFICACIONES — $5.000
+        COMPRAR +2 PLANIFICACIONES - $5.000
       </button>
 
       {mensaje && (
@@ -339,7 +410,7 @@ ${contenido}
               </button>
 
               <button
-                onClick={() => descargarWord(plan.contenido)}
+                onClick={() => descargarWord(plan.contenido, student?.nombre)}
                 className="bg-blue-600 px-5 py-3 rounded-2xl font-black"
               >
                 Descargar Word

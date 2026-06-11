@@ -1,17 +1,17 @@
-import AsistenciaResumenPage from './pages/AsistenciaResumenPage'
 import { useEffect, useState } from 'react'
 import './App.css'
 import { supabase } from './supabase'
 
-import LoginPage from './pages/LoginPage'
-import RutinasPage from './pages/RutinasPage'
+import AsistenciaPage from './pages/AsistenciaPage'
+import AsistenciaResumenPage from './pages/AsistenciaResumenPage'
+import CheckInPage from './pages/CheckInPage'
 import GeneradorPage from './pages/GeneradorPage'
+import LoginPage from './pages/LoginPage'
 import MetodosPage from './pages/MetodosPage'
+import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RegistroMensualidadesPage from './pages/RegistroMensualidadesPage'
-import MiQRPage from './pages/MiQRPage'
-import CheckInPage from './pages/CheckInPage'
-import AsistenciaPage from './pages/AsistenciaPage'
+import RutinasPage from './pages/RutinasPage'
 
 function Btn({ text, set, disabled }) {
   return (
@@ -36,7 +36,7 @@ function Info({ label, value }) {
   )
 }
 
-export function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
+function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
     encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
 
@@ -63,9 +63,37 @@ export default function App() {
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
 
-  useEffect(() => {
-    checkUser()
-  }, [])
+  async function cargarUsuario(currentUser = user) {
+    if (!currentUser) return
+
+    const { data: alumno } = await supabase
+      .from('alumnos')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .single()
+
+    setStudent(alumno || null)
+
+    const { data: comprasData } = await supabase
+      .from('solicitudes_compra')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    setRegistroCompras(comprasData || [])
+
+    const { data: alumnosData } = await supabase
+      .from('alumnos')
+      .select('*')
+      .order('id', { ascending: false })
+
+    setStudents(alumnosData || [])
+
+    const { data: asistenciasData } = await supabase
+      .from('asistencias')
+      .select('*')
+
+    setAsistencias(asistenciasData || [])
+  }
 
   async function checkUser() {
     const { data } = await supabase.auth.getUser()
@@ -81,37 +109,10 @@ export default function App() {
     setLoading(false)
   }
 
-  async function cargarUsuario(currentUser = user) {
-    if (!currentUser) return
-
-    const { data: alumno } = await supabase
-      .from('alumnos')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .single()
-
-    setStudent(alumno || null)
-
-    const { data: comprasData } = await supabase
-      .from('solicitudes_compra')
-      .select('*')
-      .order('fecha', { ascending: false })
-
-    setRegistroCompras(comprasData || [])
-
-    const { data: alumnosData } = await supabase
-      .from('alumnos')
-      .select('*')
-      .order('id', { ascending: false })
-
-    setStudents(alumnosData || [])
-  }
-
-  const { data: asistenciasData } = await supabase
-  .from('asistencias')
-  .select('*')
-
-setAsistencias(asistenciasData || [])
+  useEffect(() => {
+    Promise.resolve().then(() => checkUser())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function actualizarAlumno(id, campo, valor) {
     await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
@@ -172,7 +173,11 @@ setAsistencias(asistenciasData || [])
     window.location.reload()
   }
 
-  if (loading) return <div className="min-h-screen bg-black text-white p-10">Cargando...</div>
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black text-white p-10">Cargando...</div>
+    )
+  }
 
   if (alumnoCheckIn) {
     return <CheckInPage alumnoId={alumnoCheckIn} />
@@ -198,7 +203,10 @@ setAsistencias(asistenciasData || [])
           </p>
         </div>
 
-        <button onClick={cerrarSesion} className="bg-red-600 px-5 py-3 rounded-2xl font-black">
+        <button
+          onClick={cerrarSesion}
+          className="bg-red-600 px-5 py-3 rounded-2xl font-black"
+        >
           Cerrar sesión
         </button>
       </div>
@@ -270,7 +278,7 @@ setAsistencias(asistenciasData || [])
       {section === 'Admin' && isAdmin && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
           <h2 className="text-4xl font-black text-yellow-400 mb-6">
-            ADMINISTRADOR — ALUMNOS Y PAGOS
+            ADMINISTRADOR - ALUMNOS Y PAGOS
           </h2>
 
           <div className="space-y-3">
@@ -355,34 +363,28 @@ setAsistencias(asistenciasData || [])
                   <span>| Generaciones: {a.generaciones_disponibles || 0}</span>
                   <span>| Premium: {a.bloques_premium || 0}</span>
                   <span>| Rol: {a.role || 'alumno'}</span>
+                  <span>
+                    | Asistencias:{' '}
+                    {
+                      asistencias.filter(
+                        (x) => Number(x.alumno_id) === Number(a.id)
+                      ).length
+                    }
+                  </span>
+                  <span>
+                    | Última:{' '}
+                    {(() => {
+                      const registros = asistencias
+                        .filter((x) => Number(x.alumno_id) === Number(a.id))
+                        .sort(
+                          (a1, a2) => new Date(a2.fecha) - new Date(a1.fecha)
+                        )
 
-<span>
-| Asistencias:{
-  asistencias.filter(
-    x => Number(x.alumno_id) === Number(a.id)
-  ).length
-}
-</span>
-
-<span>
-| Última:{
-  (() => {
-    const registros = asistencias
-      .filter(x => Number(x.alumno_id) === Number(a.id))
-      .sort(
-        (a1, a2) =>
-          new Date(a2.fecha) -
-          new Date(a1.fecha)
-      )
-
-    return registros[0]
-      ? new Date(
-          registros[0].fecha
-        ).toLocaleDateString()
-      : '-'
-  })()
-}
-</span>
+                      return registros[0]
+                        ? new Date(registros[0].fecha).toLocaleDateString()
+                        : '-'
+                    })()}
+                  </span>
 
                   <button
                     onClick={() => eliminarGeneraciones(a)}
