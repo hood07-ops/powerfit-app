@@ -36,6 +36,24 @@ function Info({ label, value }) {
   )
 }
 
+function StatusBadge({ estado }) {
+  const styles = {
+    Pagado: 'bg-green-600 text-white',
+    Pendiente: 'bg-yellow-500 text-black',
+    Moroso: 'bg-red-600 text-white',
+  }
+
+  return (
+    <span
+      className={`inline-flex rounded-xl px-3 py-2 text-sm font-black ${
+        styles[estado] || styles.Pendiente
+      }`}
+    >
+      {estado || 'Pendiente'}
+    </span>
+  )
+}
+
 function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
     encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
@@ -49,6 +67,31 @@ function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   a.click()
 
   URL.revokeObjectURL(url)
+}
+
+function fechaHoy() {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function calcularEstadoPago(alumno) {
+  const hoy = fechaHoy()
+
+  if (alumno.fecha_vencimiento && alumno.fecha_vencimiento < hoy) {
+    return 'Moroso'
+  }
+
+  if (alumno.fecha_pago && alumno.fecha_vencimiento >= hoy) {
+    return 'Pagado'
+  }
+
+  return 'Pendiente'
+}
+
+function alumnoConEstadoAutomatico(alumno) {
+  return {
+    ...alumno,
+    estado_pago: calcularEstadoPago(alumno),
+  }
 }
 
 export default function App() {
@@ -72,7 +115,8 @@ export default function App() {
       .eq('user_id', currentUser.id)
       .single()
 
-    setStudent(alumno || null)
+    const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
+    setStudent(alumnoActual)
 
     const { data: comprasData } = await supabase
       .from('solicitudes_compra')
@@ -86,7 +130,22 @@ export default function App() {
       .select('*')
       .order('id', { ascending: false })
 
-    setStudents(alumnosData || [])
+    const alumnosNormalizados = (alumnosData || []).map(alumnoConEstadoAutomatico)
+    setStudents(alumnosNormalizados)
+
+    const alumnosDesactualizados = alumnosNormalizados.filter((a) => {
+      const original = (alumnosData || []).find((item) => item.id === a.id)
+      return original?.estado_pago !== a.estado_pago
+    })
+
+    await Promise.all(
+      alumnosDesactualizados.map((a) =>
+        supabase
+          .from('alumnos')
+          .update({ estado_pago: a.estado_pago })
+          .eq('id', a.id)
+      )
+    )
 
     const { data: asistenciasData } = await supabase
       .from('asistencias')
@@ -119,19 +178,16 @@ export default function App() {
     await cargarUsuario()
   }
 
-  async function cambiarEstadoPago(alumno, estado) {
+  async function registrarPago(alumno) {
     const hoy = new Date()
     const vencimiento = new Date()
     vencimiento.setMonth(vencimiento.getMonth() + 1)
 
     const updateData = {
-      estado_pago: estado,
-    }
-
-    if (estado === 'Pagado') {
-      updateData.fecha_pago = hoy.toISOString().slice(0, 10)
-      updateData.fecha_vencimiento = vencimiento.toISOString().slice(0, 10)
-      updateData.generaciones_disponibles = 6
+      estado_pago: 'Pagado',
+      fecha_pago: hoy.toISOString().slice(0, 10),
+      fecha_vencimiento: vencimiento.toISOString().slice(0, 10),
+      generaciones_disponibles: 6,
     }
 
     await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
@@ -166,6 +222,57 @@ export default function App() {
       .eq('id', alumno.id)
 
     await cargarUsuario()
+  }
+
+  async function eliminarAlumno(alumno) {
+    const confirmado = window.confirm(
+      `Eliminar definitivamente a ${alumno.nombre || 'este alumno'}?`
+    )
+
+    if (!confirmado) return
+
+    await Promise.all([
+      supabase.from('asistencias').delete().eq('alumno_id', alumno.id),
+      supabase.from('rm_alumnos').delete().eq('alumno_id', alumno.id),
+      supabase.from('planificaciones_generadas').delete().eq('alumno_id', alumno.id),
+      supabase.from('solicitudes_compra').delete().eq('alumno_id', alumno.id),
+    ])
+
+    const { error } = await supabase.from('alumnos').delete().eq('id', alumno.id)
+
+    if (error) {
+      window.alert(`No se pudo eliminar el alumno: ${error.message}`)
+      return
+    }
+
+    await cargarUsuario()
+  }
+
+  function abrirPagoAlumno(alumno) {
+    if (!alumno) return
+
+    const paymentUrl = import.meta.env.VITE_PAYMENT_URL
+
+    if (paymentUrl) {
+      const url = new URL(paymentUrl)
+      url.searchParams.set('alumno_id', alumno.id)
+      url.searchParams.set('user_id', alumno.user_id || user.id)
+      url.searchParams.set('nombre', alumno.nombre || '')
+      url.searchParams.set('monto', String(alumno.monto || 0))
+      window.open(url.toString(), '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    const texto = `Hola Robinson, soy ${alumno.nombre || user.email}. Quiero pagar mi mensualidad PowerFit de $${alumno.monto || 0}.`
+    window.open(
+      `https://wa.me/56988497852?text=${encodeURIComponent(texto)}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
+  }
+
+  function abrirPagoMensualidad() {
+    abrirPagoAlumno(student)
   }
 
   async function cerrarSesion() {
@@ -233,6 +340,12 @@ export default function App() {
             Tu cuenta está pendiente o morosa. Regulariza el pago para desbloquear rutinas,
             generador IA y métodos.
           </p>
+          <button
+            onClick={abrirPagoMensualidad}
+            className="mt-5 bg-green-600 hover:bg-green-700 px-6 py-4 rounded-2xl font-black"
+          >
+            Pagar mensualidad
+          </button>
         </div>
       )}
 
@@ -258,10 +371,19 @@ export default function App() {
       {section === 'Pago' && (
         <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6">
           <h2 className="text-4xl font-black text-green-400 mb-6">Pago / deuda</h2>
-          <Info label="Estado" value={student?.estado_pago} />
-          <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
-          <Info label="Fecha pago" value={student?.fecha_pago} />
-          <Info label="Vencimiento" value={student?.fecha_vencimiento} />
+          <div className="grid md:grid-cols-2 gap-4">
+            <Info label="Estado" value={student?.estado_pago} />
+            <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
+            <Info label="Fecha pago" value={student?.fecha_pago} />
+            <Info label="Vencimiento" value={student?.fecha_vencimiento} />
+          </div>
+
+          <button
+            onClick={abrirPagoMensualidad}
+            className="mt-6 w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
+          >
+            Pagar mensualidad
+          </button>
         </div>
       )}
 
@@ -332,32 +454,16 @@ export default function App() {
                 />
 
                 <button
-                  onClick={() => cambiarEstadoPago(a, 'Pagado')}
+                  onClick={() => registrarPago(a)}
                   className="bg-green-600 p-3 rounded-xl font-black"
                 >
-                  Pagado
-                </button>
-
-                <button
-                  onClick={() => cambiarEstadoPago(a, 'Pendiente')}
-                  className="bg-yellow-500 text-black p-3 rounded-xl font-black"
-                >
-                  Pendiente
-                </button>
-
-                <button
-                  onClick={() => cambiarEstadoPago(a, 'Moroso')}
-                  className="bg-red-600 p-3 rounded-xl font-black"
-                >
-                  Moroso
+                  Registrar pago
                 </button>
 
                 <div className="md:col-span-9 text-sm text-zinc-300 flex flex-wrap gap-3 items-center">
                   <span>
                     Estado actual:{' '}
-                    <strong className={a.estado_pago === 'Pagado' ? 'text-green-400' : 'text-red-400'}>
-                      {a.estado_pago || 'Pendiente'}
-                    </strong>
+                    <StatusBadge estado={a.estado_pago} />
                   </span>
 
                   <span>| Generaciones: {a.generaciones_disponibles || 0}</span>
@@ -391,6 +497,20 @@ export default function App() {
                     className="bg-red-800 hover:bg-red-900 px-4 py-2 rounded-xl font-black"
                   >
                     Eliminar generaciones
+                  </button>
+
+                  <button
+                    onClick={() => abrirPagoAlumno(a)}
+                    className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-xl font-black"
+                  >
+                    Enviar link de pago
+                  </button>
+
+                  <button
+                    onClick={() => eliminarAlumno(a)}
+                    className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl font-black"
+                  >
+                    Eliminar alumno
                   </button>
                 </div>
               </div>

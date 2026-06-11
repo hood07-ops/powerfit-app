@@ -40,7 +40,6 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
-  const [cantidad, setCantidad] = useState(1)
   const [rms, setRms] = useState([])
   const [planificaciones, setPlanificaciones] = useState([])
   const [planAbierto, setPlanAbierto] = useState(null)
@@ -74,6 +73,8 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
       return
     }
 
+    await eliminarPlanificacionesVencidas()
+
     const hoy = new Date()
     const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString()
     const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1).toISOString()
@@ -93,6 +94,19 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     }
 
     setPlanificaciones(data || [])
+  }
+
+  async function eliminarPlanificacionesVencidas() {
+    if (!student?.id) return
+
+    const limite = new Date()
+    limite.setMonth(limite.getMonth() - 1)
+
+    await supabase
+      .from('planificaciones_generadas')
+      .delete()
+      .eq('alumno_id', student.id)
+      .lt('created_at', limite.toISOString())
   }
 
   async function refrescarGeneraciones() {
@@ -135,7 +149,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   function textoPlan(p, numero) {
     return `
 POWERFIT 360
-PLANIFICACIÓN ${numero}
+PLANIFICACION ${numero}
 
 Fecha: ${new Date().toLocaleString()}
 Alumno: ${student?.nombre || ''}
@@ -143,29 +157,30 @@ Objetivo: ${p.objetivo}
 Nivel: ${p.nivel}
 Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
+Variante: ${p.variante}
 
-ACTIVACIÓN
-Método: ${p.activacion.metodo}
-${p.activacion.ejercicios.map((e) => `• ${e}`).join('\n')}
+ACTIVACION
+Metodo: ${p.activacion.metodo}
+${p.activacion.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 BLOQUE 1
-Método: ${p.bloque1.metodo}
-Duración: ${p.bloque1.duracion}
-${p.bloque1.ejercicios.map((e) => `• ${e}`).join('\n')}
+Metodo: ${p.bloque1.metodo}
+Duracion: ${p.bloque1.duracion}
+${p.bloque1.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 2 - FUERZA / RM INTELIGENTE
-Método: ${p.bloque2.metodo}
-Duración: ${p.bloque2.duracion}
-${p.bloque2.ejercicios.map((e) => `• ${e}`).join('\n')}
+Metodo: ${p.bloque2.metodo}
+Duracion: ${p.bloque2.duracion}
+${p.bloque2.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 3
-Método: ${p.bloque3.metodo}
-Duración: ${p.bloque3.duracion}
-${p.bloque3.ejercicios.map((e) => `• ${e}`).join('\n')}
+Metodo: ${p.bloque3.metodo}
+Duracion: ${p.bloque3.duracion}
+${p.bloque3.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 Vuelta a la calma: dirigida en clase.
 `
@@ -186,39 +201,37 @@ Vuelta a la calma: dirigida en clase.
 
     try {
       const disponibles = await refrescarGeneraciones()
-      const cantidadSolicitada = Math.max(1, Number(cantidad || 1))
-      const cantidadFinal = Math.min(cantidadSolicitada, disponibles, 2)
+      const cantidadFinal = disponibles > 0 ? 1 : 0
 
       if (cantidadFinal <= 0) {
-        setMensaje('No tienes generaciones disponibles. Debes comprar +2 planificaciones o regularizar tu pago.')
+        setMensaje('No tienes generaciones disponibles. Debes comprar 1 planificacion o regularizar tu pago.')
         return
       }
 
-      const nuevasFilas = Array.from({ length: cantidadFinal }, (_, index) => {
-        const plan = generarEntrenamiento({
-          objetivo,
-          nivel,
-          faseATR,
-          rms,
-        })
-
-        return {
-          user_id: student.user_id,
-          alumno_id: student.id,
-          nombre_alumno: student.nombre,
-          objetivo,
-          nivel,
-          contenido: textoPlan(plan, planificaciones.length + index + 1),
-        }
+      const plan = generarEntrenamiento({
+        objetivo,
+        nivel,
+        faseATR,
+        rms,
+        historial: planificaciones.map((p) => p.contenido),
       })
 
       const { data: nuevosPlanes, error: insertError } = await supabase
         .from('planificaciones_generadas')
-        .insert(nuevasFilas)
+        .insert([
+          {
+            user_id: student.user_id,
+            alumno_id: student.id,
+            nombre_alumno: student.nombre,
+            objetivo,
+            nivel,
+            contenido: textoPlan(plan, planificaciones.length + 1),
+          },
+        ])
         .select()
 
       if (insertError) {
-        setMensaje(`Error guardando planificación: ${insertError.message}`)
+        setMensaje(`Error guardando planificacion: ${insertError.message}`)
         return
       }
 
@@ -247,11 +260,8 @@ Vuelta a la calma: dirigida en clase.
       )
 
       setDisponiblesLocal(disponiblesRestantes)
-      descargarWord(
-        (nuevosPlanes || []).map((p) => p.contenido).join('\n\n'),
-        student.nombre
-      )
-      setMensaje(`${cantidadFinal} planificación(es) generada(s), guardada(s) y descargada(s).`)
+      descargarWord((nuevosPlanes || []).map((p) => p.contenido).join('\n\n'), student.nombre)
+      setMensaje('1 planificacion generada, guardada y descargada.')
 
       await cargarPlanificacionesMes()
       onUpdateStudent?.()
@@ -270,8 +280,8 @@ Vuelta a la calma: dirigida en clase.
           user_id: student.user_id,
           alumno_id: student.id,
           nombre_alumno: student.nombre,
-          monto: 5000,
-          generaciones: 2,
+          monto: 2500,
+          generaciones: 1,
           estado: 'Pendiente',
         },
       ])
@@ -281,7 +291,7 @@ Vuelta a la calma: dirigida en clase.
       return
     }
 
-    const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar +2 planificaciones PowerFit por $5.000.`
+    const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar 1 planificacion PowerFit por $2.500.`
 
     window.open(
       `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
@@ -310,7 +320,7 @@ Vuelta a la calma: dirigida en clase.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-4">
+      <div className="grid md:grid-cols-3 gap-4">
         <select
           value={objetivo}
           onChange={(e) => setObjetivo(e.target.value)}
@@ -318,7 +328,7 @@ Vuelta a la calma: dirigida en clase.
         >
           <option value="fighter">Fighter</option>
           <option value="fuerza">Fuerza</option>
-          <option value="perdida_grasa">Pérdida grasa</option>
+          <option value="perdida_grasa">Perdida grasa</option>
           <option value="cardio">Cardio</option>
         </select>
 
@@ -327,7 +337,7 @@ Vuelta a la calma: dirigida en clase.
           onChange={(e) => setNivel(e.target.value)}
           className="bg-zinc-800 p-4 rounded-2xl"
         >
-          <option value="basico">Básico</option>
+          <option value="basico">Basico</option>
           <option value="intermedio">Intermedio</option>
           <option value="avanzado">Avanzado</option>
         </select>
@@ -337,24 +347,15 @@ Vuelta a la calma: dirigida en clase.
           onChange={(e) => setFaseATR(e.target.value)}
           className="bg-zinc-800 p-4 rounded-2xl"
         >
-          <option value="acumulacion">ATR Acumulación</option>
-          <option value="transformacion">ATR Transformación</option>
-          <option value="realizacion">ATR Realización</option>
-        </select>
-
-        <select
-          value={cantidad}
-          onChange={(e) => setCantidad(Number(e.target.value))}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
-          <option value={1}>1 planificación</option>
-          <option value={2}>2 planificaciones</option>
+          <option value="acumulacion">ATR Acumulacion</option>
+          <option value="transformacion">ATR Transformacion</option>
+          <option value="realizacion">ATR Realizacion</option>
         </select>
       </div>
 
       {sinDisponibles && (
         <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
-          Ya usaste tus planificaciones disponibles. Compra +2 por $5.000 para seguir generando.
+          Ya usaste tus planificaciones disponibles. Compra 1 por $2.500 para seguir generando.
         </div>
       )}
 
@@ -371,14 +372,14 @@ Vuelta a la calma: dirigida en clase.
           ? 'GENERANDO...'
           : sinDisponibles
             ? 'SIN PLANIFICACIONES DISPONIBLES'
-            : 'GENERAR PLANIFICACIÓN'}
+            : 'GENERAR 1 PLANIFICACION'}
       </button>
 
       <button
         onClick={solicitarCompra}
         className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
       >
-        COMPRAR +2 PLANIFICACIONES - $5.000
+        COMPRAR 1 PLANIFICACION - $2.500
       </button>
 
       {mensaje && (
@@ -406,7 +407,7 @@ Vuelta a la calma: dirigida en clase.
                 onClick={() => setPlanAbierto(plan)}
                 className="bg-red-600 px-5 py-3 rounded-2xl font-black"
               >
-                Ver planificación
+                Ver planificacion
               </button>
 
               <button
@@ -425,7 +426,7 @@ Vuelta a la calma: dirigida en clase.
           <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6 max-w-4xl max-h-[85vh] overflow-auto">
             <div className="flex justify-between items-center mb-5">
               <h2 className="text-3xl font-black text-yellow-400">
-                Planificación
+                Planificacion
               </h2>
 
               <button

@@ -84,7 +84,7 @@ export default function RegistroComprasPage({
                 onClick={() => aprobarSolicitud(s)}
                 className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
               >
-                Aprobar +2
+                Aprobar +{s.generaciones || 1}
               </button>
             ) : (
               <p className="text-green-400 font-black">Archivado</p>
