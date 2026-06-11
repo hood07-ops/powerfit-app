@@ -57,19 +57,19 @@ function configFase(faseATR) {
   const configs = {
     acumulacion: {
       porcentajes: [0.6, 0.65, 0.7],
-      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS'],
+      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS', 'PIRAMIDAL TECNICO'],
       finales: ['EMOM 12 MIN', 'AMRAP 10 MIN', 'FOR QUALITY 12 MIN'],
       foco: 'volumen tecnico y base aerobica',
     },
     transformacion: {
       porcentajes: [0.72, 0.75, 0.78],
-      principales: ['INTERVALOS 40/20', 'E3MOM 15 MIN', 'DENSIDAD 12 MIN'],
+      principales: ['INTERVALOS 40/20', 'E3MOM 15 MIN', 'DENSIDAD 12 MIN', 'PIRAMIDAL DE FUERZA'],
       finales: ['AMRAP 10 MIN', 'INTERVALOS 30/30', 'CHIPPER CORTO'],
       foco: 'potencia, ritmo y transferencia',
     },
     realizacion: {
       porcentajes: [0.82, 0.85, 0.88],
-      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TECNICO'],
+      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TECNICO', 'PIRAMIDAL PESADO'],
       finales: ['FOR TIME', 'SPRINT INTERVALS', 'AMRAP 8 MIN'],
       foco: 'intensidad, rendimiento y ejecucion precisa',
     },
@@ -157,6 +157,20 @@ function crearBloqueFinal(objetivo, nivelCfg, pools) {
   return finales[objetivo] || finales.fighter
 }
 
+function crearTrabajoFuerza(ejercicio, nivelCfg, porcentaje, rms) {
+  const usarPiramidal = Math.random() < 0.35
+
+  if (usarPiramidal) {
+    return `${ejercicio} - PIRAMIDAL 1-3-5-7-5-3-1 @${Math.round(
+      porcentaje * 100
+    )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}`
+  }
+
+  return `${ejercicio} - ${pick(nivelCfg.series)}x${pick(['3', '4', '5'])} @${Math.round(
+    porcentaje * 100
+  )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}`
+}
+
 function firmaPlan(plan) {
   return [...plan.bloque2.ejercicios, ...plan.bloque3.ejercicios]
 }
@@ -233,7 +247,6 @@ export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial 
 
   for (let intento = 0; intento < 8; intento++) {
     const porcentaje = pick(faseCfg.porcentajes)
-    const series = pick(nivelCfg.series)
     const variante = pick(variantes)
     const fuerzaElegida =
       objetivo === 'fuerza'
@@ -269,11 +282,8 @@ export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial 
       bloque2: {
         metodo: `FUERZA / %RM - foco: ${faseCfg.foco}`,
         duracion: pick(['12 min', '12-15 min', '15 min', '15-18 min']),
-        ejercicios: fuerzaElegida.map(
-          (e) =>
-            `${e} - ${series}x${pick(['3', '4', '5'])} @${Math.round(
-              porcentaje * 100
-            )}% - carga sugerida: ${calcularCarga(rms, e, porcentaje)} - descanso ${pick(nivelCfg.descanso)}`
+        ejercicios: fuerzaElegida.map((e) =>
+          crearTrabajoFuerza(e, nivelCfg, porcentaje, rms)
         ),
       },
 
