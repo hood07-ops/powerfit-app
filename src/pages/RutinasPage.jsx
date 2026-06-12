@@ -1,10 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
-export default function RutinasPage({ student }) {
+export default function RutinasPage({ student, onUpdateStudent }) {
 
   const [user, setUser] = useState(null)
-  const [records, setRecords] = useState([])
   const [mensaje, setMensaje] = useState('')
   const [formValues, setFormValues] = useState({})
 
@@ -92,6 +91,66 @@ export default function RutinasPage({ student }) {
       ],
       xp: 70,
     },
+    {
+      nombre: 'TEST SALTO VERTICAL',
+      metodo: 'Evaluacion potencia',
+      duracion: '3 intentos',
+      objetivo: 'Medir potencia de tren inferior',
+      record: 'repeticiones',
+      label: 'Mejor salto CM',
+      tipo: 'gratis',
+      ejercicios: [
+        'Entrada en calor general 6-8 min',
+        '3 saltos verticales con descanso completo',
+        'Registrar el mejor salto en centimetros',
+      ],
+      xp: 35,
+    },
+    {
+      nombre: 'TEST COOPER / VO2',
+      metodo: 'Evaluacion aerobica',
+      duracion: '12 MIN',
+      objetivo: 'Estimar resistencia y VO2 max por distancia',
+      record: 'repeticiones',
+      label: 'Distancia metros en 12 min',
+      tipo: 'gratis',
+      ejercicios: [
+        'Correr, remar o pedalear 12 minutos',
+        'Mantener ritmo estable y registrar distancia total',
+        'VO2 estimado: (metros - 504.9) / 44.73',
+      ],
+      xp: 45,
+    },
+    {
+      nombre: 'TEST VELOCIDAD 30M',
+      metodo: 'Sprint test',
+      duracion: '30 metros',
+      objetivo: 'Medir aceleracion y velocidad',
+      record: 'tiempo',
+      label: 'Tiempo segundos',
+      tipo: 'gratis',
+      ejercicios: [
+        'Calentamiento completo de carrera',
+        '2-3 intentos de 30 metros',
+        'Registrar el mejor tiempo',
+      ],
+      xp: 35,
+    },
+    {
+      nombre: 'TEST DISTANCIA CONTROLADA',
+      metodo: 'Trabajo distancia / velocidad',
+      duracion: 'Libre',
+      objetivo: 'Registrar distancia o volumen completado',
+      record: 'repeticiones',
+      label: 'Distancia metros',
+      tipo: 'gratis',
+      ejercicios: [
+        'Elegir distancia o maquina de trabajo',
+        'Registrar metros totales completados',
+        'Comparar progreso semanal y mensual',
+      ],
+      xp: 35,
+    },
 
   ]
 
@@ -107,14 +166,6 @@ export default function RutinasPage({ student }) {
     if (!currentUser) return
 
     setUser(currentUser)
-
-    const { data: recordsData } = await supabase
-      .from('records_entrenamiento')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .order('created_at', { ascending: false })
-
-    setRecords(recordsData || [])
 
   }
 
@@ -190,6 +241,7 @@ export default function RutinasPage({ student }) {
     setMensaje(`+${bloque.xp} XP ganados`)
     setFormValues({})
     cargar()
+    onUpdateStudent?.()
 
   }
 
@@ -329,7 +381,7 @@ export default function RutinasPage({ student }) {
 
                 <input
                   type="number"
-                  placeholder="Repeticiones totales"
+                  placeholder={bloque.label || 'Repeticiones totales'}
                   value={valores.repeticiones || ''}
                   onChange={(e) =>
                     actualizarValor(

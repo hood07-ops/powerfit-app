@@ -149,6 +149,235 @@ function resumenAsistenciaAlumno(alumno, asistencias) {
   }
 }
 
+function valorRecord(record) {
+  if (Number(record.peso_kg)) return Number(record.peso_kg)
+  if (Number(record.repeticiones)) return Number(record.repeticiones)
+  if (Number(record.vueltas)) return Number(record.vueltas)
+  if (Number(record.tiempo_segundos)) return Number(record.tiempo_segundos)
+  return 0
+}
+
+function unidadRecord(record) {
+  const nombre = String(record.rutina_nombre || '').toLowerCase()
+
+  if (Number(record.peso_kg)) return 'kg'
+  if (Number(record.tiempo_segundos)) return 'seg'
+  if (nombre.includes('salto')) return 'cm'
+  if (nombre.includes('cooper') || nombre.includes('distancia')) return 'm'
+  if (Number(record.vueltas)) return 'vueltas'
+  return 'reps'
+}
+
+function mejorRecord(records, filtro, menorEsMejor = false) {
+  const filtrados = records.filter(filtro).filter((record) => valorRecord(record) > 0)
+
+  if (filtrados.length === 0) return null
+
+  return filtrados.reduce((mejor, actual) => {
+    const valorActual = valorRecord(actual)
+    const valorMejor = valorRecord(mejor)
+    return menorEsMejor
+      ? valorActual < valorMejor ? actual : mejor
+      : valorActual > valorMejor ? actual : mejor
+  })
+}
+
+function faseAtrPorFecha(fecha) {
+  const dia = new Date(fecha).getDate()
+
+  if (dia <= 14) return 'Acumulacion'
+  if (dia <= 24) return 'Transformacion'
+  return 'Realizacion'
+}
+
+function scoreRecord(record) {
+  if (Number(record.peso_kg)) return Number(record.peso_kg)
+  if (Number(record.repeticiones)) return Number(record.repeticiones) / 10
+  if (Number(record.vueltas)) return Number(record.vueltas) * 8
+  if (Number(record.tiempo_segundos)) return Math.max(1, 600 / Number(record.tiempo_segundos))
+  return 0
+}
+
+function datosAtrMensual(records) {
+  const hoy = new Date()
+  const delMes = records.filter((record) => {
+    const fecha = new Date(record.created_at)
+    return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear()
+  })
+
+  return ['Acumulacion', 'Transformacion', 'Realizacion'].map((fase) => {
+    const registros = delMes.filter((record) => faseAtrPorFecha(record.created_at) === fase)
+    const total = registros.reduce((sum, record) => sum + scoreRecord(record), 0)
+    const promedio = registros.length ? total / registros.length : 0
+
+    return {
+      label: fase,
+      value: Math.round(promedio * 10) / 10,
+    }
+  })
+}
+
+function SparkChart({ data, color = '#ef4444', lowerIsBetter = false }) {
+  const valores = data.map((item) => Number(item.value || 0))
+  const max = Math.max(...valores, 1)
+  const min = Math.min(...valores, 0)
+  const rango = Math.max(max - min, 1)
+  const puntos = data.map((item, index) => {
+    const x = data.length === 1 ? 50 : (index / (data.length - 1)) * 100
+    const normalizado = (Number(item.value || 0) - min) / rango
+    const y = lowerIsBetter ? 10 + normalizado * 80 : 90 - normalizado * 80
+    return `${x},${y}`
+  })
+
+  return (
+    <div className="h-32 w-full">
+      {data.length === 0 ? (
+        <div className="h-full rounded-2xl bg-zinc-800 flex items-center justify-center text-zinc-500">
+          Sin datos
+        </div>
+      ) : (
+        <svg viewBox="0 0 100 100" className="h-full w-full overflow-visible">
+          <polyline
+            points={puntos.join(' ')}
+            fill="none"
+            stroke={color}
+            strokeWidth="4"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {puntos.map((punto, index) => {
+            const [x, y] = punto.split(',')
+            return <circle key={`${punto}-${index}`} cx={x} cy={y} r="3.5" fill={color} />
+          })}
+        </svg>
+      )}
+    </div>
+  )
+}
+
+function BarChart({ data }) {
+  const max = Math.max(...data.map((item) => Number(item.value || 0)), 1)
+
+  return (
+    <div className="grid grid-cols-3 gap-3 h-36 items-end">
+      {data.map((item) => (
+        <div key={item.label} className="h-full flex flex-col justify-end gap-2">
+          <div className="text-center text-sm font-black text-yellow-400">
+            {item.value || 0}
+          </div>
+          <div
+            className="rounded-t-xl bg-red-600 min-h-2"
+            style={{ height: `${Math.max((Number(item.value || 0) / max) * 100, 6)}%` }}
+          />
+          <div className="text-center text-xs text-zinc-400">{item.label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function ProgressDashboard({ records, rms, asistencias, student }) {
+  const ordenados = [...records].sort(
+    (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)
+  )
+  const ultimos = [...records].slice(0, 5)
+  const fuerza = mejorRecord(records, (record) => Number(record.peso_kg))
+  const tiempo = mejorRecord(records, (record) => Number(record.tiempo_segundos), true)
+  const salto = mejorRecord(records, (record) =>
+    String(record.rutina_nombre || '').toLowerCase().includes('salto')
+  )
+  const cooper = mejorRecord(records, (record) =>
+    String(record.rutina_nombre || '').toLowerCase().includes('cooper')
+  )
+  const mejorRm = [...rms]
+    .filter((rm) => Number(rm.rm_kg))
+    .sort((a, b) => Number(b.rm_kg) - Number(a.rm_kg))[0]
+  const datosFuerza = ordenados
+    .filter((record) => Number(record.peso_kg))
+    .slice(-6)
+    .map((record) => ({ label: record.rutina_nombre, value: Number(record.peso_kg) }))
+  const datosTiempo = ordenados
+    .filter((record) => Number(record.tiempo_segundos))
+    .slice(-6)
+    .map((record) => ({ label: record.rutina_nombre, value: Number(record.tiempo_segundos) }))
+  const resumenAsistencia = resumenAsistenciaAlumno(student, asistencias)
+  const atr = datosAtrMensual(records)
+  const vo2 = cooper?.repeticiones
+    ? Math.max(0, (Number(cooper.repeticiones) - 504.9) / 44.73).toFixed(1)
+    : null
+
+  return (
+    <div className="mt-8 space-y-6">
+      <div>
+        <h3 className="text-3xl font-black text-red-500">Progreso PowerFit</h3>
+        <p className="text-zinc-400 mt-2">
+          Graficos de crecimiento por records, tests, asistencia, RM y mesociclo ATR.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        <Info label="Records guardados" value={records.length} />
+        <Info label="Asistencias este mes" value={resumenAsistencia.mes} />
+        <Info label="Mejor RM" value={mejorRm ? `${mejorRm.ejercicio} ${mejorRm.rm_kg} kg` : '-'} />
+        <Info label="VO2 estimado" value={vo2 ? `${vo2} ml/kg/min` : '-'} />
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="font-black text-yellow-400">Mesociclo ATR del mes</p>
+          <BarChart data={atr} />
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="font-black text-yellow-400">Fuerza / kg</p>
+          <SparkChart data={datosFuerza} color="#22c55e" />
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="font-black text-yellow-400">Tiempos / segundos</p>
+          <SparkChart data={datosTiempo} color="#38bdf8" lowerIsBetter />
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Info label="Mejor fuerza registrada" value={fuerza ? `${fuerza.peso_kg} kg` : '-'} />
+        <Info label="Mejor tiempo" value={tiempo ? `${tiempo.tiempo_segundos} seg` : '-'} />
+        <Info label="Salto vertical" value={salto ? `${salto.repeticiones} cm` : '-'} />
+        <Info label="Cooper distancia" value={cooper ? `${cooper.repeticiones} m` : '-'} />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-4">
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="font-black text-yellow-400 mb-3">Ultimos registros</p>
+          <div className="space-y-2">
+            {ultimos.map((record) => (
+              <div key={record.id} className="bg-black/40 rounded-xl p-3">
+                <p className="font-black">{record.rutina_nombre}</p>
+                <p className="text-sm text-zinc-400">
+                  {new Date(record.created_at).toLocaleDateString()} - {valorRecord(record)} {unidadRecord(record)}
+                </p>
+              </div>
+            ))}
+            {ultimos.length === 0 && (
+              <p className="text-zinc-500">Aun no hay records. Guarda tests desde Rutinas.</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="font-black text-yellow-400 mb-3">Evaluaciones recomendadas</p>
+          <div className="grid sm:grid-cols-2 gap-2 text-sm text-zinc-300">
+            <p className="bg-black/40 rounded-xl p-3">Salto vertical: potencia de piernas.</p>
+            <p className="bg-black/40 rounded-xl p-3">Cooper 12 min: VO2 max estimado.</p>
+            <p className="bg-black/40 rounded-xl p-3">Sprint 30m: velocidad/aceleracion.</p>
+            <p className="bg-black/40 rounded-xl p-3">RM: fuerza maxima por ejercicio.</p>
+            <p className="bg-black/40 rounded-xl p-3">Tiempo For Time: capacidad bajo fatiga.</p>
+            <p className="bg-black/40 rounded-xl p-3">Distancia controlada: volumen aerobico.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AdminAlumnoModal({
   alumno,
   asistencias,
@@ -454,6 +683,8 @@ export default function App() {
   const [student, setStudent] = useState(null)
   const [students, setStudents] = useState([])
   const [asistencias, setAsistencias] = useState([])
+  const [recordsEntrenamiento, setRecordsEntrenamiento] = useState([])
+  const [rmsAlumno, setRmsAlumno] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
@@ -474,6 +705,27 @@ export default function App() {
 
     const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
     setStudent(alumnoActual)
+
+    if (alumnoActual?.id) {
+      const { data: recordsData, error: recordsError } = await supabase
+        .from('records_entrenamiento')
+        .select('*')
+        .eq('alumno_id', alumnoActual.id)
+        .order('created_at', { ascending: false })
+
+      setRecordsEntrenamiento(recordsError ? [] : recordsData || [])
+
+      const { data: rmsData, error: rmsError } = await supabase
+        .from('rm_alumnos')
+        .select('*')
+        .eq('alumno_id', alumnoActual.id)
+        .order('rm_kg', { ascending: false })
+
+      setRmsAlumno(rmsError ? [] : rmsData || [])
+    } else {
+      setRecordsEntrenamiento([])
+      setRmsAlumno([])
+    }
 
     const { data: comprasData, error: comprasError } = await supabase
       .from('solicitudes_compra')
@@ -790,6 +1042,13 @@ export default function App() {
             <Info label="Estado pago" value={student?.estado_pago} />
             <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
           </div>
+
+          <ProgressDashboard
+            records={recordsEntrenamiento}
+            rms={rmsAlumno}
+            asistencias={asistencias}
+            student={student}
+          />
         </div>
       )}
 
@@ -812,7 +1071,9 @@ export default function App() {
         </div>
       )}
 
-      {section === 'Rutinas' && !bloqueado && <RutinasPage student={student} />}
+      {section === 'Rutinas' && !bloqueado && (
+        <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
+      )}
 
       {section === 'Generador' && !bloqueado && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
