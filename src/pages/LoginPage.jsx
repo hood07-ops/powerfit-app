@@ -93,8 +93,13 @@ export default function LoginPage({ onLogin }) {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <div className="w-full max-w-2xl bg-zinc-900 border border-red-600 rounded-3xl p-8">
-        <h1 className="text-4xl font-black text-red-500 text-center">
+      <div className="w-full max-w-2xl bg-zinc-900 border border-red-600 rounded-3xl p-6 sm:p-8">
+        <img
+          src="/powerfit-logo.png"
+          alt="PowerFit 360"
+          className="mx-auto h-40 w-40 sm:h-48 sm:w-48 rounded-full object-cover border border-red-600"
+        />
+        <h1 className="text-4xl font-black text-red-500 text-center mt-5">
           POWERFIT 360
         </h1>
 

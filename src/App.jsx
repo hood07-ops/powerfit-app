@@ -702,15 +702,22 @@ export default function App() {
     <div className="min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto">
       <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-3xl sm:text-4xl font-black text-red-500">POWERFIT 360</h1>
-          <p className="text-zinc-300">{student?.nombre || user.email}</p>
-          <p className="text-yellow-400 font-black">
-            {isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}
-          </p>
-          <p className={pagoAlDia ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
-            Estado pago: {student?.estado_pago || 'Pendiente'}
-          </p>
+        <div className="min-w-0 flex items-center gap-4">
+          <img
+            src="/powerfit-logo.png"
+            alt="PowerFit 360"
+            className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover border border-red-600"
+          />
+          <div className="min-w-0">
+            <h1 className="text-3xl sm:text-4xl font-black text-red-500">POWERFIT 360</h1>
+            <p className="text-zinc-300 truncate">{student?.nombre || user.email}</p>
+            <p className="text-yellow-400 font-black">
+              {isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}
+            </p>
+            <p className={pagoAlDia ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
+              Estado pago: {student?.estado_pago || 'Pendiente'}
+            </p>
+          </div>
         </div>
 
         <button
