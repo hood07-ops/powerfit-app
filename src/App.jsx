@@ -2,15 +2,12 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import { supabase } from './supabase'
 
-import AsistenciaPage from './pages/AsistenciaPage'
-import AsistenciaResumenPage from './pages/AsistenciaResumenPage'
 import CheckInPage from './pages/CheckInPage'
 import GeneradorPage from './pages/GeneradorPage'
 import LoginPage from './pages/LoginPage'
 import MetodosPage from './pages/MetodosPage'
 import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
-import RegistroMensualidadesPage from './pages/RegistroMensualidadesPage'
 import RutinasPage from './pages/RutinasPage'
 
 function Btn({ text, set, disabled }) {
@@ -73,6 +70,17 @@ function fechaHoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function diferenciaDias(fecha) {
+  if (!fecha) return null
+
+  const hoy = new Date(fechaHoy())
+  const destino = new Date(fecha)
+
+  if (Number.isNaN(destino.getTime())) return null
+
+  return Math.ceil((destino - hoy) / (1000 * 60 * 60 * 24))
+}
+
 function calcularEstadoPago(alumno) {
   const hoy = fechaHoy()
 
@@ -104,6 +112,339 @@ function ordenarCompras(compras) {
   )
 }
 
+function fechaAsistencia(item) {
+  return item.fecha || item.created_at
+}
+
+function resumenAsistenciaAlumno(alumno, asistencias) {
+  const registros = asistencias
+    .filter((item) => String(item.alumno_id) === String(alumno?.id))
+    .sort((a, b) => new Date(fechaAsistencia(b)) - new Date(fechaAsistencia(a)))
+
+  const hoy = new Date()
+  const asistenciasMes = registros.filter((item) => {
+    const fecha = new Date(fechaAsistencia(item))
+
+    return (
+      fecha.getMonth() === hoy.getMonth() &&
+      fecha.getFullYear() === hoy.getFullYear()
+    )
+  }).length
+
+  const ultima = registros[0] ? fechaAsistencia(registros[0]) : null
+  const diasSinAsistir = ultima
+    ? Math.floor((hoy - new Date(ultima)) / (1000 * 60 * 60 * 24))
+    : null
+
+  return {
+    registros,
+    total: registros.length,
+    mes: asistenciasMes,
+    ultima,
+    diasSinAsistir,
+  }
+}
+
+function AdminAlumnoModal({
+  alumno,
+  asistencias,
+  onClose,
+  onUpdate,
+  onRegistrarPago,
+  onEnviarPago,
+  onEliminarGeneraciones,
+  onEliminarAlumno,
+}) {
+  if (!alumno) return null
+
+  const resumen = resumenAsistenciaAlumno(alumno, asistencias)
+  const diasVence = diferenciaDias(alumno.fecha_vencimiento)
+  const monto = Number(alumno.monto || 0)
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+      <div className="bg-zinc-950 border border-yellow-500 rounded-3xl p-6 max-w-6xl w-full max-h-[90vh] overflow-auto">
+        <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+          <div>
+            <h2 className="text-4xl font-black text-yellow-400">
+              {alumno.nombre || 'Alumno'}
+            </h2>
+            <div className="mt-3 flex flex-wrap gap-3 items-center">
+              <StatusBadge estado={alumno.estado_pago} />
+              <span className="text-zinc-400">ID: {alumno.id}</span>
+              <span className="text-zinc-400">Rol: {alumno.role || 'alumno'}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl font-black"
+          >
+            Cerrar
+          </button>
+        </div>
+
+        {alumno.estado_pago === 'Pagado' && diasVence !== null && diasVence <= 5 && (
+          <div className="bg-yellow-500 text-black rounded-2xl p-4 mb-6 font-black">
+            Membresia por vencer:{' '}
+            {diasVence <= 0 ? 'vence hoy' : `faltan ${diasVence} dia(s)`}.
+          </div>
+        )}
+
+        {alumno.estado_pago === 'Moroso' && (
+          <div className="bg-red-900 border border-red-500 rounded-2xl p-4 mb-6 font-black">
+            Membresia vencida. El alumno queda bloqueado hasta registrar pago o confirmar Webpay.
+          </div>
+        )}
+
+        <div className="grid md:grid-cols-4 gap-4 mb-6">
+          <Info label="Asistencias total" value={resumen.total} />
+          <Info label="Asistencias este mes" value={resumen.mes} />
+          <Info
+            label="Ultima asistencia"
+            value={resumen.ultima ? new Date(resumen.ultima).toLocaleDateString() : '-'}
+          />
+          <Info
+            label="Dias sin asistir"
+            value={resumen.diasSinAsistir === null ? 'Sin registros' : resumen.diasSinAsistir}
+          />
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-6">
+          <section className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5">
+            <h3 className="text-2xl font-black text-green-400 mb-4">
+              Datos y mensualidad
+            </h3>
+
+            <div className="grid md:grid-cols-2 gap-3">
+              <input
+                defaultValue={alumno.nombre || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'nombre', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+                placeholder="Nombre"
+              />
+              <input
+                defaultValue={alumno.telefono || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'telefono', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+                placeholder="Telefono"
+              />
+              <input
+                type="number"
+                defaultValue={alumno.peso || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'peso', Number(e.target.value))}
+                className="bg-black p-3 rounded-xl"
+                placeholder="Peso"
+              />
+              <input
+                type="number"
+                defaultValue={monto}
+                onBlur={(e) => onUpdate(alumno.id, 'monto', Number(e.target.value))}
+                className="bg-black p-3 rounded-xl"
+                placeholder="Mensualidad"
+              />
+              <input
+                type="date"
+                defaultValue={alumno.fecha_ingreso || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'fecha_ingreso', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+              />
+              <input
+                type="date"
+                defaultValue={alumno.fecha_pago || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'fecha_pago', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+              />
+              <input
+                type="date"
+                defaultValue={alumno.fecha_vencimiento || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'fecha_vencimiento', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+              />
+              <input
+                type="number"
+                defaultValue={alumno.generaciones_disponibles || 0}
+                onBlur={(e) =>
+                  onUpdate(alumno.id, 'generaciones_disponibles', Number(e.target.value))
+                }
+                className="bg-black p-3 rounded-xl"
+                placeholder="Generaciones"
+              />
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-3 mt-5">
+              <button
+                onClick={() => onRegistrarPago(alumno)}
+                className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
+              >
+                Registrar pago
+              </button>
+              <button
+                onClick={() => onEnviarPago(alumno)}
+                className="bg-green-800 hover:bg-green-900 p-3 rounded-xl font-black"
+              >
+                Enviar link de pago
+              </button>
+              <button
+                onClick={() => onEliminarGeneraciones(alumno)}
+                className="bg-red-800 hover:bg-red-900 p-3 rounded-xl font-black"
+              >
+                Eliminar generaciones
+              </button>
+              <button
+                onClick={() => onEliminarAlumno(alumno)}
+                className="bg-red-600 hover:bg-red-700 p-3 rounded-xl font-black"
+              >
+                Eliminar alumno
+              </button>
+            </div>
+
+            <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4 mt-5">
+              <p className="font-black text-yellow-400">Webpay</p>
+              <p className="text-zinc-400 mt-2">
+                Cuando Webpay confirme el pago, el backend debe actualizar esta misma ficha:
+                fecha de pago hoy, vencimiento +1 mes, estado Pagado y generaciones disponibles.
+              </p>
+            </div>
+          </section>
+
+          <section className="bg-zinc-900 border border-zinc-700 rounded-2xl p-5">
+            <h3 className="text-2xl font-black text-cyan-400 mb-4">
+              Asistencia y resumen
+            </h3>
+
+            <div className="space-y-3 max-h-[430px] overflow-auto pr-1">
+              {resumen.registros.map((item) => {
+                const fecha = new Date(fechaAsistencia(item))
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-black/40 border border-zinc-800 rounded-2xl p-4 grid md:grid-cols-3 gap-3"
+                  >
+                    <div>
+                      <p className="font-black">{fecha.toLocaleDateString()}</p>
+                      <p className="text-zinc-400 text-sm">{fecha.toLocaleTimeString()}</p>
+                    </div>
+                    <p>{item.estado_pago || alumno.estado_pago || 'Pendiente'}</p>
+                    <p>Vence: {item.fecha_vencimiento || alumno.fecha_vencimiento || '-'}</p>
+                  </div>
+                )
+              })}
+
+              {resumen.registros.length === 0 && (
+                <p className="text-zinc-400">Este alumno aun no tiene asistencias.</p>
+              )}
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminAlumnosPanel({
+  students,
+  asistencias,
+  busqueda,
+  setBusqueda,
+  alumnosFiltrados,
+  abrirDetalle,
+  registrarPago,
+}) {
+  return (
+    <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
+        <div>
+          <h2 className="text-4xl font-black text-yellow-400">
+            ADMINISTRADOR - ALUMNOS
+          </h2>
+          <p className="text-zinc-400 mt-2">
+            Busca un alumno y abre su ficha para editar datos, revisar asistencia,
+            mensualidad y resumen.
+          </p>
+        </div>
+
+        <div className="bg-zinc-800 rounded-2xl p-4 font-black">
+          {alumnosFiltrados.length} / {students.length} alumnos
+        </div>
+      </div>
+
+      <input
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder="Buscar por nombre, correo, telefono, estado o rol..."
+        className="w-full bg-black p-4 rounded-2xl mb-6"
+      />
+
+      <div className="space-y-3">
+        {alumnosFiltrados.map((alumno) => {
+          const resumen = resumenAsistenciaAlumno(alumno, asistencias)
+          const diasVence = diferenciaDias(alumno.fecha_vencimiento)
+
+          return (
+            <div
+              key={alumno.id}
+              className="grid md:grid-cols-6 gap-3 items-center bg-zinc-800 rounded-2xl p-4"
+            >
+              <div>
+                <p className="text-xl font-black text-yellow-400">
+                  {alumno.nombre || '-'}
+                </p>
+                <p className="text-zinc-400 text-sm">
+                  {alumno.email || alumno.telefono || '-'}
+                </p>
+              </div>
+
+              <StatusBadge estado={alumno.estado_pago} />
+
+              <div className="text-sm text-zinc-300">
+                <p>Vence: {alumno.fecha_vencimiento || '-'}</p>
+                <p>
+                  {diasVence === null
+                    ? 'Sin fecha'
+                    : diasVence < 0
+                      ? `Vencida hace ${Math.abs(diasVence)} dia(s)`
+                      : `Faltan ${diasVence} dia(s)`}
+                </p>
+              </div>
+
+              <div className="text-sm text-zinc-300">
+                <p>Asistencias: {resumen.total}</p>
+                <p>Mes: {resumen.mes}</p>
+              </div>
+
+              <div className="text-sm text-zinc-300">
+                <p>Generaciones: {alumno.generaciones_disponibles || 0}</p>
+                <p>Rol: {alumno.role || 'alumno'}</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => abrirDetalle(alumno)}
+                  className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-xl font-black"
+                >
+                  Ver ficha
+                </button>
+                <button
+                  onClick={() => registrarPago(alumno)}
+                  className="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-xl font-black"
+                >
+                  Registrar pago
+                </button>
+              </div>
+            </div>
+          )
+        })}
+
+        {alumnosFiltrados.length === 0 && (
+          <p className="text-zinc-400">No hay alumnos para esa busqueda.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
@@ -111,6 +452,8 @@ export default function App() {
   const [asistencias, setAsistencias] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
   const [section, setSection] = useState('Ficha')
+  const [busquedaAdmin, setBusquedaAdmin] = useState('')
+  const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
 
   const params = new URLSearchParams(window.location.search)
@@ -146,6 +489,14 @@ export default function App() {
 
     const alumnosNormalizados = (alumnosData || []).map(alumnoConEstadoAutomatico)
     setStudents(alumnosNormalizados)
+    setAlumnoDetalle((actual) => {
+      if (!actual) return null
+
+      return (
+        alumnosNormalizados.find((item) => String(item.id) === String(actual.id)) ||
+        null
+      )
+    })
 
     const alumnosDesactualizados = alumnosNormalizados.filter((a) => {
       const original = (alumnosData || []).find((item) => item.id === a.id)
@@ -193,6 +544,10 @@ export default function App() {
   }
 
   async function registrarPago(alumno) {
+    await aplicarPagoConfirmado(alumno)
+  }
+
+  async function aplicarPagoConfirmado(alumno) {
     const hoy = new Date()
     const vencimiento = new Date()
     vencimiento.setMonth(vencimiento.getMonth() + 1)
@@ -272,6 +627,7 @@ export default function App() {
       return
     }
 
+    setAlumnoDetalle(null)
     await cargarUsuario()
   }
 
@@ -322,6 +678,21 @@ export default function App() {
   const isAdmin = student?.role?.toLowerCase() === 'admin'
   const pagoAlDia = student?.estado_pago === 'Pagado'
   const bloqueado = !isAdmin && !pagoAlDia
+  const diasParaVencer = diferenciaDias(student?.fecha_vencimiento)
+  const mostrarAvisoVencimiento =
+    !isAdmin && pagoAlDia && diasParaVencer !== null && diasParaVencer <= 5
+  const alumnosFiltrados = students.filter((alumno) =>
+    [
+      alumno.nombre,
+      alumno.email,
+      alumno.telefono,
+      alumno.estado_pago,
+      alumno.role,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(busquedaAdmin.toLowerCase().trim())
+  )
 
   return (
     <div className="min-h-screen bg-black text-white p-4">
@@ -341,7 +712,7 @@ export default function App() {
           onClick={cerrarSesion}
           className="bg-red-600 px-5 py-3 rounded-2xl font-black"
         >
-          Cerrar sesión
+          Cerrar sesion
         </button>
       </div>
 
@@ -350,26 +721,39 @@ export default function App() {
         <Btn text="Pago / deuda" set={() => setSection('Pago')} />
         <Btn text="Rutinas" disabled={bloqueado} set={() => setSection('Rutinas')} />
         <Btn text="Generador IA" disabled={bloqueado} set={() => setSection('Generador')} />
-        <Btn text="Métodos" disabled={bloqueado} set={() => setSection('Metodos')} />
+        <Btn text="Metodos" disabled={bloqueado} set={() => setSection('Metodos')} />
         <Btn text="MI QR" set={() => setSection('MiQR')} />
 
         {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
-        {isAdmin && <Btn text="Asistencias" set={() => setSection('Asistencias')} />}
-        {isAdmin && <Btn text="Resumen asistencia" set={() => setSection('ResumenAsistencia')} />}
         {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
-        {isAdmin && <Btn text="Registro mensualidades" set={() => setSection('RegistroMensualidades')} />}
       </div>
 
       {bloqueado && (
         <div className="bg-red-950 border border-red-600 rounded-3xl p-6 mb-8">
           <h2 className="text-3xl font-black text-red-400">SERVICIOS BLOQUEADOS</h2>
           <p className="text-zinc-300 mt-2">
-            Tu cuenta está pendiente o morosa. Regulariza el pago para desbloquear rutinas,
-            generador IA y métodos.
+            Tu cuenta esta pendiente o morosa. Regulariza el pago para desbloquear rutinas,
+            generador IA y metodos.
           </p>
           <button
             onClick={abrirPagoMensualidad}
             className="mt-5 bg-green-600 hover:bg-green-700 px-6 py-4 rounded-2xl font-black"
+          >
+            Pagar mensualidad
+          </button>
+        </div>
+      )}
+
+      {mostrarAvisoVencimiento && (
+        <div className="bg-yellow-500 text-black rounded-3xl p-6 mb-8">
+          <h2 className="text-3xl font-black">MEMBRESIA POR VENCER</h2>
+          <p className="mt-2 font-bold">
+            Tu membresia vence {diasParaVencer === 0 ? 'hoy' : `en ${diasParaVencer} dia(s)`}.
+            Regulariza el pago para evitar el bloqueo automatico.
+          </p>
+          <button
+            onClick={abrirPagoMensualidad}
+            className="mt-5 bg-green-700 hover:bg-green-800 text-white px-6 py-4 rounded-2xl font-black"
           >
             Pagar mensualidad
           </button>
@@ -383,7 +767,7 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
             <Info label="Correo" value={student?.email || user.email} />
-            <Info label="Teléfono" value={student?.telefono} />
+            <Info label="Telefono" value={student?.telefono} />
             <Info label="Peso" value={student?.peso} />
             <Info label="Fecha ingreso" value={student?.fecha_ingreso} />
             <Info label="Fecha pago" value={student?.fecha_pago} />
@@ -425,131 +809,15 @@ export default function App() {
       {section === 'MiQR' && <MiQRPage student={student} />}
 
       {section === 'Admin' && isAdmin && (
-        <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-yellow-400 mb-6">
-            ADMINISTRADOR - ALUMNOS Y PAGOS
-          </h2>
-
-          <div className="space-y-3">
-            {students.map((a) => (
-              <div
-                key={a.id}
-                className="grid md:grid-cols-9 gap-2 items-center bg-zinc-800 rounded-2xl p-4"
-              >
-                <input
-                  defaultValue={a.nombre || ''}
-                  onBlur={(e) => actualizarAlumno(a.id, 'nombre', e.target.value)}
-                  className="bg-black p-3 rounded-xl"
-                  placeholder="Nombre"
-                />
-
-                <input
-                  type="number"
-                  defaultValue={a.peso || ''}
-                  onBlur={(e) => actualizarAlumno(a.id, 'peso', Number(e.target.value))}
-                  className="bg-black p-3 rounded-xl"
-                  placeholder="Peso"
-                />
-
-                <input
-                  type="date"
-                  defaultValue={a.fecha_ingreso || ''}
-                  onBlur={(e) => actualizarAlumno(a.id, 'fecha_ingreso', e.target.value)}
-                  className="bg-black p-3 rounded-xl"
-                />
-
-                <input
-                  type="date"
-                  defaultValue={a.fecha_pago || ''}
-                  onBlur={(e) => actualizarAlumno(a.id, 'fecha_pago', e.target.value)}
-                  className="bg-black p-3 rounded-xl"
-                />
-
-                <input
-                  type="date"
-                  defaultValue={a.fecha_vencimiento || ''}
-                  onBlur={(e) => actualizarAlumno(a.id, 'fecha_vencimiento', e.target.value)}
-                  className="bg-black p-3 rounded-xl"
-                />
-
-                <input
-                  type="number"
-                  defaultValue={a.monto || 0}
-                  onBlur={(e) => actualizarAlumno(a.id, 'monto', Number(e.target.value))}
-                  className="bg-black p-3 rounded-xl"
-                  placeholder="Mensualidad"
-                />
-
-                <button
-                  onClick={() => registrarPago(a)}
-                  className="bg-green-600 p-3 rounded-xl font-black"
-                >
-                  Registrar pago
-                </button>
-
-                <div className="md:col-span-9 text-sm text-zinc-300 flex flex-wrap gap-3 items-center">
-                  <span>
-                    Estado actual:{' '}
-                    <StatusBadge estado={a.estado_pago} />
-                  </span>
-
-                  <span>| Generaciones: {a.generaciones_disponibles || 0}</span>
-                  <span>| Premium: {a.bloques_premium || 0}</span>
-                  <span>| Rol: {a.role || 'alumno'}</span>
-                  <span>
-                    | Asistencias:{' '}
-                    {
-                      asistencias.filter(
-                        (x) => Number(x.alumno_id) === Number(a.id)
-                      ).length
-                    }
-                  </span>
-                  <span>
-                    | Última:{' '}
-                    {(() => {
-                      const registros = asistencias
-                        .filter((x) => Number(x.alumno_id) === Number(a.id))
-                        .sort(
-                          (a1, a2) => new Date(a2.fecha) - new Date(a1.fecha)
-                        )
-
-                      return registros[0]
-                        ? new Date(registros[0].fecha).toLocaleDateString()
-                        : '-'
-                    })()}
-                  </span>
-
-                  <button
-                    onClick={() => eliminarGeneraciones(a)}
-                    className="bg-red-800 hover:bg-red-900 px-4 py-2 rounded-xl font-black"
-                  >
-                    Eliminar generaciones
-                  </button>
-
-                  <button
-                    onClick={() => abrirPagoAlumno(a)}
-                    className="bg-green-700 hover:bg-green-800 px-4 py-2 rounded-xl font-black"
-                  >
-                    Enviar link de pago
-                  </button>
-
-                  <button
-                    onClick={() => eliminarAlumno(a)}
-                    className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-xl font-black"
-                  >
-                    Eliminar alumno
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {section === 'Asistencias' && isAdmin && <AsistenciaPage />}
-
-      {section === 'ResumenAsistencia' && isAdmin && (
-        <AsistenciaResumenPage />
+        <AdminAlumnosPanel
+          students={students}
+          asistencias={asistencias}
+          busqueda={busquedaAdmin}
+          setBusqueda={setBusquedaAdmin}
+          alumnosFiltrados={alumnosFiltrados}
+          abrirDetalle={setAlumnoDetalle}
+          registrarPago={registrarPago}
+        />
       )}
 
       {section === 'RegistroCompras' && isAdmin && (
@@ -560,12 +828,16 @@ export default function App() {
         />
       )}
 
-      {section === 'RegistroMensualidades' && isAdmin && (
-        <RegistroMensualidadesPage
-          students={students}
-          descargarCSV={descargarCSV}
-        />
-      )}
+      <AdminAlumnoModal
+        alumno={alumnoDetalle}
+        asistencias={asistencias}
+        onClose={() => setAlumnoDetalle(null)}
+        onUpdate={actualizarAlumno}
+        onRegistrarPago={registrarPago}
+        onEnviarPago={abrirPagoAlumno}
+        onEliminarGeneraciones={eliminarGeneraciones}
+        onEliminarAlumno={eliminarAlumno}
+      />
     </div>
   )
 }
