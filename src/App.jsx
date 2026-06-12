@@ -727,7 +727,7 @@ export default function App() {
           <Btn text="Pago / deuda" active={section === 'Pago'} set={() => setSection('Pago')} />
           <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
           <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
-          <Btn text="Metodos" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
+          <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
           <Btn text="MI QR" active={section === 'MiQR'} set={() => setSection('MiQR')} />
 
           {isAdmin && <Btn text="ADMIN ALUMNOS" active={section === 'Admin'} set={() => setSection('Admin')} />}

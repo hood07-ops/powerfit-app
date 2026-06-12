@@ -495,18 +495,18 @@ export default function MetodosPage() {
 
   return (
     <div className="space-y-6">
-      <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
+      <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-4xl font-black text-yellow-400">
-              Biblioteca PowerFit
+            <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
+              Biblioteca
             </h2>
             <p className="text-zinc-400 mt-2">
-              Metodos, ejercicios, ejemplos y material tecnico de apoyo.
+              Metodos PowerFit, ejercicios, ejemplos y material tecnico de apoyo.
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="grid grid-cols-2 sm:flex gap-3 w-full sm:w-auto">
             <button
               onClick={() => setVista('metodos')}
               className={`px-5 py-3 rounded-2xl font-black ${
