@@ -160,10 +160,10 @@ export default function RegistroComprasPage({
   }
 
   return (
-    <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6">
+    <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-4xl font-black text-green-400">
+          <h2 className="text-3xl sm:text-4xl font-black text-green-400">
             Registro de compras
           </h2>
           <p className="text-zinc-400 mt-2">
@@ -171,31 +171,31 @@ export default function RegistroComprasPage({
           </p>
         </div>
 
-        <div className="bg-zinc-800 rounded-2xl p-4 font-black text-green-400">
+        <div className="bg-zinc-800 rounded-2xl p-4 font-black text-green-400 w-full sm:w-auto">
           Total rango: ${totalAprobado}
         </div>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-zinc-800 rounded-2xl p-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
+        <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4">
           <p className="text-zinc-400">Hoy</p>
-          <p className="text-2xl font-black text-green-400">${totales.dia}</p>
+          <p className="text-xl sm:text-2xl font-black text-green-400">${totales.dia}</p>
         </div>
-        <div className="bg-zinc-800 rounded-2xl p-4">
+        <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4">
           <p className="text-zinc-400">Semana</p>
-          <p className="text-2xl font-black text-green-400">${totales.semana}</p>
+          <p className="text-xl sm:text-2xl font-black text-green-400">${totales.semana}</p>
         </div>
-        <div className="bg-zinc-800 rounded-2xl p-4">
+        <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4">
           <p className="text-zinc-400">Mes</p>
-          <p className="text-2xl font-black text-green-400">${totales.mes}</p>
+          <p className="text-xl sm:text-2xl font-black text-green-400">${totales.mes}</p>
         </div>
-        <div className="bg-zinc-800 rounded-2xl p-4">
+        <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4">
           <p className="text-zinc-400">Año</p>
-          <p className="text-2xl font-black text-green-400">${totales.anio}</p>
+          <p className="text-xl sm:text-2xl font-black text-green-400">${totales.anio}</p>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-6">
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6">
         {[
           ['dia', 'Dia'],
           ['semana', 'Semana'],
@@ -252,9 +252,9 @@ export default function RegistroComprasPage({
           return (
             <div
               key={s.id}
-              className="grid md:grid-cols-7 gap-3 bg-zinc-800 rounded-2xl p-4 items-center"
+              className="grid lg:grid-cols-7 gap-3 bg-zinc-800 rounded-2xl p-4 items-start lg:items-center"
             >
-              <p className="font-black">{s.nombre_alumno || s.nombre || '-'}</p>
+              <p className="font-black text-lg lg:text-base">{s.nombre_alumno || s.nombre || '-'}</p>
               <p>${montoCompra(s)}</p>
               <p>+{generaciones} generacion</p>
               <EstadoCompra estado={estado} />

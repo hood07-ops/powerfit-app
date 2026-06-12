@@ -10,13 +10,17 @@ import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RutinasPage from './pages/RutinasPage'
 
-function Btn({ text, set, disabled }) {
+function Btn({ text, set, disabled, active }) {
   return (
     <button
       onClick={set}
       disabled={disabled}
-      className={`px-4 py-3 rounded-2xl font-black ${
-        disabled ? 'bg-zinc-700 opacity-40' : 'bg-zinc-800 hover:bg-red-600'
+      className={`shrink-0 min-w-[132px] flex-1 sm:flex-none px-4 py-3 rounded-2xl font-black text-sm sm:text-base transition ${
+        disabled
+          ? 'bg-zinc-700 opacity-40'
+          : active
+            ? 'bg-red-600 text-white shadow-lg shadow-red-950/40'
+            : 'bg-zinc-800 hover:bg-red-600'
       }`}
     >
       {text}
@@ -26,9 +30,9 @@ function Btn({ text, set, disabled }) {
 
 function Info({ label, value }) {
   return (
-    <div className="bg-zinc-800 rounded-2xl p-4">
-      <p className="text-zinc-400">{label}</p>
-      <p className="text-xl font-black">{value || '-'}</p>
+    <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4 min-w-0">
+      <p className="text-zinc-400 text-sm">{label}</p>
+      <p className="text-lg sm:text-xl font-black break-words">{value || '-'}</p>
     </div>
   )
 }
@@ -162,11 +166,11 @@ function AdminAlumnoModal({
   const monto = Number(alumno.monto || 0)
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-      <div className="bg-zinc-950 border border-yellow-500 rounded-3xl p-6 max-w-6xl w-full max-h-[90vh] overflow-auto">
+    <div className="fixed inset-0 bg-black/80 z-50 flex items-start sm:items-center justify-center p-2 sm:p-4">
+      <div className="bg-zinc-950 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-6xl w-full max-h-[96vh] sm:max-h-[90vh] overflow-auto">
         <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-          <div>
-            <h2 className="text-4xl font-black text-yellow-400">
+          <div className="min-w-0">
+            <h2 className="text-3xl sm:text-4xl font-black text-yellow-400 break-words">
               {alumno.nombre || 'Alumno'}
             </h2>
             <div className="mt-3 flex flex-wrap gap-3 items-center">
@@ -178,7 +182,7 @@ function AdminAlumnoModal({
 
           <button
             onClick={onClose}
-            className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl font-black"
+            className="bg-red-600 hover:bg-red-700 px-5 py-3 rounded-2xl font-black w-full sm:w-auto"
           >
             Cerrar
           </button>
@@ -272,7 +276,7 @@ function AdminAlumnoModal({
               />
             </div>
 
-            <div className="grid md:grid-cols-2 gap-3 mt-5">
+            <div className="grid sm:grid-cols-2 gap-3 mt-5">
               <button
                 onClick={() => onRegistrarPago(alumno)}
                 className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
@@ -320,7 +324,7 @@ function AdminAlumnoModal({
                 return (
                   <div
                     key={item.id}
-                    className="bg-black/40 border border-zinc-800 rounded-2xl p-4 grid md:grid-cols-3 gap-3"
+                    className="bg-black/40 border border-zinc-800 rounded-2xl p-4 grid sm:grid-cols-3 gap-3"
                   >
                     <div>
                       <p className="font-black">{fecha.toLocaleDateString()}</p>
@@ -353,10 +357,10 @@ function AdminAlumnosPanel({
   registrarPago,
 }) {
   return (
-    <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
+    <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-4xl font-black text-yellow-400">
+          <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
             ADMINISTRADOR - ALUMNOS
           </h2>
           <p className="text-zinc-400 mt-2">
@@ -385,9 +389,9 @@ function AdminAlumnosPanel({
           return (
             <div
               key={alumno.id}
-              className="grid md:grid-cols-6 gap-3 items-center bg-zinc-800 rounded-2xl p-4"
+              className="grid lg:grid-cols-6 gap-3 items-start lg:items-center bg-zinc-800 rounded-2xl p-4"
             >
-              <div>
+              <div className="min-w-0">
                 <p className="text-xl font-black text-yellow-400">
                   {alumno.nombre || '-'}
                 </p>
@@ -419,7 +423,7 @@ function AdminAlumnosPanel({
                 <p>Rol: {alumno.role || 'alumno'}</p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col sm:flex-row lg:flex-wrap gap-2">
                 <button
                   onClick={() => abrirDetalle(alumno)}
                   className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-xl font-black"
@@ -695,10 +699,11 @@ export default function App() {
   )
 
   return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <div className="bg-zinc-900 border border-red-600 rounded-3xl p-5 mb-6 flex justify-between">
-        <div>
-          <h1 className="text-4xl font-black text-red-500">POWERFIT 360</h1>
+    <div className="min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+      <div className="max-w-7xl mx-auto">
+      <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-3xl sm:text-4xl font-black text-red-500">POWERFIT 360</h1>
           <p className="text-zinc-300">{student?.nombre || user.email}</p>
           <p className="text-yellow-400 font-black">
             {isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}
@@ -710,27 +715,29 @@ export default function App() {
 
         <button
           onClick={cerrarSesion}
-          className="bg-red-600 px-5 py-3 rounded-2xl font-black"
+          className="bg-red-600 px-5 py-3 rounded-2xl font-black w-full sm:w-auto"
         >
           Cerrar sesion
         </button>
       </div>
 
-      <div className="flex flex-wrap gap-3 mb-8">
-        <Btn text="Ficha personal" set={() => setSection('Ficha')} />
-        <Btn text="Pago / deuda" set={() => setSection('Pago')} />
-        <Btn text="Rutinas" disabled={bloqueado} set={() => setSection('Rutinas')} />
-        <Btn text="Generador IA" disabled={bloqueado} set={() => setSection('Generador')} />
-        <Btn text="Metodos" disabled={bloqueado} set={() => setSection('Metodos')} />
-        <Btn text="MI QR" set={() => setSection('MiQR')} />
+      <div className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
+        <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
+          <Btn text="Ficha personal" active={section === 'Ficha'} set={() => setSection('Ficha')} />
+          <Btn text="Pago / deuda" active={section === 'Pago'} set={() => setSection('Pago')} />
+          <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn text="Metodos" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
+          <Btn text="MI QR" active={section === 'MiQR'} set={() => setSection('MiQR')} />
 
-        {isAdmin && <Btn text="ADMIN ALUMNOS" set={() => setSection('Admin')} />}
-        {isAdmin && <Btn text="Registro compras" set={() => setSection('RegistroCompras')} />}
+          {isAdmin && <Btn text="ADMIN ALUMNOS" active={section === 'Admin'} set={() => setSection('Admin')} />}
+          {isAdmin && <Btn text="Registro compras" active={section === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
+        </div>
       </div>
 
       {bloqueado && (
-        <div className="bg-red-950 border border-red-600 rounded-3xl p-6 mb-8">
-          <h2 className="text-3xl font-black text-red-400">SERVICIOS BLOQUEADOS</h2>
+        <div className="bg-red-950 border border-red-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
+          <h2 className="text-2xl sm:text-3xl font-black text-red-400">SERVICIOS BLOQUEADOS</h2>
           <p className="text-zinc-300 mt-2">
             Tu cuenta esta pendiente o morosa. Regulariza el pago para desbloquear rutinas,
             generador IA y metodos.
@@ -745,8 +752,8 @@ export default function App() {
       )}
 
       {mostrarAvisoVencimiento && (
-        <div className="bg-yellow-500 text-black rounded-3xl p-6 mb-8">
-          <h2 className="text-3xl font-black">MEMBRESIA POR VENCER</h2>
+        <div className="bg-yellow-500 text-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
+          <h2 className="text-2xl sm:text-3xl font-black">MEMBRESIA POR VENCER</h2>
           <p className="mt-2 font-bold">
             Tu membresia vence {diasParaVencer === 0 ? 'hoy' : `en ${diasParaVencer} dia(s)`}.
             Regulariza el pago para evitar el bloqueo automatico.
@@ -761,8 +768,8 @@ export default function App() {
       )}
 
       {section === 'Ficha' && (
-        <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-yellow-400 mb-6">Ficha personal</h2>
+        <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h2 className="text-3xl sm:text-4xl font-black text-yellow-400 mb-6">Ficha personal</h2>
 
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
@@ -780,8 +787,8 @@ export default function App() {
       )}
 
       {section === 'Pago' && (
-        <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6">
-          <h2 className="text-4xl font-black text-green-400 mb-6">Pago / deuda</h2>
+        <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h2 className="text-3xl sm:text-4xl font-black text-green-400 mb-6">Pago / deuda</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Estado" value={student?.estado_pago} />
             <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
@@ -838,6 +845,7 @@ export default function App() {
         onEliminarGeneraciones={eliminarGeneraciones}
         onEliminarAlumno={eliminarAlumno}
       />
+      </div>
     </div>
   )
 }

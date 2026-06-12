@@ -1,0 +1,19 @@
+{
+  "name": "PowerFit 360",
+  "short_name": "PowerFit",
+  "description": "Gestion de alumnos, pagos, asistencia y planificaciones PowerFit.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#000000",
+  "theme_color": "#09090b",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

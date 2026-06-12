@@ -389,9 +389,9 @@ Vuelta a la calma: dirigida en clase.
   const sinDisponibles = Number(disponiblesLocal || 0) <= 0
 
   return (
-    <div className="space-y-8">
-      <div className="bg-zinc-900 border border-red-600 rounded-3xl p-6">
-        <h1 className="text-4xl font-black text-red-500">
+    <div className="space-y-6 sm:space-y-8">
+      <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h1 className="text-3xl sm:text-4xl font-black text-red-500">
           GENERADOR POWERFIT IA
         </h1>
 
@@ -405,7 +405,7 @@ Vuelta a la calma: dirigida en clase.
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-zinc-900 border border-blue-600 rounded-3xl p-6 space-y-4">
+        <div className="bg-zinc-900 border border-blue-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
           <div>
             <h2 className="text-2xl font-black text-blue-400">
               RM / CARGAS DE PESAS
@@ -468,7 +468,7 @@ Vuelta a la calma: dirigida en clase.
           </div>
         </div>
 
-        <div className="bg-zinc-900 border border-pink-600 rounded-3xl p-6 space-y-4">
+        <div className="bg-zinc-900 border border-pink-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
           <div>
             <h2 className="text-2xl font-black text-pink-400">
               CICLO MENSTRUAL
@@ -549,7 +549,7 @@ Vuelta a la calma: dirigida en clase.
       <button
         onClick={generar}
         disabled={sinDisponibles || generando}
-        className={`w-full p-5 rounded-2xl font-black text-xl ${
+        className={`w-full p-5 rounded-2xl font-black text-lg sm:text-xl ${
           sinDisponibles || generando
             ? 'bg-zinc-700 opacity-40 cursor-not-allowed'
             : 'bg-red-600 hover:bg-red-700'
@@ -564,7 +564,7 @@ Vuelta a la calma: dirigida en clase.
 
       <button
         onClick={solicitarCompra}
-        className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
+        className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-lg sm:text-xl"
       >
         COMPRAR 1 PLANIFICACION - $2.500
       </button>
@@ -579,7 +579,7 @@ Vuelta a la calma: dirigida en clase.
         {planificaciones.map((plan) => (
           <div
             key={plan.id}
-            className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6"
+            className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6"
           >
             <h2 className="text-2xl font-black text-yellow-400">
               {plan.objetivo?.toUpperCase()}
@@ -589,7 +589,7 @@ Vuelta a la calma: dirigida en clase.
               Fecha: {new Date(plan.created_at).toLocaleString()}
             </p>
 
-            <div className="flex flex-wrap gap-3 mt-5">
+            <div className="grid sm:flex sm:flex-wrap gap-3 mt-5">
               <button
                 onClick={() => setPlanAbierto(plan)}
                 className="bg-red-600 px-5 py-3 rounded-2xl font-black"
@@ -609,16 +609,16 @@ Vuelta a la calma: dirigida en clase.
       </div>
 
       {planAbierto && (
-        <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-6 z-50">
-          <div className="bg-zinc-900 border border-yellow-500 rounded-3xl p-6 max-w-4xl max-h-[85vh] overflow-auto">
-            <div className="flex justify-between items-center mb-5">
-              <h2 className="text-3xl font-black text-yellow-400">
+        <div className="fixed inset-0 bg-black/80 flex items-start sm:items-center justify-center p-2 sm:p-6 z-50">
+          <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-4xl w-full max-h-[96vh] sm:max-h-[85vh] overflow-auto">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
+              <h2 className="text-2xl sm:text-3xl font-black text-yellow-400">
                 Planificacion
               </h2>
 
               <button
                 onClick={() => setPlanAbierto(null)}
-                className="bg-red-600 px-4 py-2 rounded-xl font-black"
+                className="bg-red-600 px-4 py-3 rounded-xl font-black"
               >
                 Cerrar
               </button>
