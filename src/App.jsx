@@ -74,6 +74,96 @@ function fechaHoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
+const RM_EJERCICIOS = [
+  'Back Squat',
+  'Front Squat',
+  'Deadlift',
+  'Bench Press',
+  'Push Press',
+  'Strict Press',
+  'Barbell Row',
+  'Power Clean',
+  'Clean Pull',
+  'Power Snatch',
+  'Push Jerk',
+  'Thruster',
+]
+
+const EVALUACIONES = [
+  {
+    id: 'salto',
+    nombre: 'Test salto vertical',
+    metodo: 'Evaluacion potencia',
+    tipo: 'repeticiones',
+    label: 'Mejor salto',
+    unidad: 'cm',
+    descripcion: '3 intentos, registrar el mejor salto en centimetros.',
+  },
+  {
+    id: 'cooper',
+    nombre: 'Test Cooper / VO2',
+    metodo: 'Evaluacion aerobica 12 min',
+    tipo: 'repeticiones',
+    label: 'Distancia 12 min',
+    unidad: 'metros',
+    descripcion: 'Registrar metros recorridos en 12 minutos. La ficha estima VO2 max.',
+  },
+  {
+    id: 'velocidad',
+    nombre: 'Sprint 30m',
+    metodo: 'Evaluacion velocidad',
+    tipo: 'tiempo',
+    label: 'Mejor tiempo',
+    unidad: 'segundos',
+    descripcion: '2 o 3 intentos, registrar el menor tiempo en segundos.',
+  },
+  {
+    id: 'distancia',
+    nombre: 'Distancia controlada',
+    metodo: 'Trabajo distancia / velocidad',
+    tipo: 'repeticiones',
+    label: 'Distancia total',
+    unidad: 'metros',
+    descripcion: 'Registrar metros completados en carrera, remo, bici o ski.',
+  },
+  {
+    id: 'for_time',
+    nombre: 'For Time / WOD',
+    metodo: 'Evaluacion tiempo bajo fatiga',
+    tipo: 'tiempo',
+    label: 'Tiempo final',
+    unidad: 'segundos',
+    descripcion: 'Registrar tiempo total del trabajo definido.',
+  },
+  {
+    id: 'vueltas',
+    nombre: 'AMRAP / vueltas',
+    metodo: 'Evaluacion densidad',
+    tipo: 'vueltas',
+    label: 'Vueltas completadas',
+    unidad: 'vueltas',
+    descripcion: 'Registrar vueltas completas del bloque.',
+  },
+  {
+    id: 'reps',
+    nombre: 'Repeticiones totales',
+    metodo: 'Evaluacion volumen',
+    tipo: 'repeticiones',
+    label: 'Repeticiones',
+    unidad: 'reps',
+    descripcion: 'Registrar repeticiones totales del test o bloque.',
+  },
+  {
+    id: 'rm',
+    nombre: 'RM / fuerza maxima',
+    metodo: 'Evaluacion RM',
+    tipo: 'peso',
+    label: 'Peso levantado',
+    unidad: 'kg',
+    descripcion: 'Registrar RM real o estimado por ejercicio.',
+  },
+]
+
 function diferenciaDias(fecha) {
   if (!fecha) return null
 
@@ -168,6 +258,33 @@ function unidadRecord(record) {
   return 'reps'
 }
 
+function metadataRecord(record) {
+  const metodo = String(record.metodo || '')
+
+  function buscar(campo) {
+    const match = metodo.match(new RegExp(`${campo}:([^|]+)`))
+    return match ? match[1].trim() : ''
+  }
+
+  return {
+    fecha: buscar('Fecha'),
+    atr: buscar('ATR'),
+    rpe: Number(buscar('RPE') || 0),
+    energia: Number(buscar('Energia') || 0),
+    sueno: Number(buscar('Sueno') || 0),
+    dolor: Number(buscar('Dolor') || 0),
+    observacion: buscar('Obs'),
+  }
+}
+
+function fechaRecord(record) {
+  return metadataRecord(record).fecha || record.created_at
+}
+
+function faseAtrRecord(record) {
+  return metadataRecord(record).atr || faseAtrPorFecha(fechaRecord(record))
+}
+
 function mejorRecord(records, filtro, menorEsMejor = false) {
   const filtrados = records.filter(filtro).filter((record) => valorRecord(record) > 0)
 
@@ -201,12 +318,12 @@ function scoreRecord(record) {
 function datosAtrMensual(records) {
   const hoy = new Date()
   const delMes = records.filter((record) => {
-    const fecha = new Date(record.created_at)
+    const fecha = new Date(fechaRecord(record))
     return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear()
   })
 
   return ['Acumulacion', 'Transformacion', 'Realizacion'].map((fase) => {
-    const registros = delMes.filter((record) => faseAtrPorFecha(record.created_at) === fase)
+    const registros = delMes.filter((record) => faseAtrRecord(record) === fase)
     const total = registros.reduce((sum, record) => sum + scoreRecord(record), 0)
     const promedio = registros.length ? total / registros.length : 0
 
@@ -276,6 +393,44 @@ function BarChart({ data }) {
   )
 }
 
+function semaforoCarga(records, asistencias, student) {
+  const recientes = records.slice(0, 5)
+  const metas = recientes.map(metadataRecord)
+  const promedio = (campo) => {
+    const valores = metas.map((meta) => Number(meta[campo] || 0)).filter(Boolean)
+    return valores.length
+      ? valores.reduce((sum, value) => sum + value, 0) / valores.length
+      : 0
+  }
+  const rpe = promedio('rpe')
+  const energia = promedio('energia')
+  const sueno = promedio('sueno')
+  const dolor = promedio('dolor')
+  const resumen = resumenAsistenciaAlumno(student, asistencias)
+
+  if (dolor >= 7 || rpe >= 9 || energia <= 3 || sueno <= 3) {
+    return {
+      color: 'bg-red-600',
+      label: 'Rojo',
+      accion: 'Bajar carga, reducir volumen y priorizar recuperacion tecnica.',
+    }
+  }
+
+  if (dolor >= 5 || rpe >= 8 || energia <= 5 || sueno <= 5 || resumen.mes < 4) {
+    return {
+      color: 'bg-yellow-500 text-black',
+      label: 'Amarillo',
+      accion: 'Mantener carga, controlar tecnica y observar respuesta del alumno.',
+    }
+  }
+
+  return {
+    color: 'bg-green-600',
+    label: 'Verde',
+    accion: 'Puede progresar carga o intensidad de forma controlada.',
+  }
+}
+
 function ProgressDashboard({ records, rms, asistencias, student }) {
   const ordenados = [...records].sort(
     (a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)
@@ -302,6 +457,7 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
     .map((record) => ({ label: record.rutina_nombre, value: Number(record.tiempo_segundos) }))
   const resumenAsistencia = resumenAsistenciaAlumno(student, asistencias)
   const atr = datosAtrMensual(records)
+  const semaforo = semaforoCarga(records, asistencias, student)
   const vo2 = cooper?.repeticiones
     ? Math.max(0, (Number(cooper.repeticiones) - 504.9) / 44.73).toFixed(1)
     : null
@@ -320,6 +476,15 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
         <Info label="Asistencias este mes" value={resumenAsistencia.mes} />
         <Info label="Mejor RM" value={mejorRm ? `${mejorRm.ejercicio} ${mejorRm.rm_kg} kg` : '-'} />
         <Info label="VO2 estimado" value={vo2 ? `${vo2} ml/kg/min` : '-'} />
+      </div>
+
+      <div className="bg-zinc-800 rounded-2xl p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className={`rounded-2xl px-4 py-2 font-black ${semaforo.color}`}>
+            Semaforo {semaforo.label}
+          </span>
+          <p className="text-zinc-300 font-bold">{semaforo.accion}</p>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-4">
@@ -352,12 +517,12 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
               <div key={record.id} className="bg-black/40 rounded-xl p-3">
                 <p className="font-black">{record.rutina_nombre}</p>
                 <p className="text-sm text-zinc-400">
-                  {new Date(record.created_at).toLocaleDateString()} - {valorRecord(record)} {unidadRecord(record)}
+                  {new Date(fechaRecord(record)).toLocaleDateString()} - {valorRecord(record)} {unidadRecord(record)} - ATR {faseAtrRecord(record)}
                 </p>
               </div>
             ))}
             {ultimos.length === 0 && (
-              <p className="text-zinc-500">Aun no hay records. Guarda tests desde Rutinas.</p>
+              <p className="text-zinc-500">Aun no hay records. Guarda tests desde Evaluaciones.</p>
             )}
           </div>
         </div>
@@ -374,6 +539,262 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+function EvaluacionesPage({ student, user, onSaved }) {
+  const [form, setForm] = useState({
+    evaluacion: EVALUACIONES[0].id,
+    fecha: fechaHoy(),
+    faseATR: 'Acumulacion',
+    valor: '',
+    ejercicio: RM_EJERCICIOS[0],
+    rpe: '6',
+    energia: '7',
+    sueno: '7',
+    dolor: '2',
+    observacion: '',
+  })
+  const [mensaje, setMensaje] = useState('')
+  const [guardando, setGuardando] = useState(false)
+
+  const evaluacion = EVALUACIONES.find((item) => item.id === form.evaluacion) || EVALUACIONES[0]
+
+  function update(campo, valor) {
+    setForm((prev) => ({ ...prev, [campo]: valor }))
+  }
+
+  async function guardarRM(rmKg) {
+    const { data: existente, error: buscarError } = await supabase
+      .from('rm_alumnos')
+      .select('id')
+      .eq('alumno_id', student.id)
+      .eq('ejercicio', form.ejercicio)
+      .maybeSingle()
+
+    if (buscarError) return buscarError
+
+    const payload = {
+      user_id: student.user_id || user.id,
+      alumno_id: student.id,
+      ejercicio: form.ejercicio,
+      rm_kg: rmKg,
+    }
+
+    const { error } = existente?.id
+      ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
+      : await supabase.from('rm_alumnos').insert([payload])
+
+    return error
+  }
+
+  async function guardarEvaluacion() {
+    if (!student?.id || guardando) return
+
+    const valor = Number(form.valor)
+
+    if (!valor || valor <= 0) {
+      setMensaje('Ingresa un valor valido para la evaluacion.')
+      return
+    }
+
+    setGuardando(true)
+    setMensaje('')
+
+    try {
+      const detalleMetodo = [
+        evaluacion.metodo,
+        `Fecha:${form.fecha}`,
+        `ATR:${form.faseATR}`,
+        `RPE:${form.rpe}`,
+        `Energia:${form.energia}`,
+        `Sueno:${form.sueno}`,
+        `Dolor:${form.dolor}`,
+        `Obs:${String(form.observacion || '').replaceAll('|', '/')}`,
+      ].join(' | ')
+
+      const payload = {
+        user_id: student.user_id || user.id,
+        alumno_id: student.id,
+        rutina_nombre:
+          evaluacion.id === 'rm'
+            ? `${evaluacion.nombre} - ${form.ejercicio}`
+            : evaluacion.nombre,
+        metodo: detalleMetodo,
+        tipo_record: evaluacion.tipo,
+        vueltas: evaluacion.tipo === 'vueltas' ? valor : null,
+        repeticiones: evaluacion.tipo === 'repeticiones' ? valor : null,
+        tiempo_segundos: evaluacion.tipo === 'tiempo' ? valor : null,
+        peso_kg: evaluacion.tipo === 'peso' ? valor : null,
+        porcentaje_rm: evaluacion.tipo === 'peso' ? 100 : null,
+      }
+
+      const { error } = await supabase.from('records_entrenamiento').insert([payload])
+
+      if (error) {
+        setMensaje(`Error guardando evaluacion: ${error.message}`)
+        return
+      }
+
+      if (evaluacion.id === 'rm') {
+        const rmError = await guardarRM(valor)
+        if (rmError) {
+          setMensaje(`Evaluacion guardada, pero no se pudo actualizar RM: ${rmError.message}`)
+          return
+        }
+      }
+
+      setForm((prev) => ({ ...prev, valor: '', observacion: '' }))
+      setMensaje('Evaluacion guardada. La ficha personal ya puede mostrar el progreso.')
+      onSaved?.()
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <div className="bg-zinc-900 border border-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-6">
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-black text-cyan-400">
+          Evaluaciones
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Aqui se ingresan los records: tiempos, saltos, vueltas, distancia, VO2, RM y control de carga.
+        </p>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid sm:grid-cols-2 gap-4">
+          <select
+            value={form.evaluacion}
+            onChange={(e) => update('evaluacion', e.target.value)}
+            className="bg-black p-4 rounded-2xl"
+          >
+            {EVALUACIONES.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.nombre}
+              </option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={form.fecha}
+            onChange={(e) => update('fecha', e.target.value)}
+            className="bg-black p-4 rounded-2xl"
+          />
+
+          <select
+            value={form.faseATR}
+            onChange={(e) => update('faseATR', e.target.value)}
+            className="bg-black p-4 rounded-2xl"
+          >
+            <option value="Acumulacion">ATR Acumulacion</option>
+            <option value="Transformacion">ATR Transformacion</option>
+            <option value="Realizacion">ATR Realizacion</option>
+          </select>
+
+          {evaluacion.id === 'rm' && (
+            <select
+              value={form.ejercicio}
+              onChange={(e) => update('ejercicio', e.target.value)}
+              className="bg-black p-4 rounded-2xl"
+            >
+              {RM_EJERCICIOS.map((ejercicio) => (
+                <option key={ejercicio} value={ejercicio}>
+                  {ejercicio}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.valor}
+            onChange={(e) => update('valor', e.target.value)}
+            placeholder={`${evaluacion.label} (${evaluacion.unidad})`}
+            className="bg-black p-4 rounded-2xl"
+          />
+
+          <textarea
+            value={form.observacion}
+            onChange={(e) => update('observacion', e.target.value)}
+            placeholder="Observacion del coach o del alumno"
+            className="bg-black p-4 rounded-2xl sm:col-span-2 min-h-24"
+          />
+        </div>
+
+        <div className="bg-zinc-800 rounded-2xl p-4 space-y-4">
+          <div>
+            <p className="font-black text-yellow-400">Guia del test</p>
+            <p className="text-zinc-300 mt-2">{evaluacion.descripcion}</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="space-y-1">
+              <span className="text-sm text-zinc-400">RPE 1-10</span>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={form.rpe}
+                onChange={(e) => update('rpe', e.target.value)}
+                className="w-full bg-black p-3 rounded-xl"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sm text-zinc-400">Energia 1-10</span>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={form.energia}
+                onChange={(e) => update('energia', e.target.value)}
+                className="w-full bg-black p-3 rounded-xl"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sm text-zinc-400">Sueno 1-10</span>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={form.sueno}
+                onChange={(e) => update('sueno', e.target.value)}
+                className="w-full bg-black p-3 rounded-xl"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-sm text-zinc-400">Dolor 1-10</span>
+              <input
+                type="number"
+                min="1"
+                max="10"
+                value={form.dolor}
+                onChange={(e) => update('dolor', e.target.value)}
+                className="w-full bg-black p-3 rounded-xl"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <button
+        onClick={guardarEvaluacion}
+        disabled={guardando}
+        className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 rounded-2xl p-5 font-black text-xl"
+      >
+        {guardando ? 'Guardando...' : 'Guardar evaluacion'}
+      </button>
+
+      {mensaje && (
+        <div className="bg-yellow-500 text-black rounded-2xl p-4 font-black">
+          {mensaje}
+        </div>
+      )}
     </div>
   )
 }
@@ -985,6 +1406,7 @@ export default function App() {
           <Btn text="Ficha personal" active={section === 'Ficha'} set={() => setSection('Ficha')} />
           <Btn text="Pago / deuda" active={section === 'Pago'} set={() => setSection('Pago')} />
           <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn text="Evaluaciones" active={section === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
           <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
           <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
           <Btn text="MI QR" active={section === 'MiQR'} set={() => setSection('MiQR')} />
@@ -1073,6 +1495,14 @@ export default function App() {
 
       {section === 'Rutinas' && !bloqueado && (
         <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
+      )}
+
+      {section === 'Evaluaciones' && !bloqueado && (
+        <EvaluacionesPage
+          student={student}
+          user={user}
+          onSaved={() => cargarUsuario()}
+        />
       )}
 
       {section === 'Generador' && !bloqueado && (
