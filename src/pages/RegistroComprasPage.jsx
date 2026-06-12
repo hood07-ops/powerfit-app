@@ -16,6 +16,59 @@ function generacionesCompra(solicitud) {
   return Number(solicitud.generaciones || 1)
 }
 
+function toDateInput(date) {
+  return date.toISOString().slice(0, 10)
+}
+
+function inicioSemana(date) {
+  const copia = new Date(date)
+  const dia = copia.getDay() || 7
+  copia.setDate(copia.getDate() - dia + 1)
+  return copia
+}
+
+function formatoFecha(date) {
+  return toDateInput(date)
+}
+
+function calcularRango(tipo) {
+  const hoy = new Date()
+
+  if (tipo === 'dia') {
+    return [formatoFecha(hoy), formatoFecha(hoy)]
+  }
+
+  if (tipo === 'semana') {
+    const inicio = inicioSemana(hoy)
+    const fin = new Date(inicio)
+    fin.setDate(inicio.getDate() + 6)
+    return [formatoFecha(inicio), formatoFecha(fin)]
+  }
+
+  if (tipo === 'mes') {
+    const inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1)
+    const fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0)
+    return [formatoFecha(inicio), formatoFecha(fin)]
+  }
+
+  const inicio = new Date(hoy.getFullYear(), 0, 1)
+  const fin = new Date(hoy.getFullYear(), 11, 31)
+  return [formatoFecha(inicio), formatoFecha(fin)]
+}
+
+function totalAprobadoEnRango(compras, desde, hasta) {
+  return compras
+    .filter((s) => estadoCompra(s) === 'Aprobado')
+    .filter((s) => {
+      const fecha = String(fechaCompra(s)).slice(0, 10)
+      if (!fecha) return false
+      if (desde && fecha < desde) return false
+      if (hasta && fecha > hasta) return false
+      return true
+    })
+    .reduce((sum, s) => sum + montoCompra(s), 0)
+}
+
 function EstadoCompra({ estado }) {
   const styles = {
     Aprobado: 'bg-green-600 text-white',
@@ -40,8 +93,10 @@ export default function RegistroComprasPage({
   aprobarSolicitud,
   descargarCSV,
 }) {
-  const [desde, setDesde] = useState('')
-  const [hasta, setHasta] = useState('')
+  const [rangoInicialDesde, rangoInicialHasta] = calcularRango('mes')
+  const [desde, setDesde] = useState(rangoInicialDesde)
+  const [hasta, setHasta] = useState(rangoInicialHasta)
+  const [periodoActivo, setPeriodoActivo] = useState('mes')
 
   const comprasOrdenadas = [...registroCompras].sort((a, b) => {
     const estadoA = estadoCompra(a) === 'Pendiente' ? 0 : 1
@@ -65,9 +120,25 @@ export default function RegistroComprasPage({
     (s) => estadoCompra(s) !== 'Aprobado'
   )
 
-  const totalAprobado = comprasFiltradas
-    .filter((s) => estadoCompra(s) === 'Aprobado')
-    .reduce((sum, s) => sum + montoCompra(s), 0)
+  const totalAprobado = totalAprobadoEnRango(comprasFiltradas, desde, hasta)
+  const [diaDesde, diaHasta] = calcularRango('dia')
+  const [semanaDesde, semanaHasta] = calcularRango('semana')
+  const [mesDesde, mesHasta] = calcularRango('mes')
+  const [anioDesde, anioHasta] = calcularRango('anio')
+
+  const totales = {
+    dia: totalAprobadoEnRango(registroCompras, diaDesde, diaHasta),
+    semana: totalAprobadoEnRango(registroCompras, semanaDesde, semanaHasta),
+    mes: totalAprobadoEnRango(registroCompras, mesDesde, mesHasta),
+    anio: totalAprobadoEnRango(registroCompras, anioDesde, anioHasta),
+  }
+
+  function aplicarPeriodo(tipo) {
+    const [nuevoDesde, nuevoHasta] = calcularRango(tipo)
+    setDesde(nuevoDesde)
+    setHasta(nuevoHasta)
+    setPeriodoActivo(tipo)
+  }
 
   function descargar() {
     descargarCSV(
@@ -101,22 +172,66 @@ export default function RegistroComprasPage({
         </div>
 
         <div className="bg-zinc-800 rounded-2xl p-4 font-black text-green-400">
-          Total aprobado: ${totalAprobado}
+          Total rango: ${totalAprobado}
         </div>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4 mb-6">
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="text-zinc-400">Hoy</p>
+          <p className="text-2xl font-black text-green-400">${totales.dia}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="text-zinc-400">Semana</p>
+          <p className="text-2xl font-black text-green-400">${totales.semana}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="text-zinc-400">Mes</p>
+          <p className="text-2xl font-black text-green-400">${totales.mes}</p>
+        </div>
+        <div className="bg-zinc-800 rounded-2xl p-4">
+          <p className="text-zinc-400">Año</p>
+          <p className="text-2xl font-black text-green-400">${totales.anio}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-3 mb-6">
+        {[
+          ['dia', 'Dia'],
+          ['semana', 'Semana'],
+          ['mes', 'Mes'],
+          ['anio', 'Año'],
+        ].map(([tipo, label]) => (
+          <button
+            key={tipo}
+            onClick={() => aplicarPeriodo(tipo)}
+            className={`px-5 py-3 rounded-2xl font-black ${
+              periodoActivo === tipo ? 'bg-green-600' : 'bg-zinc-800'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-6">
         <input
           type="date"
           value={desde}
-          onChange={(e) => setDesde(e.target.value)}
+          onChange={(e) => {
+            setDesde(e.target.value)
+            setPeriodoActivo('custom')
+          }}
           className="bg-black p-3 rounded-xl"
         />
 
         <input
           type="date"
           value={hasta}
-          onChange={(e) => setHasta(e.target.value)}
+          onChange={(e) => {
+            setHasta(e.target.value)
+            setPeriodoActivo('custom')
+          }}
           className="bg-black p-3 rounded-xl"
         />
 
