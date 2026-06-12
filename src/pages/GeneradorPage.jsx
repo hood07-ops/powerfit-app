@@ -4,6 +4,23 @@ import { generarEntrenamiento } from './workoutSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
 
+const RM_EJERCICIOS = [
+  'Back Squat',
+  'Front Squat',
+  'Deadlift',
+  'Bench Press',
+  'Push Press',
+  'Strict Press',
+  'Barbell Row',
+  'Power Clean',
+  'Clean Pull',
+  'Power Snatch',
+  'Push Jerk',
+  'Thruster',
+  'Hang Power Clean',
+  'High Pull',
+]
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll('&', '&amp;')
@@ -40,12 +57,19 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
+  const [usarCicloMenstrual, setUsarCicloMenstrual] = useState(false)
+  const [faseMenstrual, setFaseMenstrual] = useState('folicular')
   const [rms, setRms] = useState([])
+  const [rmForm, setRmForm] = useState({
+    ejercicio: RM_EJERCICIOS[0],
+    rm_kg: '',
+  })
   const [planificaciones, setPlanificaciones] = useState([])
   const [planAbierto, setPlanAbierto] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [disponiblesLocal, setDisponiblesLocal] = useState(0)
   const [generando, setGenerando] = useState(false)
+  const [guardandoRM, setGuardandoRM] = useState(false)
 
   async function cargarRM() {
     if (!student?.id) {
@@ -158,6 +182,16 @@ Nivel: ${p.nivel}
 Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
 Variante: ${p.variante}
+${p.cicloMenstrual ? `
+CICLO MENSTRUAL - AJUSTE ORIENTATIVO
+Fase: ${p.cicloMenstrual.label}
+Ajuste carga: ${p.cicloMenstrual.ajusteCarga}
+Porcentaje ATR base: ${p.cicloMenstrual.porcentajeBase}
+Porcentaje aplicado: ${p.cicloMenstrual.porcentajeAplicado}
+Foco: ${p.cicloMenstrual.foco}
+Recomendacion: ${p.cicloMenstrual.recomendacion}
+Nota: si hay dolor, mareos o malestar importante, reducir intensidad y consultar a un profesional.
+` : ''}
 
 ACTIVACION
 Metodo: ${p.activacion.metodo}
@@ -193,6 +227,55 @@ Vuelta a la calma: dirigida en clase.
     await supabase.from('planificaciones_generadas').delete().in('id', ids)
   }
 
+  async function guardarRM() {
+    if (!student?.id || guardandoRM) return
+
+    const rmKg = Number(rmForm.rm_kg)
+    if (!rmForm.ejercicio || !rmKg || rmKg <= 0) {
+      setMensaje('Ingresa un ejercicio y un RM valido en kg.')
+      return
+    }
+
+    setGuardandoRM(true)
+    setMensaje('')
+
+    try {
+      const { data: existente, error: buscarError } = await supabase
+        .from('rm_alumnos')
+        .select('id')
+        .eq('alumno_id', student.id)
+        .eq('ejercicio', rmForm.ejercicio)
+        .maybeSingle()
+
+      if (buscarError) {
+        setMensaje(`Error buscando RM: ${buscarError.message}`)
+        return
+      }
+
+      const payload = {
+        user_id: student.user_id,
+        alumno_id: student.id,
+        ejercicio: rmForm.ejercicio,
+        rm_kg: rmKg,
+      }
+
+      const { error } = existente?.id
+        ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
+        : await supabase.from('rm_alumnos').insert([payload])
+
+      if (error) {
+        setMensaje(`Error guardando RM: ${error.message}`)
+        return
+      }
+
+      setRmForm((prev) => ({ ...prev, rm_kg: '' }))
+      setMensaje(`RM guardado: ${rmForm.ejercicio} ${rmKg} kg.`)
+      await cargarRM()
+    } finally {
+      setGuardandoRM(false)
+    }
+  }
+
   async function generar() {
     if (!student || generando) return
 
@@ -213,6 +296,7 @@ Vuelta a la calma: dirigida en clase.
         nivel,
         faseATR,
         rms,
+        faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
         historial: planificaciones.map((p) => p.contenido),
       })
 
@@ -318,6 +402,109 @@ Vuelta a la calma: dirigida en clase.
         <p className="text-zinc-400 mt-2">
           Planificaciones visibles este mes: {planificaciones.length}
         </p>
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-zinc-900 border border-blue-600 rounded-3xl p-6 space-y-4">
+          <div>
+            <h2 className="text-2xl font-black text-blue-400">
+              RM / CARGAS DE PESAS
+            </h2>
+            <p className="text-zinc-400 mt-2">
+              Ingresa la repeticion maxima para que la IA calcule los kg sugeridos en fuerza.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-[1fr_140px_auto] gap-3">
+            <select
+              value={rmForm.ejercicio}
+              onChange={(e) =>
+                setRmForm((prev) => ({ ...prev, ejercicio: e.target.value }))
+              }
+              className="bg-zinc-800 p-4 rounded-2xl"
+            >
+              {RM_EJERCICIOS.map((ejercicio) => (
+                <option key={ejercicio} value={ejercicio}>
+                  {ejercicio}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="number"
+              min="1"
+              value={rmForm.rm_kg}
+              onChange={(e) =>
+                setRmForm((prev) => ({ ...prev, rm_kg: e.target.value }))
+              }
+              placeholder="RM kg"
+              className="bg-zinc-800 p-4 rounded-2xl"
+            />
+
+            <button
+              onClick={guardarRM}
+              disabled={guardandoRM}
+              className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 px-5 py-4 rounded-2xl font-black"
+            >
+              {guardandoRM ? 'Guardando...' : 'Guardar RM'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {rms.length > 0 ? (
+              rms.map((rm) => (
+                <span
+                  key={`${rm.ejercicio}-${rm.id}`}
+                  className="bg-zinc-800 border border-zinc-700 rounded-2xl px-4 py-2 text-sm font-black"
+                >
+                  {rm.ejercicio}: {rm.rm_kg} kg
+                </span>
+              ))
+            ) : (
+              <p className="text-zinc-500">
+                Aun no hay RM guardados. Si no existe RM, el plan dira "RM no registrado".
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-pink-600 rounded-3xl p-6 space-y-4">
+          <div>
+            <h2 className="text-2xl font-black text-pink-400">
+              CICLO MENSTRUAL
+            </h2>
+            <p className="text-zinc-400 mt-2">
+              Ajuste opcional para modificar cargas y foco segun la fase del mes.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-3 bg-zinc-800 rounded-2xl p-4 font-black">
+            <input
+              type="checkbox"
+              checked={usarCicloMenstrual}
+              onChange={(e) => setUsarCicloMenstrual(e.target.checked)}
+              className="h-5 w-5 accent-pink-600"
+            />
+            Aplicar ajuste por ciclo menstrual
+          </label>
+
+          {usarCicloMenstrual && (
+            <select
+              value={faseMenstrual}
+              onChange={(e) => setFaseMenstrual(e.target.value)}
+              className="w-full bg-zinc-800 p-4 rounded-2xl"
+            >
+              <option value="menstrual">Fase menstrual - bajar carga y priorizar tecnica</option>
+              <option value="folicular">Fase folicular - mejor fase para progresar fuerza</option>
+              <option value="ovulatoria">Fase ovulatoria - potencia controlada</option>
+              <option value="lutea">Fase lutea - moderar volumen e intensidad</option>
+            </select>
+          )}
+
+          <p className="text-sm text-zinc-500">
+            Es una guia orientativa: cada alumna puede responder distinto. Si hay dolor, fatiga alta o malestar, se baja intensidad.
+          </p>
+        </div>
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">

@@ -78,6 +78,51 @@ function configFase(faseATR) {
   return configs[faseATR] || configs.acumulacion
 }
 
+function configCicloMenstrual(faseMenstrual) {
+  const configs = {
+    menstrual: {
+      label: 'Menstrual',
+      factorCarga: 0.85,
+      intensidad: 'baja a moderada',
+      foco: 'tecnica, movilidad, control respiratorio y baja percepcion de esfuerzo',
+      recomendacion:
+        'Reducir cargas si hay dolor o fatiga. Priorizar tecnica, movilidad y trabajo aerobico suave.',
+    },
+    folicular: {
+      label: 'Folicular',
+      factorCarga: 1.05,
+      intensidad: 'media a alta',
+      foco: 'progresion de fuerza, potencia tecnica y aprendizaje motor',
+      recomendacion:
+        'Buena fase para progresar cargas si la alumna se siente bien y mantiene tecnica estable.',
+    },
+    ovulatoria: {
+      label: 'Ovulatoria',
+      factorCarga: 1,
+      intensidad: 'alta controlada',
+      foco: 'potencia, velocidad y fuerza con buena entrada en calor',
+      recomendacion:
+        'Mantener intensidad, cuidando aterrizajes, rodillas y hombros con calentamiento completo.',
+    },
+    lutea: {
+      label: 'Lutea',
+      factorCarga: 0.9,
+      intensidad: 'moderada',
+      foco: 'volumen controlado, fuerza submaxima y recuperacion',
+      recomendacion:
+        'Bajar volumen o carga si aumenta la fatiga. Usar descansos completos y controlar RPE.',
+    },
+  }
+
+  return configs[faseMenstrual] || null
+}
+
+function ajustarPorcentajeCiclo(porcentaje, cicloCfg) {
+  if (!cicloCfg) return porcentaje
+
+  return Math.min(0.9, Math.max(0.5, porcentaje * cicloCfg.factorCarga))
+}
+
 export function calcularCarga(rms, ejercicio, porcentaje) {
   const rm = rms?.find(
     (r) =>
@@ -184,7 +229,14 @@ function esMuyParecidoAlHistorial(plan, historial) {
   })
 }
 
-export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial = [] }) {
+export function generarEntrenamiento({
+  objetivo,
+  nivel,
+  faseATR,
+  rms,
+  historial = [],
+  faseMenstrual = null,
+}) {
   const pools = {
     fuerza: [
       'Back Squat',
@@ -241,12 +293,14 @@ export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial 
 
   const nivelCfg = configNivel(nivel)
   const faseCfg = configFase(faseATR)
+  const cicloCfg = configCicloMenstrual(faseMenstrual)
   const variantes = ['A', 'B', 'C', 'D', 'E', 'F']
 
   let mejorPlan = null
 
   for (let intento = 0; intento < 8; intento++) {
-    const porcentaje = pick(faseCfg.porcentajes)
+    const porcentajeBase = pick(faseCfg.porcentajes)
+    const porcentaje = ajustarPorcentajeCiclo(porcentajeBase, cicloCfg)
     const variante = pick(variantes)
     const fuerzaElegida =
       objetivo === 'fuerza'
@@ -260,8 +314,22 @@ export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial 
       objetivo: labelObjetivo(objetivo),
       nivel,
       faseATR,
+      cicloMenstrual: cicloCfg
+        ? {
+            fase: faseMenstrual,
+            label: cicloCfg.label,
+            intensidad: cicloCfg.intensidad,
+            foco: cicloCfg.foco,
+            recomendacion: cicloCfg.recomendacion,
+            ajusteCarga: `${Math.round(cicloCfg.factorCarga * 100)}% de la carga base ATR`,
+            porcentajeBase: `${Math.round(porcentajeBase * 100)}%`,
+            porcentajeAplicado: `${Math.round(porcentaje * 100)}%`,
+          }
+        : null,
       variante,
-      intensidad: nivelCfg.intensidad,
+      intensidad: cicloCfg
+        ? `${nivelCfg.intensidad} / ciclo ${cicloCfg.intensidad}`
+        : nivelCfg.intensidad,
 
       activacion: {
         metodo: pick(['RAMP 8 MIN', 'RAMP 10 MIN', 'MOVILIDAD + PULSO 8 MIN']),
@@ -280,7 +348,9 @@ export function generarEntrenamiento({ objetivo, nivel, faseATR, rms, historial 
       },
 
       bloque2: {
-        metodo: `FUERZA / %RM - foco: ${faseCfg.foco}`,
+        metodo: cicloCfg
+          ? `FUERZA / %RM - foco ATR: ${faseCfg.foco} - ajuste ciclo: ${cicloCfg.foco}`
+          : `FUERZA / %RM - foco: ${faseCfg.foco}`,
         duracion: pick(['12 min', '12-15 min', '15 min', '15-18 min']),
         ejercicios: fuerzaElegida.map((e) =>
           crearTrabajoFuerza(e, nivelCfg, porcentaje, rms)
