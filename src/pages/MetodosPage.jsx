@@ -82,6 +82,25 @@ const metodos = [
     medir: 'Rondas, calidad de guardia, potencia mantenida y recuperacion.',
     ejemplo: '3 rounds: 45 sec heavy bag, 10 burpees, 150m row, 30 sec plank.',
   },
+  {
+    nombre: 'Motor transversal',
+    uso: 'Transferir fuerza entre cadera, tronco, hombro y brazo para deportes rotacionales como boxeo y tenis.',
+    ejecucion:
+      'Se trabaja diagonal, cadenas cruzadas, oblicuo, serrato y separacion cadera-hombro. La fase concentrica debe ser explosiva, pero solo si la postura se mantiene limpia.',
+    medir:
+      'Calidad de rotacion, velocidad, control de frenado, simetria por lado y capacidad de repetir sin perder eje.',
+    ejemplo:
+      'Push Jerk 5 reps + 8 lanzamientos rotacionales con balon por lado + 10 desplazamientos laterales con frenado.',
+  },
+  {
+    nombre: 'Contraste fuerza-potencia',
+    uso: 'Aplicar un gesto explosivo despues de una serie de fuerza para transferir carga a aceleracion y potencia.',
+    ejecucion:
+      'Se hace una serie de fuerza, se descansa breve y se ejecuta un gesto rapido: bandas, balon medicinal, salto lateral o patron especifico.',
+    medir: 'Carga usada, velocidad del gesto, calidad tecnica y fatiga acumulada.',
+    ejemplo:
+      '10 push jerk + 10 flexoextensiones de brazos con salto lateral y desplazamiento.',
+  },
 ]
 
 function youtubeSearch(nombre) {
@@ -473,6 +492,78 @@ const ejercicios = [
     'Movilidad',
     'Mejorar rotacion toracica y movilidad de tobillo.',
     '10 rotaciones por lado + 10 ankle rocks por lado.'
+  ),
+  crearEjercicio(
+    'Elastic Band Jab Cross',
+    'Boxeo / Banda elastica',
+    'Mejorar aceleracion de golpe, retorno de guardia y transferencia cadera-hombro.',
+    '3x10 por lado despues de una serie de fuerza de empuje.'
+  ),
+  crearEjercicio(
+    'Elastic Band Hook Rotation',
+    'Boxeo / Banda elastica',
+    'Entrenar rotacion explosiva, oblicuos, serrato y control de eje.',
+    '3x8 por lado con fase concentrica explosiva y vuelta controlada.'
+  ),
+  crearEjercicio(
+    'Medicine Ball Rotational Throw',
+    'Potencia rotacional',
+    'Transferir fuerza de piernas y cadera hacia tronco, hombro y brazo.',
+    '4x6 por lado contra pared o con compañero.'
+  ),
+  crearEjercicio(
+    'Medicine Ball Forehand Throw',
+    'Tenis / Potencia rotacional',
+    'Simular golpe de derecha usando cadenas cruzadas y efecto serape.',
+    '4x6 por lado con separacion cadera-hombro.'
+  ),
+  crearEjercicio(
+    'Medicine Ball Backhand Throw',
+    'Tenis / Potencia rotacional',
+    'Simular reves con transferencia diagonal y control de frenado.',
+    '4x6 por lado, priorizando calidad antes que velocidad.'
+  ),
+  crearEjercicio(
+    'Band Forehand Acceleration',
+    'Tenis / Banda elastica',
+    'Mejorar aceleracion de golpe y activacion oblicuo-serrato.',
+    '3x10 por lado entre series de fuerza.'
+  ),
+  crearEjercicio(
+    'Band Backhand Acceleration',
+    'Tenis / Banda elastica',
+    'Desarrollar aceleracion y control en patron de reves.',
+    '3x10 por lado con retorno controlado.'
+  ),
+  crearEjercicio(
+    'Serape Effect Diagonal Stretch + Explosive Rotation',
+    'Motor transversal',
+    'Cargar diagonalmente la cadena cruzada y liberar con rotacion explosiva.',
+    '3x6 por lado antes o despues de fuerza principal.'
+  ),
+  crearEjercicio(
+    'Cross-body Chop Oblique-Serratus',
+    'Motor transversal',
+    'Conectar oblicuo, serrato, cadera y hombro en diagonal.',
+    '3x8 por lado con banda o polea.'
+  ),
+  crearEjercicio(
+    'Lateral Shuffle + Deceleration',
+    'Aceleracion / Frenado',
+    'Mejorar desplazamiento lateral, frenado y cambio de direccion.',
+    '4x15-20m cuidando rodilla y cadera al frenar.'
+  ),
+  crearEjercicio(
+    'Split Step + Lateral Acceleration',
+    'Tenis / Aceleracion',
+    'Entrenar reaccion, primer paso y salida lateral.',
+    '6-8 salidas cortas de 5m por lado.'
+  ),
+  crearEjercicio(
+    'Flexoextension de brazos con salto lateral',
+    'Contraste fuerza-potencia',
+    'Combinar empuje, rigidez de tronco y desplazamiento lateral explosivo.',
+    '10 reps entre series de push jerk, bench press o strict press.'
   ),
 ]
 

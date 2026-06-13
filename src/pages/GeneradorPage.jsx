@@ -182,6 +182,10 @@ Nivel: ${p.nivel}
 Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
 Variante: ${p.variante}
+${p.motorTransversal ? `
+MOTOR TRANSVERSAL
+${p.motorTransversal.map((e) => `- ${e}`).join('\n')}
+` : ''}
 ${p.cicloMenstrual ? `
 CICLO MENSTRUAL - AJUSTE ORIENTATIVO
 Fase: ${p.cicloMenstrual.label}
@@ -514,6 +518,7 @@ Vuelta a la calma: dirigida en clase.
           className="bg-zinc-800 p-4 rounded-2xl"
         >
           <option value="fighter">Fighter</option>
+          <option value="tenis">Tenis</option>
           <option value="fuerza">Fuerza</option>
           <option value="perdida_grasa">Perdida grasa</option>
           <option value="cardio">Cardio</option>

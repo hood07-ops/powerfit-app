@@ -17,6 +17,7 @@ function uniquePick(arr, count) {
 function labelObjetivo(objetivo) {
   const labels = {
     fighter: 'Fighter',
+    tenis: 'Tenis',
     fuerza: 'Fuerza',
     perdida_grasa: 'Perdida grasa',
     cardio: 'Cardio',
@@ -142,9 +143,15 @@ function crearBloqueObjetivo(objetivo, nivelCfg, pools) {
   const bloques = {
     fighter: [
       `${reps} ${pick(pools.boxeo)}`,
+      `${reps} ${pick(pools.transversal)}`,
       `${reps} ${pick(pools.pesoCorporal)}`,
       `${cardio} ${pick(pools.cardio)}`,
-      `30 sec ${pick(pools.core)}`,
+    ],
+    tenis: [
+      `${reps} ${pick(pools.tenis)}`,
+      `${reps} ${pick(pools.transversal)}`,
+      `${reps} ${pick(pools.banda)}`,
+      `${cardio} ${pick(pools.desplazamiento)}`,
     ],
     fuerza: [
       `${reps} ${pick(pools.kb)}`,
@@ -175,9 +182,15 @@ function crearBloqueFinal(objetivo, nivelCfg, pools) {
   const finales = {
     fighter: [
       `12 ${pick(pools.boxeo)}`,
+      `10 ${pick(pools.balon)}`,
       `10 ${pick(pools.pesoCorporal)}`,
       `12 ${pick(pools.kb)}`,
-      `${cardio} ${pick(pools.cardio)}`,
+    ],
+    tenis: [
+      `10 ${pick(pools.tenis)}`,
+      `8 por lado ${pick(pools.transversal)}`,
+      `10 ${pick(pools.balon)}`,
+      `${cardio} ${pick(pools.desplazamiento)}`,
     ],
     fuerza: [
       `8 ${pick(pools.pesoCorporal)}`,
@@ -202,18 +215,31 @@ function crearBloqueFinal(objetivo, nivelCfg, pools) {
   return finales[objetivo] || finales.fighter
 }
 
-function crearTrabajoFuerza(ejercicio, nivelCfg, porcentaje, rms) {
+function crearContrasteTransversal(pools) {
+  return pick([
+    `Contraste entre series: 10 ${pick(pools.banda)} + 10 ${pick(pools.desplazamiento)}`,
+    `Contraste entre series: 8 por lado ${pick(pools.balon)} + 10 ${pick(pools.transversal)}`,
+    `Contraste entre series: 10 flexoextension de brazos con salto lateral + 8 por lado ${pick(pools.banda)}`,
+    `Contraste entre series: 10 saltos abre/cierra brazos arriba-abajo + 8 por lado ${pick(pools.transversal)}`,
+  ])
+}
+
+function crearTrabajoFuerza(ejercicio, nivelCfg, porcentaje, rms, pools, objetivo) {
   const usarPiramidal = Math.random() < 0.35
+  const contraste =
+    objetivo === 'fighter' || objetivo === 'tenis'
+      ? ` | ${crearContrasteTransversal(pools)}`
+      : ''
 
   if (usarPiramidal) {
     return `${ejercicio} - PIRAMIDAL 1-3-5-7-5-3-1 @${Math.round(
       porcentaje * 100
-    )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}`
+    )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}${contraste}`
   }
 
   return `${ejercicio} - ${pick(nivelCfg.series)}x${pick(['3', '4', '5'])} @${Math.round(
     porcentaje * 100
-  )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}`
+  )}% - carga sugerida: ${calcularCarga(rms, ejercicio, porcentaje)} - descanso ${pick(nivelCfg.descanso)}${contraste}`
 }
 
 function firmaPlan(plan) {
@@ -264,6 +290,54 @@ export function generarEntrenamiento({
       'Slip + Counter',
       'Defense + Counter',
       'Uppercut Hook Combo',
+      'Elastic Band Jab Cross',
+      'Elastic Band Hook Rotation',
+      'Medicine Ball Rotational Throw',
+      'Medicine Ball Slam + Sprawl',
+    ],
+    tenis: [
+      'Split Step + lateral acceleration',
+      'Open stance rotational drive',
+      'Medicine Ball Forehand Throw',
+      'Medicine Ball Backhand Throw',
+      'Elastic Band Forehand Pattern',
+      'Elastic Band Backhand Pattern',
+      'Lateral Shuffle + deceleration',
+      'Crossover Step + hip rotation',
+    ],
+    transversal: [
+      'Serape effect diagonal stretch + explosive rotation',
+      'Cross-body chop oblique-serratus',
+      'Half-kneeling lift diagonal',
+      'Pallof press + rotation control',
+      'Contralateral dead bug with band',
+      'Crossover step to rotational punch',
+      'Hip shoulder separation drill',
+    ],
+    banda: [
+      'Band resisted jab cross',
+      'Band resisted hook',
+      'Band anti-rotation punch',
+      'Band forehand acceleration',
+      'Band backhand acceleration',
+      'Band diagonal chop',
+      'Band serratus punch',
+    ],
+    balon: [
+      'Medicine Ball rotational throw',
+      'Medicine Ball scoop toss',
+      'Medicine Ball shot put throw',
+      'Medicine Ball slam',
+      'Medicine Ball lateral bound throw',
+      'Medicine Ball overhead throw',
+    ],
+    desplazamiento: [
+      'lateral shuffle + stick landing',
+      'crossover step + brake',
+      'split step + sprint 5m',
+      'lateral bound + rebound',
+      'in-out footwork ladder',
+      'side hop + arm open-close',
     ],
     cardio: ['Run', 'Bike', 'Row', 'Ski Erg', 'Jump Rope', 'Shuttle Run'],
     core: ['Sit Up', 'Plank Hold', 'Hollow Hold', 'Russian Twist', 'Dead Bug', 'V-Up'],
@@ -305,7 +379,7 @@ export function generarEntrenamiento({
     const fuerzaElegida =
       objetivo === 'fuerza'
         ? uniquePick(pools.fuerza, 3)
-        : objetivo === 'fighter'
+        : objetivo === 'fighter' || objetivo === 'tenis'
           ? uniquePick([...pools.haltero, ...pools.fuerza], 3)
           : uniquePick(['Back Squat', 'Deadlift', 'Push Press', 'Barbell Row'], 2)
 
@@ -330,6 +404,14 @@ export function generarEntrenamiento({
       intensidad: cicloCfg
         ? `${nivelCfg.intensidad} / ciclo ${cicloCfg.intensidad}`
         : nivelCfg.intensidad,
+      motorTransversal:
+        objetivo === 'fighter' || objetivo === 'tenis'
+          ? [
+              'Base: aceleracion, potencia rotacional, cadenas cruzadas y fase concentrica explosiva.',
+              'Foco tecnico: efecto serape, diagonal oblicuo-serrato y transferencia cadera-hombro.',
+              'Criterio: calidad primero, velocidad despues; cortar la serie si se pierde eje o timing.',
+            ]
+          : null,
 
       activacion: {
         metodo: pick(['RAMP 8 MIN', 'RAMP 10 MIN', 'MOVILIDAD + PULSO 8 MIN']),
@@ -353,7 +435,7 @@ export function generarEntrenamiento({
           : `FUERZA / %RM - foco: ${faseCfg.foco}`,
         duracion: pick(['12 min', '12-15 min', '15 min', '15-18 min']),
         ejercicios: fuerzaElegida.map((e) =>
-          crearTrabajoFuerza(e, nivelCfg, porcentaje, rms)
+          crearTrabajoFuerza(e, nivelCfg, porcentaje, rms, pools, objetivo)
         ),
       },
 
