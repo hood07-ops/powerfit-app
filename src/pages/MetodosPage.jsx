@@ -101,6 +101,30 @@ const metodos = [
     ejemplo:
       '10 push jerk + 10 flexoextensiones de brazos con salto lateral y desplazamiento.',
   },
+  {
+    nombre: 'HIIT',
+    uso: 'Trabajar alta intensidad por intervalos para mejorar potencia, tolerancia al esfuerzo y recuperacion.',
+    ejecucion:
+      'Alterna ventanas cortas de trabajo y pausa. La relacion trabajo/descanso cambia segun objetivo: 10/50 para potencia alactica, 30/30 para aerobico intenso, 45/15 para lactico.',
+    medir: 'Watts, metros, repeticiones, tiempo sostenido, recuperacion y caida de rendimiento entre rondas.',
+    ejemplo: 'HIIT 10/50: sprint 10 sec + 50 sec pausa x 8. HIIT 30/30: row fuerte 30 sec + 30 sec suave x 10.',
+  },
+  {
+    nombre: 'Sistema metabolico',
+    uso: 'Elegir que energia se quiere entrenar: oxidativo, glucolitico o ATP-PC.',
+    ejecucion:
+      'Oxidativo usa trabajos mas largos y sostenibles. Glucolitico tolera esfuerzos medios con fatiga. ATP-PC busca acciones explosivas muy cortas con descanso amplio.',
+    medir: 'Duracion del esfuerzo, descanso, potencia mantenida, frecuencia cardiaca y calidad tecnica.',
+    ejemplo: 'Acumulacion: oxidativo. Transformacion: glucolitico. Realizacion: ATP-PC alactico.',
+  },
+  {
+    nombre: 'Pliometria deportiva',
+    uso: 'Mejorar reactividad, aceleracion, frenado y transferencia elastica por deporte.',
+    ejecucion:
+      'Se usan saltos, rebotes y aterrizajes con poco volumen y maxima calidad. El aterrizaje debe ser silencioso, estable y alineado.',
+    medir: 'Altura/distancia, tiempo de contacto, control de aterrizaje, simetria y respuesta al siguiente gesto.',
+    ejemplo: 'Tenis: split step rebound + salida lateral. Boxeo: pogo guard stance + slip reaction.',
+  },
 ]
 
 function youtubeSearch(nombre) {
@@ -564,6 +588,60 @@ const ejercicios = [
     'Contraste fuerza-potencia',
     'Combinar empuje, rigidez de tronco y desplazamiento lateral explosivo.',
     '10 reps entre series de push jerk, bench press o strict press.'
+  ),
+  crearEjercicio(
+    'Pogo Jump Guard Stance',
+    'Pliometria / Boxeo',
+    'Mejorar reactividad de pies manteniendo guardia y eje de combate.',
+    '3x15-20 sec, contacto rapido con el suelo y guardia estable.'
+  ),
+  crearEjercicio(
+    'Lateral Bound + Fighting Stance Stick',
+    'Pliometria / Boxeo',
+    'Transferir potencia lateral a una posicion de golpe estable.',
+    '4x5 por lado, saltar lateral y congelar en guardia.'
+  ),
+  crearEjercicio(
+    'Skater Jump + Slip Reaction',
+    'Pliometria / Boxeo',
+    'Integrar salto lateral, frenado y defensa de tronco.',
+    '3x6 por lado, aterrizar y ejecutar slip controlado.'
+  ),
+  crearEjercicio(
+    'Split Step Rebound',
+    'Pliometria / Tenis',
+    'Entrenar rebote de preparacion y primera reaccion.',
+    '4x6 salidas, caer en split step y salir hacia lado indicado.'
+  ),
+  crearEjercicio(
+    'Crossover Bound + Brake',
+    'Pliometria / Tenis',
+    'Mejorar cadena cruzada, cambio de direccion y frenado.',
+    '4x5 por lado, cruzar, saltar y frenar con control.'
+  ),
+  crearEjercicio(
+    'Drop Jump + First Step',
+    'Pliometria / Aceleracion',
+    'Reducir tiempo de contacto y mejorar salida explosiva.',
+    '3x5, caer bajo control y salir 3-5 metros.'
+  ),
+  crearEjercicio(
+    'HIIT 10/50 Sprint',
+    'HIIT / ATP-PC',
+    'Desarrollar potencia alactica con recuperacion suficiente.',
+    '8-10 rondas: 10 sec maximo + 50 sec pausa.'
+  ),
+  crearEjercicio(
+    'HIIT 30/30 Row Bike Run',
+    'HIIT / Oxidativo intenso',
+    'Mejorar capacidad de sostener potencia repetida.',
+    '10 rondas: 30 sec fuerte + 30 sec suave.'
+  ),
+  crearEjercicio(
+    'HIIT 45/15 Lactico',
+    'HIIT / Glucolitico',
+    'Entrenar tolerancia a fatiga metabolica manteniendo tecnica.',
+    '8 rondas: 45 sec trabajo + 15 sec pausa.'
   ),
 ]
 

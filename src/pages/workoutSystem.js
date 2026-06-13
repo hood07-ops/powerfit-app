@@ -58,21 +58,24 @@ function configFase(faseATR) {
   const configs = {
     acumulacion: {
       porcentajes: [0.6, 0.65, 0.7],
-      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS', 'PIRAMIDAL TECNICO'],
-      finales: ['EMOM 12 MIN', 'AMRAP 10 MIN', 'FOR QUALITY 12 MIN'],
+      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS', 'PIRAMIDAL TECNICO', 'HIIT AEROBICO 30/30'],
+      finales: ['EMOM 12 MIN', 'AMRAP 10 MIN', 'FOR QUALITY 12 MIN', 'ZONA 2 + TECNICA'],
       foco: 'volumen tecnico y base aerobica',
+      sistema: 'oxidativo / base aerobica',
     },
     transformacion: {
       porcentajes: [0.72, 0.75, 0.78],
-      principales: ['INTERVALOS 40/20', 'E3MOM 15 MIN', 'DENSIDAD 12 MIN', 'PIRAMIDAL DE FUERZA'],
-      finales: ['AMRAP 10 MIN', 'INTERVALOS 30/30', 'CHIPPER CORTO'],
+      principales: ['INTERVALOS 40/20', 'E3MOM 15 MIN', 'DENSIDAD 12 MIN', 'PIRAMIDAL DE FUERZA', 'HIIT LACTICO 45/15'],
+      finales: ['AMRAP 10 MIN', 'INTERVALOS 30/30', 'CHIPPER CORTO', 'REPEATED SPRINT ABILITY'],
       foco: 'potencia, ritmo y transferencia',
+      sistema: 'glucolitico / lactico tolerable',
     },
     realizacion: {
       porcentajes: [0.82, 0.85, 0.88],
-      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TECNICO', 'PIRAMIDAL PESADO'],
-      finales: ['FOR TIME', 'SPRINT INTERVALS', 'AMRAP 8 MIN'],
+      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TECNICO', 'PIRAMIDAL PESADO', 'HIIT ALTACTICO 10/50'],
+      finales: ['FOR TIME', 'SPRINT INTERVALS', 'AMRAP 8 MIN', 'POTENCIA ALTACTICA'],
       foco: 'intensidad, rendimiento y ejecucion precisa',
+      sistema: 'ATP-PC / potencia alactica',
     },
   }
 
@@ -139,25 +142,26 @@ export function calcularCarga(rms, ejercicio, porcentaje) {
 function crearBloqueObjetivo(objetivo, nivelCfg, pools) {
   const reps = pick(nivelCfg.reps)
   const cardio = pick(nivelCfg.cardio)
+  const pliometria = pick(pools.pliometria[objetivo] || pools.pliometria.general)
 
   const bloques = {
     fighter: [
       `${reps} ${pick(pools.boxeo)}`,
       `${reps} ${pick(pools.transversal)}`,
+      `${reps} ${pliometria}`,
       `${reps} ${pick(pools.pesoCorporal)}`,
-      `${cardio} ${pick(pools.cardio)}`,
     ],
     tenis: [
       `${reps} ${pick(pools.tenis)}`,
       `${reps} ${pick(pools.transversal)}`,
+      `${reps} ${pliometria}`,
       `${reps} ${pick(pools.banda)}`,
-      `${cardio} ${pick(pools.desplazamiento)}`,
     ],
     fuerza: [
       `${reps} ${pick(pools.kb)}`,
+      `${reps} ${pliometria}`,
       `${reps} ${pick(pools.pesoCorporal)}`,
       `30 sec ${pick(pools.core)}`,
-      `${cardio} ${pick(pools.cardio)} suave`,
     ],
     perdida_grasa: [
       `${reps} ${pick(pools.pesoCorporal)}`,
@@ -178,19 +182,20 @@ function crearBloqueObjetivo(objetivo, nivelCfg, pools) {
 
 function crearBloqueFinal(objetivo, nivelCfg, pools) {
   const cardio = pick(nivelCfg.cardio)
+  const pliometria = pick(pools.pliometria[objetivo] || pools.pliometria.general)
 
   const finales = {
     fighter: [
       `12 ${pick(pools.boxeo)}`,
       `10 ${pick(pools.balon)}`,
+      `8 ${pliometria}`,
       `10 ${pick(pools.pesoCorporal)}`,
-      `12 ${pick(pools.kb)}`,
     ],
     tenis: [
       `10 ${pick(pools.tenis)}`,
       `8 por lado ${pick(pools.transversal)}`,
+      `8 ${pliometria}`,
       `10 ${pick(pools.balon)}`,
-      `${cardio} ${pick(pools.desplazamiento)}`,
     ],
     fuerza: [
       `8 ${pick(pools.pesoCorporal)}`,
@@ -219,6 +224,7 @@ function crearContrasteTransversal(pools) {
   return pick([
     `Contraste entre series: 10 ${pick(pools.banda)} + 10 ${pick(pools.desplazamiento)}`,
     `Contraste entre series: 8 por lado ${pick(pools.balon)} + 10 ${pick(pools.transversal)}`,
+    `Contraste entre series: 6 ${pick(pools.pliometria.general)} + 8 por lado ${pick(pools.transversal)}`,
     `Contraste entre series: 10 flexoextension de brazos con salto lateral + 8 por lado ${pick(pools.banda)}`,
     `Contraste entre series: 10 saltos abre/cierra brazos arriba-abajo + 8 por lado ${pick(pools.transversal)}`,
   ])
@@ -339,6 +345,50 @@ export function generarEntrenamiento({
       'in-out footwork ladder',
       'side hop + arm open-close',
     ],
+    pliometria: {
+      fighter: [
+        'Pogo jump guard stance',
+        'Lateral bound + fighting stance stick',
+        'Split stance switch jump',
+        'Skater jump + slip reaction',
+        'Drop step jump + counter punch',
+        'Medicine Ball plyo push pass',
+      ],
+      tenis: [
+        'Split step rebound',
+        'Lateral bound + deceleration',
+        'Crossover bound + brake',
+        'Single leg hop + open stance',
+        'Drop jump + first step',
+        'Multi-direction hop to forehand stance',
+      ],
+      fuerza: [
+        'Box jump',
+        'Broad jump',
+        'Jump squat',
+        'Depth landing',
+        'Pogo jump',
+      ],
+      cardio: [
+        'Line hop',
+        'Skater jump',
+        'Jump rope fast feet',
+        'Low amplitude pogo',
+      ],
+      perdida_grasa: [
+        'Low impact skater step',
+        'Squat jump tecnico',
+        'Jumping jack rapido',
+        'Lateral line hop',
+      ],
+      general: [
+        'Pogo jump',
+        'Lateral bound',
+        'Broad jump',
+        'Skater jump',
+        'Split stance jump',
+      ],
+    },
     cardio: ['Run', 'Bike', 'Row', 'Ski Erg', 'Jump Rope', 'Shuttle Run'],
     core: ['Sit Up', 'Plank Hold', 'Hollow Hold', 'Russian Twist', 'Dead Bug', 'V-Up'],
     kb: [
@@ -404,6 +454,7 @@ export function generarEntrenamiento({
       intensidad: cicloCfg
         ? `${nivelCfg.intensidad} / ciclo ${cicloCfg.intensidad}`
         : nivelCfg.intensidad,
+      sistemaMetabolico: faseCfg.sistema,
       motorTransversal:
         objetivo === 'fighter' || objetivo === 'tenis'
           ? [
@@ -424,7 +475,7 @@ export function generarEntrenamiento({
       },
 
       bloque1: {
-        metodo: pick(faseCfg.principales),
+        metodo: `${pick(faseCfg.principales)} - sistema ${faseCfg.sistema}`,
         duracion: pick(['10 min', '10-12 min', '12 min', '12-15 min']),
         ejercicios: crearBloqueObjetivo(objetivo, nivelCfg, pools),
       },
@@ -440,7 +491,7 @@ export function generarEntrenamiento({
       },
 
       bloque3: {
-        metodo: pick(faseCfg.finales),
+        metodo: `${pick(faseCfg.finales)} - sistema ${faseCfg.sistema}`,
         duracion: pick(['8-10 min', '10 min', '10-12 min', '12 min']),
         ejercicios: crearBloqueFinal(objetivo, nivelCfg, pools),
       },

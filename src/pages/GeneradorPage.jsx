@@ -181,6 +181,7 @@ Objetivo: ${p.objetivo}
 Nivel: ${p.nivel}
 Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
+Sistema metabolico: ${p.sistemaMetabolico || 'No especificado'}
 Variante: ${p.variante}
 ${p.motorTransversal ? `
 MOTOR TRANSVERSAL
