@@ -1,8 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { generarEntrenamiento } from './workoutSystem'
+import { generarEntrenamiento, generarPlanMensual } from './workoutSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
+const PAQUETES_GENERACION = [
+  { desdeCompra: 0, generaciones: 4, monto: 2500, nombre: 'Inicio PowerFit' },
+  { desdeCompra: 1, generaciones: 10, monto: 5000, nombre: 'Progreso PowerFit' },
+  { desdeCompra: 2, generaciones: 10, monto: 7500, nombre: 'Continuo PowerFit' },
+]
+const COSTO_PLAN_MENSUAL = 4
 
 const RM_EJERCICIOS = [
   'Back Squat',
@@ -54,6 +60,7 @@ ${escapeHtml(contenido)}
 }
 
 export default function GeneradorPage({ student, onUpdateStudent }) {
+  const [tipoPlan, setTipoPlan] = useState('sesion')
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
@@ -68,8 +75,14 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [planAbierto, setPlanAbierto] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [disponiblesLocal, setDisponiblesLocal] = useState(0)
+  const [comprasAprobadas, setComprasAprobadas] = useState(0)
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
+
+  const paqueteActual =
+    PAQUETES_GENERACION.find((paquete) => comprasAprobadas <= paquete.desdeCompra) ||
+    PAQUETES_GENERACION[PAQUETES_GENERACION.length - 1]
+  const costoGeneracion = tipoPlan === 'mensual' ? COSTO_PLAN_MENSUAL : 1
 
   async function cargarRM() {
     if (!student?.id) {
@@ -120,6 +133,26 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     setPlanificaciones(data || [])
   }
 
+  async function cargarComprasAprobadas() {
+    if (!student?.id) {
+      setComprasAprobadas(0)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('solicitudes_compra')
+      .select('id')
+      .eq('alumno_id', student.id)
+      .eq('estado', 'Aprobado')
+
+    if (error) {
+      setComprasAprobadas(0)
+      return
+    }
+
+    setComprasAprobadas((data || []).length)
+  }
+
   async function eliminarPlanificacionesVencidas() {
     if (!student?.id) return
 
@@ -156,6 +189,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     Promise.resolve().then(() => {
       cargarRM()
       cargarPlanificacionesMes()
+      cargarComprasAprobadas()
       setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -171,6 +205,18 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   }, [student?.id])
 
   function textoPlan(p, numero) {
+    if (p.tipo === 'mensual') {
+      return `
+POWERFIT 360
+PLANIFICACION MENSUAL ${numero}
+
+Fecha: ${new Date().toLocaleString()}
+Alumno: ${student?.nombre || ''}
+
+${p.contenido}
+`
+    }
+
     return `
 POWERFIT 360
 PLANIFICACION ${numero}
@@ -289,21 +335,32 @@ Vuelta a la calma: dirigida en clase.
 
     try {
       const disponibles = await refrescarGeneraciones()
-      const cantidadFinal = disponibles > 0 ? 1 : 0
+      const cantidadFinal = disponibles >= costoGeneracion ? costoGeneracion : 0
 
       if (cantidadFinal <= 0) {
-        setMensaje('No tienes generaciones disponibles. Debes comprar 1 planificacion o regularizar tu pago.')
+        setMensaje(
+          tipoPlan === 'mensual'
+            ? `El plan mensual usa ${COSTO_PLAN_MENSUAL} generaciones. Compra el paquete ${paqueteActual.nombre} para continuar.`
+            : `No tienes generaciones disponibles. Compra el paquete ${paqueteActual.nombre} para seguir generando.`
+        )
         return
       }
 
-      const plan = generarEntrenamiento({
-        objetivo,
-        nivel,
-        faseATR,
-        rms,
-        faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
-        historial: planificaciones.map((p) => p.contenido),
-      })
+      const plan =
+        tipoPlan === 'mensual'
+          ? generarPlanMensual({
+              objetivo,
+              nivel,
+              faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
+            })
+          : generarEntrenamiento({
+              objetivo,
+              nivel,
+              faseATR,
+              rms,
+              faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
+              historial: planificaciones.map((p) => p.contenido),
+            })
 
       const { data: nuevosPlanes, error: insertError } = await supabase
         .from('planificaciones_generadas')
@@ -312,7 +369,7 @@ Vuelta a la calma: dirigida en clase.
             user_id: student.user_id,
             alumno_id: student.id,
             nombre_alumno: student.nombre,
-            objetivo,
+            objetivo: tipoPlan === 'mensual' ? `Plan mensual ${objetivo}` : objetivo,
             nivel,
             contenido: textoPlan(plan, planificaciones.length + 1),
           },
@@ -350,7 +407,11 @@ Vuelta a la calma: dirigida en clase.
 
       setDisponiblesLocal(disponiblesRestantes)
       descargarWord((nuevosPlanes || []).map((p) => p.contenido).join('\n\n'), student.nombre)
-      setMensaje('1 planificacion generada, guardada y descargada.')
+      setMensaje(
+        tipoPlan === 'mensual'
+          ? `Plan mensual generado, guardado y descargado. Se descontaron ${COSTO_PLAN_MENSUAL} generaciones.`
+          : '1 planificacion generada, guardada y descargada.'
+      )
 
       await cargarPlanificacionesMes()
       onUpdateStudent?.()
@@ -362,6 +423,7 @@ Vuelta a la calma: dirigida en clase.
   async function solicitarCompra() {
     if (!student) return
 
+    const paquete = paqueteActual
     const { error } = await supabase
       .from('solicitudes_compra')
       .insert([
@@ -369,8 +431,8 @@ Vuelta a la calma: dirigida en clase.
           user_id: student.user_id,
           alumno_id: student.id,
           nombre_alumno: student.nombre,
-          monto: 2500,
-          generaciones: 1,
+          monto: paquete.monto,
+          generaciones: paquete.generaciones,
           estado: 'Pendiente',
         },
       ])
@@ -380,7 +442,7 @@ Vuelta a la calma: dirigida en clase.
       return
     }
 
-    const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar 1 planificacion PowerFit por $2.500.`
+    const texto = `Hola Robinson, soy ${student.nombre}. Quiero comprar el paquete ${paquete.nombre}: ${paquete.generaciones} planificaciones PowerFit por $${paquete.monto.toLocaleString('es-CL')}.`
 
     window.open(
       `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
@@ -391,7 +453,7 @@ Vuelta a la calma: dirigida en clase.
     setMensaje('Solicitud enviada correctamente.')
   }
 
-  const sinDisponibles = Number(disponiblesLocal || 0) <= 0
+  const sinDisponibles = Number(disponiblesLocal || 0) < costoGeneracion
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -407,6 +469,58 @@ Vuelta a la calma: dirigida en clase.
         <p className="text-zinc-400 mt-2">
           Planificaciones visibles este mes: {planificaciones.length}
         </p>
+      </div>
+
+      <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
+        <div>
+          <h2 className="text-2xl font-black text-green-400">
+            PAQUETES Y TIPO DE GENERACION
+          </h2>
+          <p className="text-zinc-400 mt-2">
+            El precio sube por avance: primero 4 por $2.500, luego 10 por $5.000 y despues 10 por $7.500.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-3">
+          {PAQUETES_GENERACION.map((paquete) => (
+            <div
+              key={paquete.nombre}
+              className={`rounded-2xl border p-4 ${
+                paqueteActual.nombre === paquete.nombre
+                  ? 'border-green-500 bg-green-950/40'
+                  : 'border-zinc-700 bg-zinc-800'
+              }`}
+            >
+              <p className="font-black text-white">{paquete.nombre}</p>
+              <p className="text-yellow-400 font-black text-xl">
+                {paquete.generaciones} por ${paquete.monto.toLocaleString('es-CL')}
+              </p>
+              <p className="text-sm text-zinc-400">
+                {paqueteActual.nombre === paquete.nombre ? 'Siguiente compra' : 'Escala de precio'}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <button
+            onClick={() => setTipoPlan('sesion')}
+            className={`p-4 rounded-2xl font-black ${
+              tipoPlan === 'sesion' ? 'bg-red-600' : 'bg-zinc-800'
+            }`}
+          >
+            Sesion IA - usa 1 generacion
+          </button>
+
+          <button
+            onClick={() => setTipoPlan('mensual')}
+            className={`p-4 rounded-2xl font-black ${
+              tipoPlan === 'mensual' ? 'bg-blue-600' : 'bg-zinc-800'
+            }`}
+          >
+            Plan mensual ATR - usa {COSTO_PLAN_MENSUAL}
+          </button>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -548,7 +662,7 @@ Vuelta a la calma: dirigida en clase.
 
       {sinDisponibles && (
         <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
-          Ya usaste tus planificaciones disponibles. Compra 1 por $2.500 para seguir generando.
+          Te faltan generaciones para este tipo de plan. Siguiente paquete: {paqueteActual.generaciones} por ${paqueteActual.monto.toLocaleString('es-CL')}.
         </div>
       )}
 
@@ -565,14 +679,16 @@ Vuelta a la calma: dirigida en clase.
           ? 'GENERANDO...'
           : sinDisponibles
             ? 'SIN PLANIFICACIONES DISPONIBLES'
-            : 'GENERAR 1 PLANIFICACION'}
+            : tipoPlan === 'mensual'
+              ? `GENERAR PLAN MENSUAL - USA ${COSTO_PLAN_MENSUAL}`
+              : 'GENERAR 1 PLANIFICACION'}
       </button>
 
       <button
         onClick={solicitarCompra}
         className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-lg sm:text-xl"
       >
-        COMPRAR 1 PLANIFICACION - $2.500
+        COMPRAR {paqueteActual.generaciones} PLANIFICACIONES - ${paqueteActual.monto.toLocaleString('es-CL')}
       </button>
 
       {mensaje && (

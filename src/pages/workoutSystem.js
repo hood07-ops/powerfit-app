@@ -127,6 +127,39 @@ function ajustarPorcentajeCiclo(porcentaje, cicloCfg) {
   return Math.min(0.9, Math.max(0.5, porcentaje * cicloCfg.factorCarga))
 }
 
+function permitePliometria(faseATR) {
+  return faseATR === 'transformacion' || faseATR === 'realizacion'
+}
+
+function ejercicioReactivoSinPliometria(objetivo) {
+  const prePliometria = {
+    fighter: [
+      'footwork tecnico en guardia + frenado estable',
+      'slip + counter lento con control de eje',
+      'paso lateral + retorno a guardia sin salto',
+      'band jab cross tecnico con fase concentrica rapida',
+    ],
+    tenis: [
+      'split step tecnico sin rebote + primer paso',
+      'lateral shuffle + frenado estable',
+      'crossover step + rotacion de cadera controlada',
+      'band forehand pattern tecnico sin salto',
+    ],
+    fuerza: [
+      'depth landing tecnico sin rebote',
+      'bisagra de cadera rapida con freno',
+      'sentadilla tempo 3-1-1',
+    ],
+    general: [
+      'mecanica de aterrizaje sin salto',
+      'desaceleracion lateral controlada',
+      'cambio de direccion tecnico',
+    ],
+  }
+
+  return pick(prePliometria[objetivo] || prePliometria.general)
+}
+
 export function calcularCarga(rms, ejercicio, porcentaje) {
   const rm = rms?.find(
     (r) =>
@@ -139,27 +172,29 @@ export function calcularCarga(rms, ejercicio, porcentaje) {
   return `${Math.round(Number(rm.rm_kg) * porcentaje)} kg`
 }
 
-function crearBloqueObjetivo(objetivo, nivelCfg, pools) {
+function crearBloqueObjetivo(objetivo, nivelCfg, pools, faseATR) {
   const reps = pick(nivelCfg.reps)
   const cardio = pick(nivelCfg.cardio)
-  const pliometria = pick(pools.pliometria[objetivo] || pools.pliometria.general)
+  const reactivo = permitePliometria(faseATR)
+    ? pick(pools.pliometria[objetivo] || pools.pliometria.general)
+    : ejercicioReactivoSinPliometria(objetivo)
 
   const bloques = {
     fighter: [
       `${reps} ${pick(pools.boxeo)}`,
       `${reps} ${pick(pools.transversal)}`,
-      `${reps} ${pliometria}`,
+      `${reps} ${reactivo}`,
       `${reps} ${pick(pools.pesoCorporal)}`,
     ],
     tenis: [
       `${reps} ${pick(pools.tenis)}`,
       `${reps} ${pick(pools.transversal)}`,
-      `${reps} ${pliometria}`,
+      `${reps} ${reactivo}`,
       `${reps} ${pick(pools.banda)}`,
     ],
     fuerza: [
       `${reps} ${pick(pools.kb)}`,
-      `${reps} ${pliometria}`,
+      `${reps} ${reactivo}`,
       `${reps} ${pick(pools.pesoCorporal)}`,
       `30 sec ${pick(pools.core)}`,
     ],
@@ -180,21 +215,23 @@ function crearBloqueObjetivo(objetivo, nivelCfg, pools) {
   return bloques[objetivo] || bloques.fighter
 }
 
-function crearBloqueFinal(objetivo, nivelCfg, pools) {
+function crearBloqueFinal(objetivo, nivelCfg, pools, faseATR) {
   const cardio = pick(nivelCfg.cardio)
-  const pliometria = pick(pools.pliometria[objetivo] || pools.pliometria.general)
+  const reactivo = permitePliometria(faseATR)
+    ? pick(pools.pliometria[objetivo] || pools.pliometria.general)
+    : ejercicioReactivoSinPliometria(objetivo)
 
   const finales = {
     fighter: [
       `12 ${pick(pools.boxeo)}`,
       `10 ${pick(pools.balon)}`,
-      `8 ${pliometria}`,
+      `8 ${reactivo}`,
       `10 ${pick(pools.pesoCorporal)}`,
     ],
     tenis: [
       `10 ${pick(pools.tenis)}`,
       `8 por lado ${pick(pools.transversal)}`,
-      `8 ${pliometria}`,
+      `8 ${reactivo}`,
       `10 ${pick(pools.balon)}`,
     ],
     fuerza: [
@@ -228,6 +265,173 @@ function crearContrasteTransversal(pools) {
     `Contraste entre series: 10 flexoextension de brazos con salto lateral + 8 por lado ${pick(pools.banda)}`,
     `Contraste entre series: 10 saltos abre/cierra brazos arriba-abajo + 8 por lado ${pick(pools.transversal)}`,
   ])
+}
+
+function descansoMuscularTexto() {
+  return [
+    'Musculos grandes (espalda, piernas y pecho): 72 horas entre estimulos fuertes.',
+    'Musculos pequenos (brazos, hombros, gemelos y abdomen): 48 horas entre estimulos fuertes.',
+    'Si se repite un patron antes del descanso completo, debe ser tecnico, liviano o de movilidad.',
+  ]
+}
+
+function focoDeportivo(objetivo) {
+  if (objetivo === 'tenis') {
+    return [
+      'Motor transversal: split step, aceleracion, desaceleracion y potencia rotacional.',
+      'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y cadera-hombro.',
+      'Ejemplos: med ball forehand/backhand throw, band forehand, lateral bound, crossover step.',
+    ]
+  }
+
+  if (objetivo === 'fighter') {
+    return [
+      'Motor transversal: golpeo, cambio de nivel, desplazamiento y potencia rotacional.',
+      'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y fase concentrica explosiva.',
+      'Ejemplos: band jab cross, band hook, med ball rotational throw, slip + counter, footwork.',
+    ]
+  }
+
+  return [
+    'Base fisica: fuerza util, control tecnico, capacidad metabolica y recuperacion.',
+    'Transferencia: estabilidad, movilidad, control de eje y progresion de cargas.',
+  ]
+}
+
+function diaMensual({ dia, nombre, foco, fuerza, reactivo, sistema, notas }) {
+  return [
+    `${dia} - ${nombre}`,
+    `Foco: ${foco}`,
+    `Fuerza: ${fuerza}`,
+    `Reactivo/transferencia: ${reactivo}`,
+    `Sistema metabolico: ${sistema}`,
+    `Notas: ${notas}`,
+  ].join('\n')
+}
+
+export function generarPlanMensual({
+  objetivo,
+  nivel,
+  faseMenstrual = null,
+}) {
+  const nivelCfg = configNivel(nivel)
+  const cicloCfg = configCicloMenstrual(faseMenstrual)
+  const ajusteCiclo = cicloCfg
+    ? `Ajuste ciclo menstrual: ${cicloCfg.label} - ${cicloCfg.recomendacion}`
+    : 'Ajuste ciclo menstrual: no aplicado.'
+
+  const semanas = [
+    {
+      numero: 1,
+      fase: 'acumulacion',
+      foco: 'base tecnica, volumen controlado y capacidad aerobica',
+      notaPliometria: 'Sin pliometria. Usar mecanica de aterrizaje, frenadas y patrones reactivos sin salto.',
+    },
+    {
+      numero: 2,
+      fase: 'acumulacion',
+      foco: 'progresion de volumen, fuerza submaxima y calidad de movimiento',
+      notaPliometria: 'Sin pliometria. Mantener saltos fuera del plan y mejorar desaceleracion.',
+    },
+    {
+      numero: 3,
+      fase: 'transformacion',
+      foco: 'potencia, transferencia deportiva y HIIT lactico controlado',
+      notaPliometria: 'Iniciar pliometria: pocas repeticiones, descansos completos y maxima calidad.',
+    },
+    {
+      numero: 4,
+      fase: 'realizacion',
+      foco: 'velocidad, potencia alactica y rendimiento tecnico',
+      notaPliometria: 'Pliometria corta y explosiva. Cortar la serie si baja la velocidad.',
+    },
+  ]
+
+  const contenidoSemanas = semanas.map((semana) => {
+    const usarPliometria = permitePliometria(semana.fase)
+    const reactivoBase = usarPliometria
+      ? 'pliometria especifica del deporte 3-5 series x 3-6 reps'
+      : 'pre-pliometria: frenadas, aterrizajes y patron tecnico sin salto'
+
+    const dias = [
+      diaMensual({
+        dia: 'Dia 1',
+        nombre: 'Piernas + cadera + motor transversal',
+        foco: 'piernas como musculo grande, bisagra, sentadilla y cadena posterior',
+        fuerza: `3-5 series a intensidad ${nivelCfg.intensidad}; dejar 72h antes de repetir piernas fuerte`,
+        reactivo: `${reactivoBase}; diagonal oblicuo-serrato y aceleracion corta`,
+        sistema: semana.fase === 'acumulacion' ? 'oxidativo / zona 2 tecnica' : 'ATP-PC con descansos completos',
+        notas: 'No cargar pecho/espalda pesado este dia. Priorizar tecnica y rango.',
+      }),
+      diaMensual({
+        dia: 'Dia 2',
+        nombre: 'Pecho + espalda + brazos/hombros',
+        foco: 'empuje y traccion como musculos grandes; accesorios pequenos controlados',
+        fuerza: `3-5 series; pecho/espalda descansan 72h, brazos/hombros descansan 48h`,
+        reactivo: objetivo === 'fighter'
+          ? 'band jab cross + med ball rotational throw entre series'
+          : objetivo === 'tenis'
+            ? 'band forehand/backhand + med ball scoop toss entre series'
+            : 'core anti-rotacion + traslado de fuerza',
+        sistema: 'glucolitico moderado sin romper tecnica',
+        notas: 'Los contrastes deben ser rapidos, limpios y con baja fatiga.',
+      }),
+      diaMensual({
+        dia: 'Dia 3',
+        nombre: 'Potencia rotacional + velocidad deportiva',
+        foco: semana.foco,
+        fuerza: 'cargas bajas/medias o tecnica olimpica; evitar repetir pecho/espalda pesado antes de 72h',
+        reactivo: usarPliometria
+          ? 'lanzamientos de balon, bounds laterales, split step rebound o footwork explosivo'
+          : 'bandas, desplazamientos tecnicos y frenadas sin salto',
+        sistema: semana.fase === 'realizacion' ? 'HIIT alactico 10/50' : 'HIIT aerobico tecnico 30/30',
+        notas: semana.notaPliometria,
+      }),
+      diaMensual({
+        dia: 'Dia 4',
+        nombre: 'Sistema metabolico + movilidad + tecnica',
+        foco: 'condicionamiento sin bloquear la recuperacion muscular',
+        fuerza: 'sin fuerza maxima; solo accesorios livianos o autocarga',
+        reactivo: 'tecnica deportiva, core, movilidad toracica/cadera y respiracion',
+        sistema: semana.fase === 'acumulacion' ? 'zona 2 + tempo controlado' : 'intervalos cortos de calidad',
+        notas: 'Dia ideal para evaluar sensaciones, tiempos, saltos o RPE sin fatigar en exceso.',
+      }),
+    ]
+
+    return [
+      `SEMANA ${semana.numero} - ATR ${semana.fase.toUpperCase()}`,
+      `Foco: ${semana.foco}`,
+      `Pliometria: ${semana.notaPliometria}`,
+      dias.join('\n\n'),
+    ].join('\n\n')
+  })
+
+  return {
+    tipo: 'mensual',
+    objetivo: labelObjetivo(objetivo),
+    nivel,
+    faseATR: 'mesociclo ATR mensual',
+    contenido: [
+      'POWERFIT 360',
+      'PLAN MENSUAL IA',
+      '',
+      `Objetivo: ${labelObjetivo(objetivo)}`,
+      `Nivel: ${nivel}`,
+      `Intensidad base: ${nivelCfg.intensidad}`,
+      ajusteCiclo,
+      '',
+      'REGLAS DE RECUPERACION',
+      ...descansoMuscularTexto().map((linea) => `- ${linea}`),
+      '',
+      'FOCO DEPORTIVO',
+      ...focoDeportivo(objetivo).map((linea) => `- ${linea}`),
+      '',
+      contenidoSemanas.join('\n\n'),
+      '',
+      'Control semanal: registrar tiempo, distancia, velocidad, saltos, VO2 estimado, RM usado y RPE.',
+      'Ajuste: si la tecnica baja o hay dolor, reducir volumen antes de subir intensidad.',
+    ].join('\n'),
+  }
 }
 
 function crearTrabajoFuerza(ejercicio, nivelCfg, porcentaje, rms, pools, objetivo) {
@@ -477,7 +681,7 @@ export function generarEntrenamiento({
       bloque1: {
         metodo: `${pick(faseCfg.principales)} - sistema ${faseCfg.sistema}`,
         duracion: pick(['10 min', '10-12 min', '12 min', '12-15 min']),
-        ejercicios: crearBloqueObjetivo(objetivo, nivelCfg, pools),
+        ejercicios: crearBloqueObjetivo(objetivo, nivelCfg, pools, faseATR),
       },
 
       bloque2: {
@@ -493,7 +697,7 @@ export function generarEntrenamiento({
       bloque3: {
         metodo: `${pick(faseCfg.finales)} - sistema ${faseCfg.sistema}`,
         duracion: pick(['8-10 min', '10 min', '10-12 min', '12 min']),
-        ejercicios: crearBloqueFinal(objetivo, nivelCfg, pools),
+        ejercicios: crearBloqueFinal(objetivo, nivelCfg, pools, faseATR),
       },
     }
 
