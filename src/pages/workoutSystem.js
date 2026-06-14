@@ -298,13 +298,93 @@ function focoDeportivo(objetivo) {
   ]
 }
 
-function diaMensual({ dia, nombre, foco, fuerza, reactivo, sistema, notas }) {
+function seleccionDeportivaMensual(objetivo, usarPliometria) {
+  if (objetivo === 'fighter') {
+    return {
+      activacion: 'footwork drill + movilidad toracica + guardia activa',
+      motor: 'band jab cross + cross-body chop oblicuo-serrato',
+      transferencia: usarPliometria
+        ? 'lateral bound + fighting stance stick + med ball rotational throw'
+        : 'paso lateral + retorno a guardia sin salto + med ball rotational throw tecnico',
+      final: 'shuttle run corto + heavy bag tecnico',
+    }
+  }
+
+  if (objetivo === 'tenis') {
+    return {
+      activacion: 'split step tecnico + cadera/hombro + primer paso',
+      motor: 'band forehand/backhand + hip shoulder separation drill',
+      transferencia: usarPliometria
+        ? 'split step rebound + lateral bound + med ball forehand throw'
+        : 'split step sin rebote + frenada lateral + med ball forehand throw tecnico',
+      final: 'cambio de direccion 5m + shadow swing tecnico',
+    }
+  }
+
+  return {
+    activacion: 'movilidad de cadera/hombro + patron bisagra + core activo',
+    motor: 'kettlebell swing + pallof press + desplazamiento lateral',
+    transferencia: usarPliometria
+      ? 'pogo jump + medicine ball slam + aceleracion corta'
+      : 'mecanica de aterrizaje + desaceleracion lateral + core anti-rotacion',
+    final: 'row/bike/run + peso corporal tecnico',
+  }
+}
+
+function fuerzaMensual({ objetivo, dia, porcentaje, rms, nivelCfg }) {
+  const ejerciciosPorDia = {
+    1: objetivo === 'cardio' ? ['Front Squat', 'Kettlebell Swing'] : ['Deadlift', 'Front Squat'],
+    2: objetivo === 'fighter' || objetivo === 'tenis'
+      ? ['Push Jerk', 'Barbell Row']
+      : ['Push Press', 'Barbell Row'],
+    3: objetivo === 'fighter' || objetivo === 'tenis'
+      ? ['Power Clean', 'Clean Pull']
+      : ['Thruster', 'High Pull'],
+    4: ['Goblet Squat', 'Push Up'],
+  }
+
+  return (ejerciciosPorDia[dia] || ejerciciosPorDia[1]).map((ejercicio) => {
+    const carga = calcularCarga(rms, ejercicio, porcentaje)
+    return `${ejercicio} funcional - ${pick(nivelCfg.series)}x${pick(['3', '4', '5'])} @${Math.round(
+      porcentaje * 100
+    )}% - carga sugerida: ${carga} - descanso ${pick(nivelCfg.descanso)}`
+  })
+}
+
+function diaMensual({
+  dia,
+  nombre,
+  metodo,
+  foco,
+  activacion,
+  motor,
+  fuerza,
+  transferencia,
+  sistema,
+  final,
+  notas,
+}) {
   return [
     `${dia} - ${nombre}`,
+    `Metodo PowerFit: ${metodo}`,
     `Foco: ${foco}`,
-    `Fuerza: ${fuerza}`,
-    `Reactivo/transferencia: ${reactivo}`,
-    `Sistema metabolico: ${sistema}`,
+    '',
+    'ACTIVACION',
+    `- ${activacion}`,
+    '- respiracion + movilidad dinamica + tecnica antes de velocidad',
+    '',
+    'BLOQUE 1 - FUNCIONAL / MOTOR TRANSVERSAL',
+    `- ${motor}`,
+    '- calidad de eje, diagonal activa, oblicuo-serrato y transferencia cadera-hombro',
+    '',
+    'BLOQUE 2 - FUERZA / RM + CONTRASTE FUNCIONAL',
+    ...fuerza.map((linea) => `- ${linea}`),
+    `- Contraste entre series: ${transferencia}`,
+    '',
+    'BLOQUE 3 - SISTEMA METABOLICO',
+    `- ${sistema}`,
+    `- Final: ${final}`,
+    '',
     `Notas: ${notas}`,
   ].join('\n')
 }
@@ -312,6 +392,7 @@ function diaMensual({ dia, nombre, foco, fuerza, reactivo, sistema, notas }) {
 export function generarPlanMensual({
   objetivo,
   nivel,
+  rms = [],
   faseMenstrual = null,
 }) {
   const nivelCfg = configNivel(nivel)
@@ -349,52 +430,84 @@ export function generarPlanMensual({
 
   const contenidoSemanas = semanas.map((semana) => {
     const usarPliometria = permitePliometria(semana.fase)
-    const reactivoBase = usarPliometria
-      ? 'pliometria especifica del deporte 3-5 series x 3-6 reps'
-      : 'pre-pliometria: frenadas, aterrizajes y patron tecnico sin salto'
+    const faseCfg = configFase(semana.fase)
+    const porcentajeBase = pick(faseCfg.porcentajes)
+    const porcentaje = ajustarPorcentajeCiclo(porcentajeBase, cicloCfg)
+    const deportivo = seleccionDeportivaMensual(objetivo, usarPliometria)
+    const reglaPliometria = usarPliometria
+      ? 'pliometria especifica del deporte con pocas repeticiones, mucha pausa y maxima calidad'
+      : 'pre-pliometria sin salto: aterrizajes, frenadas, cambio de direccion tecnico y control del eje'
 
     const dias = [
       diaMensual({
         dia: 'Dia 1',
-        nombre: 'Piernas + cadera + motor transversal',
-        foco: 'piernas como musculo grande, bisagra, sentadilla y cadena posterior',
-        fuerza: `3-5 series a intensidad ${nivelCfg.intensidad}; dejar 72h antes de repetir piernas fuerte`,
-        reactivo: `${reactivoBase}; diagonal oblicuo-serrato y aceleracion corta`,
-        sistema: semana.fase === 'acumulacion' ? 'oxidativo / zona 2 tecnica' : 'ATP-PC con descansos completos',
-        notas: 'No cargar pecho/espalda pesado este dia. Priorizar tecnica y rango.',
+        nombre: 'Base funcional + cadena posterior + motor transversal',
+        metodo: `${pick(faseCfg.principales)} - ${faseCfg.sistema}`,
+        foco: 'fuerza util, bisagra, sentadilla, core cruzado y aceleracion corta',
+        activacion: deportivo.activacion,
+        motor: deportivo.motor,
+        fuerza: fuerzaMensual({ objetivo, dia: 1, porcentaje, rms, nivelCfg }),
+        transferencia: deportivo.transferencia,
+        sistema: semana.fase === 'acumulacion' ? 'AMRAP 10-12 min tecnico oxidativo' : 'E2MOM 10 min potencia controlada',
+        final: deportivo.final,
+        notas: 'Descanso muscular: piernas 72h antes de otro estimulo fuerte. Esto no es hipertrofia; es fuerza funcional transferible.',
       }),
       diaMensual({
         dia: 'Dia 2',
-        nombre: 'Pecho + espalda + brazos/hombros',
-        foco: 'empuje y traccion como musculos grandes; accesorios pequenos controlados',
-        fuerza: `3-5 series; pecho/espalda descansan 72h, brazos/hombros descansan 48h`,
-        reactivo: objetivo === 'fighter'
-          ? 'band jab cross + med ball rotational throw entre series'
+        nombre: 'Empuje/traccion funcional + potencia rotacional',
+        metodo: `${pick(faseCfg.principales)} - contraste fuerza/transferencia`,
+        foco: 'empuje, traccion, serrato, escapula y cadena cruzada sin trabajo de volumen estetico',
+        activacion: 'scap push up + movilidad toracica + patron de golpeo/raqueta sin carga',
+        motor: objetivo === 'fighter'
+          ? 'elastic band hook rotation + slip counter tecnico'
           : objetivo === 'tenis'
-            ? 'band forehand/backhand + med ball scoop toss entre series'
-            : 'core anti-rotacion + traslado de fuerza',
-        sistema: 'glucolitico moderado sin romper tecnica',
-        notas: 'Los contrastes deben ser rapidos, limpios y con baja fatiga.',
+            ? 'elastic band backhand pattern + crossover step'
+            : 'pallof press + diagonal chop + bear crawl tecnico',
+        fuerza: fuerzaMensual({ objetivo, dia: 2, porcentaje, rms, nivelCfg }),
+        transferencia: objetivo === 'fighter'
+          ? '10 band jab cross + 8 med ball rotational throw por lado'
+          : objetivo === 'tenis'
+            ? '10 band forehand/backhand + 8 med ball scoop toss por lado'
+            : '10 pallof press + 8 medicine ball slam',
+        sistema: 'INTERVALOS 40/20 con ejecucion limpia, no buscar fallo muscular',
+        final: 'core anti-rotacion + desplazamiento lateral',
+        notas: 'Pecho/espalda descansan 72h. Brazos/hombros/gemelos/abdomen descansan 48h.',
       }),
       diaMensual({
         dia: 'Dia 3',
-        nombre: 'Potencia rotacional + velocidad deportiva',
-        foco: semana.foco,
-        fuerza: 'cargas bajas/medias o tecnica olimpica; evitar repetir pecho/espalda pesado antes de 72h',
-        reactivo: usarPliometria
-          ? 'lanzamientos de balon, bounds laterales, split step rebound o footwork explosivo'
-          : 'bandas, desplazamientos tecnicos y frenadas sin salto',
-        sistema: semana.fase === 'realizacion' ? 'HIIT alactico 10/50' : 'HIIT aerobico tecnico 30/30',
+        nombre: 'Potencia funcional + transferencia deportiva',
+        metodo: `${pick(faseCfg.principales)} - ${semana.foco}`,
+        foco: 'fase concentrica explosiva, calidad, potencia rotacional y velocidad usable',
+        activacion: deportivo.activacion,
+        motor: objetivo === 'fighter'
+          ? 'crossover step to rotational punch + band anti-rotation punch'
+          : objetivo === 'tenis'
+            ? 'open stance rotational drive + split step primer paso'
+            : 'kettlebell clean + desplazamiento lateral controlado',
+        fuerza: fuerzaMensual({ objetivo, dia: 3, porcentaje, rms, nivelCfg }),
+        transferencia: reglaPliometria,
+        sistema: semana.fase === 'realizacion' ? 'HIIT alactico 10/50, 6-8 rondas' : 'HIIT aerobico/lactico tecnico 30/30, 8-10 rondas',
+        final: objetivo === 'fighter'
+          ? 'round tecnico de golpes con banda + footwork'
+          : objetivo === 'tenis'
+            ? 'split step + aceleracion lateral + sombra de golpe'
+            : 'shuttle run + medicine ball slam',
         notas: semana.notaPliometria,
       }),
       diaMensual({
         dia: 'Dia 4',
-        nombre: 'Sistema metabolico + movilidad + tecnica',
-        foco: 'condicionamiento sin bloquear la recuperacion muscular',
-        fuerza: 'sin fuerza maxima; solo accesorios livianos o autocarga',
-        reactivo: 'tecnica deportiva, core, movilidad toracica/cadera y respiracion',
-        sistema: semana.fase === 'acumulacion' ? 'zona 2 + tempo controlado' : 'intervalos cortos de calidad',
-        notas: 'Dia ideal para evaluar sensaciones, tiempos, saltos o RPE sin fatigar en exceso.',
+        nombre: 'Metabolico funcional + control tecnico',
+        metodo: `${pick(faseCfg.finales)} - capacidad sin perder tecnica`,
+        foco: 'resistencia especifica, movilidad, core y evaluacion de calidad',
+        activacion: 'RAMP 8 min + movilidad cadera/hombro + respiracion',
+        motor: 'cadenas cruzadas + core anti-rotacion + desplazamiento tecnico',
+        fuerza: fuerzaMensual({ objetivo, dia: 4, porcentaje, rms, nivelCfg }),
+        transferencia: usarPliometria
+          ? '3-5 series cortas de reactivo especifico + descanso completo'
+          : 'frenadas, aterrizajes y cambios de direccion sin impacto alto',
+        sistema: semana.fase === 'acumulacion' ? 'ZONA 2 + TECNICA 18-25 min' : 'AMRAP 8-10 min de calidad o repeated sprint ability',
+        final: 'movilidad, respiracion y registro de tiempos/saltos/RPE',
+        notas: 'Dia para medir progreso sin destruir recuperacion. Si baja la tecnica, termina la serie.',
       }),
     ]
 
@@ -425,6 +538,11 @@ export function generarPlanMensual({
       '',
       'FOCO DEPORTIVO',
       ...focoDeportivo(objetivo).map((linea) => `- ${linea}`),
+      '',
+      'REGLA DEL METODO POWERFIT',
+      '- Entrenamiento funcional antes que hipertrofia: fuerza util, patrones completos y transferencia deportiva.',
+      '- Cada sesion mezcla activacion, motor transversal, fuerza/RM, contraste funcional y sistema metabolico.',
+      '- La carga se sube solo si la tecnica se mantiene limpia y explosiva.',
       '',
       contenidoSemanas.join('\n\n'),
       '',

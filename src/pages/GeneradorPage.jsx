@@ -351,6 +351,7 @@ Vuelta a la calma: dirigida en clase.
           ? generarPlanMensual({
               objetivo,
               nivel,
+              rms,
               faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
             })
           : generarEntrenamiento({
