@@ -59,6 +59,188 @@ ${escapeHtml(contenido)}
   URL.revokeObjectURL(url)
 }
 
+function celdaExcel(value) {
+  return escapeHtml(value || '')
+}
+
+function extraerCarga(texto) {
+  const match = String(texto).match(/carga sugerida:\s*([^-]+)/i)
+  return match ? match[1].trim() : ''
+}
+
+function parsearPlanMensualExcel(contenido, nombreAlumno) {
+  const filas = []
+  const estado = {
+    semana: '',
+    fase: '',
+    dia: '',
+    sesion: '',
+    metodo: '',
+    foco: '',
+    bloque: '',
+  }
+
+  String(contenido)
+    .split(/\r?\n/)
+    .map((linea) => linea.trim())
+    .filter(Boolean)
+    .forEach((linea) => {
+      const semanaMatch = linea.match(/^SEMANA\s+(\d+)\s+-\s+ATR\s+(.+)$/i)
+      if (semanaMatch) {
+        estado.semana = `Semana ${semanaMatch[1]}`
+        estado.fase = semanaMatch[2]
+        estado.dia = ''
+        estado.sesion = ''
+        estado.metodo = ''
+        estado.foco = ''
+        estado.bloque = ''
+        return
+      }
+
+      const diaMatch = linea.match(/^Dia\s+(\d+)\s+-\s+(.+)$/i)
+      if (diaMatch) {
+        estado.dia = `Dia ${diaMatch[1]}`
+        estado.sesion = diaMatch[2]
+        estado.metodo = ''
+        estado.foco = ''
+        estado.bloque = ''
+        return
+      }
+
+      if (linea.startsWith('Metodo PowerFit:')) {
+        estado.metodo = linea.replace('Metodo PowerFit:', '').trim()
+        return
+      }
+
+      if (linea.startsWith('Foco:')) {
+        estado.foco = linea.replace('Foco:', '').trim()
+        return
+      }
+
+      if (
+        linea === 'ACTIVACION' ||
+        linea.startsWith('BLOQUE 1') ||
+        linea.startsWith('BLOQUE 2') ||
+        linea.startsWith('BLOQUE 3')
+      ) {
+        estado.bloque = linea
+        return
+      }
+
+      if (linea.startsWith('- ') && estado.bloque) {
+        const trabajo = linea.slice(2)
+        filas.push({
+          alumno: nombreAlumno || '',
+          semana: estado.semana,
+          fase: estado.fase,
+          dia: estado.dia,
+          sesion: estado.sesion,
+          bloque: estado.bloque,
+          metodo: estado.metodo,
+          foco: estado.foco,
+          trabajo,
+          carga: extraerCarga(trabajo),
+          sistema: estado.bloque.startsWith('BLOQUE 3') ? trabajo : '',
+          notas: '',
+        })
+        return
+      }
+
+      if (linea.startsWith('Notas:')) {
+        filas.push({
+          alumno: nombreAlumno || '',
+          semana: estado.semana,
+          fase: estado.fase,
+          dia: estado.dia,
+          sesion: estado.sesion,
+          bloque: 'NOTAS',
+          metodo: estado.metodo,
+          foco: estado.foco,
+          trabajo: '',
+          carga: '',
+          sistema: '',
+          notas: linea.replace('Notas:', '').trim(),
+        })
+      }
+    })
+
+  return filas
+}
+
+function descargarExcelMensual(contenido, nombreAlumno) {
+  const filas = parsearPlanMensualExcel(contenido, nombreAlumno)
+  const columnas = [
+    'Alumno',
+    'Semana',
+    'Fase ATR',
+    'Dia',
+    'Sesion',
+    'Bloque',
+    'Metodo',
+    'Foco',
+    'Trabajo / Ejercicio',
+    'Carga sugerida',
+    'Sistema metabolico',
+    'Notas',
+  ]
+
+  const cuerpo = filas
+    .map(
+      (fila) => `
+        <tr>
+          <td>${celdaExcel(fila.alumno)}</td>
+          <td>${celdaExcel(fila.semana)}</td>
+          <td>${celdaExcel(fila.fase)}</td>
+          <td>${celdaExcel(fila.dia)}</td>
+          <td>${celdaExcel(fila.sesion)}</td>
+          <td>${celdaExcel(fila.bloque)}</td>
+          <td>${celdaExcel(fila.metodo)}</td>
+          <td>${celdaExcel(fila.foco)}</td>
+          <td>${celdaExcel(fila.trabajo)}</td>
+          <td>${celdaExcel(fila.carga)}</td>
+          <td>${celdaExcel(fila.sistema)}</td>
+          <td>${celdaExcel(fila.notas)}</td>
+        </tr>`
+    )
+    .join('')
+
+  const html = `
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          table { border-collapse: collapse; font-family: Arial; font-size: 12px; }
+          th { background: #111827; color: #ffffff; font-weight: 700; }
+          th, td { border: 1px solid #999999; padding: 8px; vertical-align: top; }
+          td { mso-number-format: "\\@"; }
+        </style>
+      </head>
+      <body>
+        <table>
+          <thead>
+            <tr>${columnas.map((columna) => `<th>${celdaExcel(columna)}</th>`).join('')}</tr>
+          </thead>
+          <tbody>${cuerpo}</tbody>
+        </table>
+      </body>
+    </html>
+  `
+
+  const blob = new Blob([html], { type: 'application/vnd.ms-excel;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+
+  a.href = url
+  a.download = `PowerFit-Mensual-${nombreAlumno || 'alumno'}-${Date.now()}.xls`
+  a.click()
+
+  URL.revokeObjectURL(url)
+}
+
+function esPlanMensual(plan) {
+  return String(plan?.objetivo || '').toLowerCase().includes('mensual')
+}
+
 export default function GeneradorPage({ student, onUpdateStudent }) {
   const [tipoPlan, setTipoPlan] = useState('sesion')
   const [objetivo, setObjetivo] = useState('fighter')
@@ -407,10 +589,19 @@ Vuelta a la calma: dirigida en clase.
       )
 
       setDisponiblesLocal(disponiblesRestantes)
-      descargarWord((nuevosPlanes || []).map((p) => p.contenido).join('\n\n'), student.nombre)
+      const contenidoDescarga = (nuevosPlanes || [])
+        .map((p) => p.contenido)
+        .join('\n\n')
+
+      if (tipoPlan === 'mensual') {
+        descargarExcelMensual(contenidoDescarga, student.nombre)
+      } else {
+        descargarWord(contenidoDescarga, student.nombre)
+      }
+
       setMensaje(
         tipoPlan === 'mensual'
-          ? `Plan mensual generado, guardado y descargado. Se descontaron ${COSTO_PLAN_MENSUAL} generaciones.`
+          ? `Plan mensual generado, guardado y descargado en Excel. Se descontaron ${COSTO_PLAN_MENSUAL} generaciones.`
           : '1 planificacion generada, guardada y descargada.'
       )
 
@@ -721,10 +912,14 @@ Vuelta a la calma: dirigida en clase.
               </button>
 
               <button
-                onClick={() => descargarWord(plan.contenido, student?.nombre)}
+                onClick={() =>
+                  esPlanMensual(plan)
+                    ? descargarExcelMensual(plan.contenido, student?.nombre)
+                    : descargarWord(plan.contenido, student?.nombre)
+                }
                 className="bg-blue-600 px-5 py-3 rounded-2xl font-black"
               >
-                Descargar Word
+                {esPlanMensual(plan) ? 'Descargar Excel' : 'Descargar Word'}
               </button>
             </div>
           </div>
