@@ -68,6 +68,32 @@ function extraerCarga(texto) {
   return match ? match[1].trim() : ''
 }
 
+function extraerDetallesTrabajo(texto) {
+  const trabajo = String(texto || '')
+  const partes = trabajo.split(' - ')
+  const esFuerza = trabajo.toLowerCase().includes('carga sugerida:')
+  const seriesMatch = trabajo.match(/-\s*([0-9]+x[0-9]+)/)
+  const porcentajeMatch = trabajo.match(/@([0-9]+)%/)
+  const descansoMatch = trabajo.match(/descanso\s*([^|]+)/i)
+  const esContraste = trabajo.toLowerCase().startsWith('contraste entre series:')
+
+  return {
+    ejercicio: esFuerza ? partes[0].replace(' funcional', '').trim() : '',
+    series: seriesMatch ? seriesMatch[1] : '',
+    porcentaje: porcentajeMatch ? `${porcentajeMatch[1]}%` : '',
+    descanso: descansoMatch ? descansoMatch[1].trim() : '',
+    carga: extraerCarga(trabajo),
+    contraste: esContraste ? trabajo.replace(/contraste entre series:\s*/i, '').trim() : '',
+  }
+}
+
+function nombreArchivoSeguro(value) {
+  return String(value || 'alumno')
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, '-')
+    .replace(/\s+/g, '-')
+}
+
 function parsearPlanMensualExcel(contenido, nombreAlumno) {
   const filas = []
   const estado = {
@@ -129,6 +155,7 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
 
       if (linea.startsWith('- ') && estado.bloque) {
         const trabajo = linea.slice(2)
+        const detalles = extraerDetallesTrabajo(trabajo)
         filas.push({
           alumno: nombreAlumno || '',
           semana: estado.semana,
@@ -139,9 +166,17 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
           metodo: estado.metodo,
           foco: estado.foco,
           trabajo,
-          carga: extraerCarga(trabajo),
+          ejercicio: detalles.ejercicio,
+          series: detalles.series,
+          porcentaje: detalles.porcentaje,
+          carga: detalles.carga,
+          descanso: detalles.descanso,
+          contraste: detalles.contraste,
           sistema: estado.bloque.startsWith('BLOQUE 3') ? trabajo : '',
           notas: '',
+          rpe: '',
+          resultado: '',
+          observaciones: '',
         })
         return
       }
@@ -157,9 +192,17 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
           metodo: estado.metodo,
           foco: estado.foco,
           trabajo: '',
+          ejercicio: '',
+          series: '',
+          porcentaje: '',
           carga: '',
+          descanso: '',
+          contraste: '',
           sistema: '',
           notas: linea.replace('Notas:', '').trim(),
+          rpe: '',
+          resultado: '',
+          observaciones: '',
         })
       }
     })
@@ -179,9 +222,17 @@ function descargarExcelMensual(contenido, nombreAlumno) {
     'Metodo',
     'Foco',
     'Trabajo / Ejercicio',
+    'Ejercicio base',
+    'Series/Reps',
+    '%RM',
     'Carga sugerida',
+    'Descanso',
+    'Contraste / transferencia',
     'Sistema metabolico',
     'Notas',
+    'RPE',
+    'Resultado',
+    'Observaciones',
   ]
 
   const cuerpo = filas
@@ -197,9 +248,17 @@ function descargarExcelMensual(contenido, nombreAlumno) {
           <td>${celdaExcel(fila.metodo)}</td>
           <td>${celdaExcel(fila.foco)}</td>
           <td>${celdaExcel(fila.trabajo)}</td>
+          <td>${celdaExcel(fila.ejercicio)}</td>
+          <td>${celdaExcel(fila.series)}</td>
+          <td>${celdaExcel(fila.porcentaje)}</td>
           <td>${celdaExcel(fila.carga)}</td>
+          <td>${celdaExcel(fila.descanso)}</td>
+          <td>${celdaExcel(fila.contraste)}</td>
           <td>${celdaExcel(fila.sistema)}</td>
           <td>${celdaExcel(fila.notas)}</td>
+          <td>${celdaExcel(fila.rpe)}</td>
+          <td>${celdaExcel(fila.resultado)}</td>
+          <td>${celdaExcel(fila.observaciones)}</td>
         </tr>`
     )
     .join('')
@@ -212,6 +271,7 @@ function descargarExcelMensual(contenido, nombreAlumno) {
           table { border-collapse: collapse; font-family: Arial; font-size: 12px; }
           th { background: #111827; color: #ffffff; font-weight: 700; }
           th, td { border: 1px solid #999999; padding: 8px; vertical-align: top; }
+          tr:nth-child(even) { background: #f3f4f6; }
           td { mso-number-format: "\\@"; }
         </style>
       </head>
@@ -231,14 +291,17 @@ function descargarExcelMensual(contenido, nombreAlumno) {
   const a = document.createElement('a')
 
   a.href = url
-  a.download = `PowerFit-Mensual-${nombreAlumno || 'alumno'}-${Date.now()}.xls`
+  a.download = `PowerFit-Mensual-${nombreArchivoSeguro(nombreAlumno)}-${Date.now()}.xls`
   a.click()
 
   URL.revokeObjectURL(url)
 }
 
 function esPlanMensual(plan) {
-  return String(plan?.objetivo || '').toLowerCase().includes('mensual')
+  return (
+    String(plan?.objetivo || '').toLowerCase().includes('mensual') ||
+    String(plan?.contenido || '').toLowerCase().includes('plan mensual ia')
+  )
 }
 
 export default function GeneradorPage({ student, onUpdateStudent }) {
