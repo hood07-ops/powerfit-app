@@ -304,6 +304,137 @@ function esPlanMensual(plan) {
   )
 }
 
+function agruparPlanMensualVista(contenido, nombreAlumno) {
+  const filas = parsearPlanMensualExcel(contenido, nombreAlumno)
+
+  return filas.reduce((semanas, fila) => {
+    const semanaKey = `${fila.semana || 'Semana'} - ${fila.fase || 'ATR'}`
+    const diaKey = `${fila.dia || 'Dia'} - ${fila.sesion || 'Sesion'}`
+    const bloqueKey = fila.bloque || 'Bloque'
+
+    if (!semanas[semanaKey]) {
+      semanas[semanaKey] = {}
+    }
+
+    if (!semanas[semanaKey][diaKey]) {
+      semanas[semanaKey][diaKey] = {}
+    }
+
+    if (!semanas[semanaKey][diaKey][bloqueKey]) {
+      semanas[semanaKey][diaKey][bloqueKey] = []
+    }
+
+    semanas[semanaKey][diaKey][bloqueKey].push(fila)
+    return semanas
+  }, {})
+}
+
+function VistaPlanMensual({ plan, nombreAlumno }) {
+  const semanas = agruparPlanMensualVista(plan.contenido, nombreAlumno)
+
+  return (
+    <div className="space-y-5">
+      {Object.entries(semanas).map(([semana, dias]) => (
+        <section
+          key={semana}
+          className="border border-yellow-600 rounded-2xl overflow-hidden bg-zinc-950"
+        >
+          <div className="bg-yellow-500 text-black px-4 py-3 font-black">
+            {semana}
+          </div>
+
+          <div className="p-3 sm:p-4 space-y-4">
+            {Object.entries(dias).map(([dia, bloques]) => (
+              <div
+                key={dia}
+                className="border border-zinc-700 rounded-2xl p-3 sm:p-4 bg-zinc-900"
+              >
+                <h3 className="text-lg sm:text-xl font-black text-red-400">
+                  {dia}
+                </h3>
+
+                <div className="grid lg:grid-cols-2 gap-3 mt-3">
+                  {Object.entries(bloques).map(([bloque, trabajos]) => (
+                    <div
+                      key={bloque}
+                      className="border border-zinc-700 rounded-xl p-3 bg-zinc-800"
+                    >
+                      <p className="font-black text-blue-300 mb-2">
+                        {bloque}
+                      </p>
+
+                      <div className="space-y-2">
+                        {trabajos.map((trabajo, index) => (
+                          <div
+                            key={`${bloque}-${index}`}
+                            className="bg-zinc-900 rounded-xl p-3 text-sm"
+                          >
+                            {trabajo.trabajo && (
+                              <p className="font-black text-white">
+                                {trabajo.trabajo}
+                              </p>
+                            )}
+
+                            {trabajo.notas && (
+                              <p className="text-yellow-200">
+                                {trabajo.notas}
+                              </p>
+                            )}
+
+                            {(trabajo.ejercicio ||
+                              trabajo.series ||
+                              trabajo.porcentaje ||
+                              trabajo.carga ||
+                              trabajo.descanso) && (
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2 text-xs">
+                                {trabajo.ejercicio && (
+                                  <span className="bg-zinc-800 rounded-lg p-2">
+                                    Ejercicio: {trabajo.ejercicio}
+                                  </span>
+                                )}
+                                {trabajo.series && (
+                                  <span className="bg-zinc-800 rounded-lg p-2">
+                                    Series: {trabajo.series}
+                                  </span>
+                                )}
+                                {trabajo.porcentaje && (
+                                  <span className="bg-zinc-800 rounded-lg p-2">
+                                    RM: {trabajo.porcentaje}
+                                  </span>
+                                )}
+                                {trabajo.carga && (
+                                  <span className="bg-zinc-800 rounded-lg p-2">
+                                    Carga: {trabajo.carga}
+                                  </span>
+                                )}
+                                {trabajo.descanso && (
+                                  <span className="bg-zinc-800 rounded-lg p-2">
+                                    Descanso: {trabajo.descanso}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {trabajo.contraste && (
+                              <p className="text-green-300 mt-2">
+                                Transferencia: {trabajo.contraste}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </div>
+  )
+}
+
 export default function GeneradorPage({ student, onUpdateStudent }) {
   const [tipoPlan, setTipoPlan] = useState('sesion')
   const [objetivo, setObjetivo] = useState('fighter')
@@ -997,21 +1128,38 @@ Vuelta a la calma: dirigida en clase.
                 Planificacion
               </h2>
 
-              <button
-                onClick={() => setPlanAbierto(null)}
-                className="bg-red-600 px-4 py-3 rounded-xl font-black"
-              >
-                Cerrar
-              </button>
+              <div className="grid sm:flex gap-2">
+                <button
+                  onClick={() =>
+                    esPlanMensual(planAbierto)
+                      ? descargarExcelMensual(planAbierto.contenido, student?.nombre)
+                      : descargarWord(planAbierto.contenido, student?.nombre)
+                  }
+                  className="bg-blue-600 px-4 py-3 rounded-xl font-black"
+                >
+                  {esPlanMensual(planAbierto) ? 'Descargar Excel' : 'Descargar Word'}
+                </button>
+
+                <button
+                  onClick={() => setPlanAbierto(null)}
+                  className="bg-red-600 px-4 py-3 rounded-xl font-black"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
             <p className="text-zinc-400 mb-4">
               Fecha: {new Date(planAbierto.created_at).toLocaleString()}
             </p>
 
-            <pre className="whitespace-pre-wrap text-sm">
-              {planAbierto.contenido}
-            </pre>
+            {esPlanMensual(planAbierto) ? (
+              <VistaPlanMensual plan={planAbierto} nombreAlumno={student?.nombre} />
+            ) : (
+              <pre className="whitespace-pre-wrap text-sm">
+                {planAbierto.contenido}
+              </pre>
+            )}
           </div>
         </div>
       )}
