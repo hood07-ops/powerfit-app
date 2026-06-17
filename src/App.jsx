@@ -1259,7 +1259,7 @@ export default function App() {
 
     const nuevasGeneraciones =
       Number(alumno.generaciones_disponibles || 0) +
-      Number(solicitud.generaciones || 1)
+      Number(solicitud.generaciones ?? 1)
 
     await supabase
       .from('alumnos')
