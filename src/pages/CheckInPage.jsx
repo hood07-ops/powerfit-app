@@ -7,57 +7,28 @@ export default function CheckInPage({ alumnoId }) {
   const [loading, setLoading] = useState(true)
   const [yaRegistrado, setYaRegistrado] = useState(false)
 
-  useEffect(() => {
-    cargarAlumno()
-  }, [alumnoId])
-
-  function calcularRango(exp) {
-    if (exp >= 2000) return 'Ariki Matato’a'
-    if (exp >= 1000) return 'Matato’a Nui'
-    if (exp >= 600) return 'Matato’a'
-    if (exp >= 300) return 'Oro'
-    if (exp >= 100) return 'Plata'
-    return 'Bronce'
-  }
-
   async function cargarAlumno() {
     if (!alumnoId) return
 
-    const { data, error } = await supabase
-      .from('alumnos')
-      .select('*')
-      .eq('id', alumnoId)
-      .single()
+    const { data, error } = await supabase.rpc('get_powerfit_checkin_alumno', {
+      p_alumno_id: String(alumnoId),
+    })
 
     if (error || !data) {
-      setMensaje('No se encontró el alumno.')
+      setMensaje('No se encontro el alumno.')
       setLoading(false)
       return
     }
 
-    const hoy = new Date().toISOString().slice(0, 10)
-    let estadoReal = data.estado_pago || 'Pendiente'
-
-    if (data.fecha_vencimiento && data.fecha_vencimiento < hoy) {
-      estadoReal = 'Moroso'
-
-      await supabase
-        .from('alumnos')
-        .update({ estado_pago: 'Moroso' })
-        .eq('id', data.id)
-    }
-
-    const { data: asistenciaHoy } = await supabase
-      .from('asistencias')
-      .select('*')
-      .eq('alumno_id', data.id)
-      .gte('fecha', `${hoy}T00:00:00`)
-      .lte('fecha', `${hoy}T23:59:59`)
-
-    setYaRegistrado((asistenciaHoy || []).length > 0)
-    setAlumno({ ...data, estado_pago: estadoReal })
+    setYaRegistrado(Boolean(data.ya_registrado))
+    setAlumno(data)
     setLoading(false)
   }
+
+  useEffect(() => {
+    Promise.resolve().then(() => cargarAlumno())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [alumnoId])
 
   async function registrarAsistencia() {
     if (!alumno) return
@@ -67,50 +38,29 @@ export default function CheckInPage({ alumnoId }) {
       return
     }
 
-    const fechaActual = new Date().toISOString()
+    const { data, error } = await supabase.rpc('registrar_powerfit_checkin', {
+      p_alumno_id: String(alumno.id),
+    })
 
-    const { error: asistenciaError } = await supabase.from('asistencias').insert([
-      {
-        alumno_id: alumno.id,
-        user_id: alumno.user_id,
-        nombre_alumno: alumno.nombre,
-        estado_pago: alumno.estado_pago,
-        fecha_vencimiento: alumno.fecha_vencimiento,
-        registrado_por: 'qr',
-        fecha: fechaActual,
-        created_at: fechaActual,
-      },
-    ])
-
-    if (asistenciaError) {
-      setMensaje('Error registrando asistencia: ' + asistenciaError.message)
+    if (error || !data) {
+      setMensaje(`Error registrando asistencia: ${error?.message || 'sin respuesta'}`)
       return
     }
 
-    const nuevaExperiencia = Number(alumno.experiencia || 0) + 10
-    const nuevoRango = calcularRango(nuevaExperiencia)
-
-    const { error: xpError } = await supabase
-      .from('alumnos')
-      .update({
-        experiencia: nuevaExperiencia,
-        rango: nuevoRango,
-      })
-      .eq('id', alumno.id)
-
-    if (xpError) {
-      setMensaje('Asistencia registrada, pero hubo error sumando experiencia.')
+    if (!data.success) {
+      setMensaje(data.message || 'No se pudo registrar la asistencia.')
+      setYaRegistrado(true)
       return
     }
 
     setAlumno({
       ...alumno,
-      experiencia: nuevaExperiencia,
-      rango: nuevoRango,
+      experiencia: data.experiencia,
+      rango: data.rango,
     })
 
     setYaRegistrado(true)
-    setMensaje(`Asistencia registrada correctamente. +10 XP. Rango: ${nuevoRango}`)
+    setMensaje(data.message)
   }
 
   if (loading) {
@@ -132,8 +82,8 @@ export default function CheckInPage({ alumnoId }) {
           pagado
             ? 'bg-green-950 border-green-500'
             : pendiente
-            ? 'bg-yellow-950 border-yellow-500'
-            : 'bg-red-950 border-red-500'
+              ? 'bg-yellow-950 border-yellow-500'
+              : 'bg-red-950 border-red-500'
         }`}
       >
         <h1 className="text-4xl font-black mb-6">CHECK-IN POWERFIT</h1>
@@ -149,9 +99,21 @@ export default function CheckInPage({ alumnoId }) {
           <p>Rango: {alumno.rango || 'Bronce'}</p>
         </div>
 
-        {pagado && <div className="bg-green-700 p-4 rounded-2xl mt-6 font-black">ALUMNO AL DÍA ✅</div>}
-        {pendiente && <div className="bg-yellow-600 text-black p-4 rounded-2xl mt-6 font-black">ALUMNO PENDIENTE ⚠️</div>}
-        {moroso && <div className="bg-red-700 p-4 rounded-2xl mt-6 font-black">ALUMNO MOROSO ❌</div>}
+        {pagado && (
+          <div className="bg-green-700 p-4 rounded-2xl mt-6 font-black">
+            ALUMNO AL DIA
+          </div>
+        )}
+        {pendiente && (
+          <div className="bg-yellow-600 text-black p-4 rounded-2xl mt-6 font-black">
+            ALUMNO PENDIENTE
+          </div>
+        )}
+        {moroso && (
+          <div className="bg-red-700 p-4 rounded-2xl mt-6 font-black">
+            ALUMNO MOROSO
+          </div>
+        )}
 
         <button
           onClick={registrarAsistencia}
