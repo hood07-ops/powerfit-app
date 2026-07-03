@@ -34,10 +34,10 @@ export default function RutinasPage({ student, onUpdateStudent }) {
       record: 'repeticiones',
       tipo: 'gratis',
       ejercicios: [
-        'Kettlebell Swing — MAX REPS',
-        'Burpees — MAX REPS',
-        'Thruster — MAX REPS',
-        'Battle Rope — MAX REPS',
+        'Kettlebell Swing - MAX REPS',
+        'Burpees - MAX REPS',
+        'Thruster - MAX REPS',
+        'Battle Rope - MAX REPS',
       ],
       xp: 50,
     },
@@ -50,11 +50,11 @@ export default function RutinasPage({ student, onUpdateStudent }) {
       record: 'peso',
       tipo: 'gratis',
       ejercicios: [
-        'Power Clean — 5x3',
-        'Push Jerk — 5x3',
-        'Front Squat — 4x5',
-        'Deadlift — 4x5',
-        'Strict Press — 4x6',
+        'Power Clean - 5x3',
+        'Push Jerk - 5x3',
+        'Front Squat - 4x5',
+        'Deadlift - 4x5',
+        'Strict Press - 4x6',
       ],
       xp: 60,
     },
@@ -67,11 +67,11 @@ export default function RutinasPage({ student, onUpdateStudent }) {
       record: 'peso',
       tipo: 'premium',
       ejercicios: [
-        'Back Squat — 5x5 @75%',
-        'Deadlift — 5x3 @85%',
-        'Bench Press — 5x5 @75%',
-        'Push Press — 4x5 @70%',
-        'Clean Pull — 4x4 @80%',
+        'Back Squat - 5x5 @75%',
+        'Deadlift - 5x3 @85%',
+        'Bench Press - 5x5 @75%',
+        'Push Press - 4x5 @70%',
+        'Clean Pull - 4x4 @80%',
       ],
       xp: 80,
     },
@@ -93,7 +93,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     },
     {
       nombre: 'TEST SALTO VERTICAL',
-      metodo: 'Evaluacion potencia',
+      metodo: 'Evaluación potencia',
       duracion: '3 intentos',
       objetivo: 'Medir potencia de tren inferior',
       record: 'repeticiones',
@@ -108,7 +108,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     },
     {
       nombre: 'TEST COOPER / VO2',
-      metodo: 'Evaluacion aerobica',
+      metodo: 'Evaluación aeróbica',
       duracion: '12 MIN',
       objetivo: 'Estimar resistencia y VO2 max por distancia',
       record: 'repeticiones',
@@ -125,9 +125,9 @@ export default function RutinasPage({ student, onUpdateStudent }) {
       nombre: 'TEST VELOCIDAD 30M',
       metodo: 'Sprint test',
       duracion: '30 metros',
-      objetivo: 'Medir aceleracion y velocidad',
+      objetivo: 'Medir aceleración y velocidad',
       record: 'tiempo',
-      label: 'Tiempo segundos',
+      label: 'Tiempo segúndos',
       tipo: 'gratis',
       ejercicios: [
         'Calentamiento completo de carrera',
@@ -209,8 +209,8 @@ export default function RutinasPage({ student, onUpdateStudent }) {
         ? Number(valores.repeticiones || 0)
         : null,
 
-      tiempo_segundos: bloque.record === 'tiempo'
-        ? Number(valores.tiempo_segundos || 0)
+      tiempo_segúndos: bloque.record === 'tiempo'
+        ? Number(valores.tiempo_segúndos || 0)
         : null,
 
       peso_kg: bloque.record === 'peso'
@@ -256,7 +256,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
         </h1>
 
         <p className="text-zinc-400 mt-3 text-xl">
-          Fighter Conditioning • Weightlifting • Cross Training
+          Fighter Conditioning - Weightlifting - Cross Training
         </p>
 
       </div>
@@ -350,7 +350,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                       key={i}
                       className="bg-zinc-800 rounded-2xl p-4"
                     >
-                      • {ejercicio}
+                      - {ejercicio}
                     </li>
 
                   ))}
@@ -399,12 +399,12 @@ export default function RutinasPage({ student, onUpdateStudent }) {
 
                 <input
                   type="number"
-                  placeholder="Tiempo en segundos"
-                  value={valores.tiempo_segundos || ''}
+                  placeholder="Tiempo en segúndos"
+                  value={valores.tiempo_segúndos || ''}
                   onChange={(e) =>
                     actualizarValor(
                       bloque.nombre,
-                      'tiempo_segundos',
+                      'tiempo_segúndos',
                       e.target.value
                     )
                   }
@@ -478,3 +478,5 @@ export default function RutinasPage({ student, onUpdateStudent }) {
   )
 
 }
+
+

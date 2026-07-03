@@ -19,7 +19,7 @@ function labelObjetivo(objetivo) {
     fighter: 'Fighter',
     tenis: 'Tenis',
     fuerza: 'Fuerza',
-    perdida_grasa: 'Perdida grasa',
+    perdida_grasa: 'Pérdida grasa',
     cardio: 'Cardio',
   }
 
@@ -58,24 +58,24 @@ function configFase(faseATR) {
   const configs = {
     acumulacion: {
       porcentajes: [0.6, 0.65, 0.7],
-      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS', 'PIRAMIDAL TECNICO', 'HIIT AEROBICO 30/30'],
-      finales: ['EMOM 12 MIN', 'AMRAP 10 MIN', 'FOR QUALITY 12 MIN', 'ZONA 2 + TECNICA'],
-      foco: 'volumen tecnico y base aerobica',
-      sistema: 'oxidativo / base aerobica',
+      principales: ['AMRAP 12 MIN', 'E2MOM 12 MIN', 'CIRCUITO 4 RONDAS', 'PIRAMIDAL TÉCNICO', 'HIIT AERÓBICO 30/30'],
+      finales: ['EMOM 12 MIN', 'AMRAP 10 MIN', 'FOR QUALITY 12 MIN', 'ZONA 2 + TÉCNICA'],
+      foco: 'volumen técnico y base aeróbica',
+      sistema: 'oxidativo / base aeróbica',
     },
     transformacion: {
       porcentajes: [0.72, 0.75, 0.78],
       principales: ['INTERVALOS 40/20', 'E3MOM 15 MIN', 'DENSIDAD 12 MIN', 'PIRAMIDAL DE FUERZA', 'HIIT LACTICO 45/15'],
       finales: ['AMRAP 10 MIN', 'INTERVALOS 30/30', 'CHIPPER CORTO', 'REPEATED SPRINT ABILITY'],
       foco: 'potencia, ritmo y transferencia',
-      sistema: 'glucolitico / lactico tolerable',
+      sistema: 'glucolítico / láctico tolerable',
     },
     realizacion: {
       porcentajes: [0.82, 0.85, 0.88],
-      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TECNICO', 'PIRAMIDAL PESADO', 'HIIT ALTACTICO 10/50'],
-      finales: ['FOR TIME', 'SPRINT INTERVALS', 'AMRAP 8 MIN', 'POTENCIA ALTACTICA'],
-      foco: 'intensidad, rendimiento y ejecucion precisa',
-      sistema: 'ATP-PC / potencia alactica',
+      principales: ['FOR QUALITY', 'E2MOM 10 MIN', 'COMPLEJO TÉCNICO', 'PIRAMIDAL PESADO', 'HIIT ALÁCTICO 10/50'],
+      finales: ['FOR TIME', 'SPRINT INTERVALS', 'AMRAP 8 MIN', 'POTENCIA ALÁCTICA'],
+      foco: 'intensidad, rendimiento y ejecución precisa',
+      sistema: 'ATP-PC / potencia aláctica',
     },
   }
 
@@ -88,17 +88,17 @@ function configCicloMenstrual(faseMenstrual) {
       label: 'Menstrual',
       factorCarga: 0.85,
       intensidad: 'baja a moderada',
-      foco: 'tecnica, movilidad, control respiratorio y baja percepcion de esfuerzo',
+      foco: 'técnica, movilidad, control respiratorio y baja percepción de esfuerzo',
       recomendacion:
-        'Reducir cargas si hay dolor o fatiga. Priorizar tecnica, movilidad y trabajo aerobico suave.',
+        'Reducir cargas si hay dolor o fatiga. Priorizar técnica, movilidad y trabajo aeróbico suave.',
     },
     folicular: {
       label: 'Folicular',
       factorCarga: 1.05,
       intensidad: 'media a alta',
-      foco: 'progresion de fuerza, potencia tecnica y aprendizaje motor',
+      foco: 'progresión de fuerza, potencia técnica y aprendizaje motor',
       recomendacion:
-        'Buena fase para progresar cargas si la alumna se siente bien y mantiene tecnica estable.',
+        'Buena fase para progresar cargas si la alumna se siente bien y mantiene técnica estable.',
     },
     ovulatoria: {
       label: 'Ovulatoria',
@@ -112,7 +112,7 @@ function configCicloMenstrual(faseMenstrual) {
       label: 'Lutea',
       factorCarga: 0.9,
       intensidad: 'moderada',
-      foco: 'volumen controlado, fuerza submaxima y recuperacion',
+      foco: 'volumen controlado, fuerza submaxima y recuperación',
       recomendacion:
         'Bajar volumen o carga si aumenta la fatiga. Usar descansos completos y controlar RPE.',
     },
@@ -127,37 +127,37 @@ function ajustarPorcentajeCiclo(porcentaje, cicloCfg) {
   return Math.min(0.9, Math.max(0.5, porcentaje * cicloCfg.factorCarga))
 }
 
-function permitePliometria(faseATR) {
+function permitePliometría(faseATR) {
   return faseATR === 'transformacion' || faseATR === 'realizacion'
 }
 
-function ejercicioReactivoSinPliometria(objetivo) {
-  const prePliometria = {
+function ejercicioReactivoSinPliometría(objetivo) {
+  const prePliometría = {
     fighter: [
-      'footwork tecnico en guardia + frenado estable',
+      'footwork técnico en guardia + frenado estable',
       'slip + counter lento con control de eje',
       'paso lateral + retorno a guardia sin salto',
-      'band jab cross tecnico con fase concentrica rapida',
+      'band jab cross técnico con fase concéntrica rapida',
     ],
     tenis: [
-      'split step tecnico sin rebote + primer paso',
+      'split step técnico sin rebote + primer paso',
       'lateral shuffle + frenado estable',
-      'crossover step + rotacion de cadera controlada',
-      'band forehand pattern tecnico sin salto',
+      'crossover step + rotación de cadera controlada',
+      'band forehand pattern técnico sin salto',
     ],
     fuerza: [
-      'depth landing tecnico sin rebote',
+      'depth landing técnico sin rebote',
       'bisagra de cadera rapida con freno',
       'sentadilla tempo 3-1-1',
     ],
     general: [
       'mecanica de aterrizaje sin salto',
-      'desaceleracion lateral controlada',
-      'cambio de direccion tecnico',
+      'desaceleración lateral controlada',
+      'cambio de dirección técnico',
     ],
   }
 
-  return pick(prePliometria[objetivo] || prePliometria.general)
+  return pick(prePliometría[objetivo] || prePliometría.general)
 }
 
 export function calcularCarga(rms, ejercicio, porcentaje) {
@@ -175,9 +175,9 @@ export function calcularCarga(rms, ejercicio, porcentaje) {
 function crearBloqueObjetivo(objetivo, nivelCfg, pools, faseATR) {
   const reps = pick(nivelCfg.reps)
   const cardio = pick(nivelCfg.cardio)
-  const reactivo = permitePliometria(faseATR)
-    ? pick(pools.pliometria[objetivo] || pools.pliometria.general)
-    : ejercicioReactivoSinPliometria(objetivo)
+  const reactivo = permitePliometría(faseATR)
+    ? pick(pools.pliometría[objetivo] || pools.pliometría.general)
+    : ejercicioReactivoSinPliometría(objetivo)
 
   const bloques = {
     fighter: [
@@ -217,14 +217,14 @@ function crearBloqueObjetivo(objetivo, nivelCfg, pools, faseATR) {
 
 function crearBloqueFinal(objetivo, nivelCfg, pools, faseATR) {
   const cardio = pick(nivelCfg.cardio)
-  const reactivo = permitePliometria(faseATR)
-    ? pick(pools.pliometria[objetivo] || pools.pliometria.general)
-    : ejercicioReactivoSinPliometria(objetivo)
+  const reactivo = permitePliometría(faseATR)
+    ? pick(pools.pliometría[objetivo] || pools.pliometría.general)
+    : ejercicioReactivoSinPliometría(objetivo)
 
   const finales = {
     fighter: [
       `12 ${pick(pools.boxeo)}`,
-      `10 ${pick(pools.balon)}`,
+      `10 ${pick(pools.balón)}`,
       `8 ${reactivo}`,
       `10 ${pick(pools.pesoCorporal)}`,
     ],
@@ -232,7 +232,7 @@ function crearBloqueFinal(objetivo, nivelCfg, pools, faseATR) {
       `10 ${pick(pools.tenis)}`,
       `8 por lado ${pick(pools.transversal)}`,
       `8 ${reactivo}`,
-      `10 ${pick(pools.balon)}`,
+      `10 ${pick(pools.balón)}`,
     ],
     fuerza: [
       `8 ${pick(pools.pesoCorporal)}`,
@@ -260,8 +260,8 @@ function crearBloqueFinal(objetivo, nivelCfg, pools, faseATR) {
 function crearContrasteTransversal(pools) {
   return pick([
     `Contraste entre series: 10 ${pick(pools.banda)} + 10 ${pick(pools.desplazamiento)}`,
-    `Contraste entre series: 8 por lado ${pick(pools.balon)} + 10 ${pick(pools.transversal)}`,
-    `Contraste entre series: 6 ${pick(pools.pliometria.general)} + 8 por lado ${pick(pools.transversal)}`,
+    `Contraste entre series: 8 por lado ${pick(pools.balón)} + 10 ${pick(pools.transversal)}`,
+    `Contraste entre series: 6 ${pick(pools.pliometría.general)} + 8 por lado ${pick(pools.transversal)}`,
     `Contraste entre series: 10 flexoextension de brazos con salto lateral + 8 por lado ${pick(pools.banda)}`,
     `Contraste entre series: 10 saltos abre/cierra brazos arriba-abajo + 8 por lado ${pick(pools.transversal)}`,
   ])
@@ -269,16 +269,16 @@ function crearContrasteTransversal(pools) {
 
 function descansoMuscularTexto() {
   return [
-    'Musculos grandes (espalda, piernas y pecho): 72 horas entre estimulos fuertes.',
-    'Musculos pequenos (brazos, hombros, gemelos y abdomen): 48 horas entre estimulos fuertes.',
-    'Si se repite un patron antes del descanso completo, debe ser tecnico, liviano o de movilidad.',
+    'Músculos grandes (espalda, piernas y pecho): 72 horas entre estímulos fuertes.',
+    'Músculos pequeños (brazos, hombros, gemelos y abdomen): 48 horas entre estímulos fuertes.',
+    'Si se repite un patrón antes del descanso completo, debe ser técnico, liviano o de movilidad.',
   ]
 }
 
 function focoDeportivo(objetivo) {
   if (objetivo === 'tenis') {
     return [
-      'Motor transversal: split step, aceleracion, desaceleracion y potencia rotacional.',
+      'Motor transversal: split step, aceleración, desaceleración y potencia rotaciónal.',
       'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y cadera-hombro.',
       'Ejemplos: med ball forehand/backhand throw, band forehand, lateral bound, crossover step.',
     ]
@@ -286,48 +286,48 @@ function focoDeportivo(objetivo) {
 
   if (objetivo === 'fighter') {
     return [
-      'Motor transversal: golpeo, cambio de nivel, desplazamiento y potencia rotacional.',
-      'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y fase concentrica explosiva.',
+      'Motor transversal: golpeo, cambio de nivel, desplazamiento y potencia rotaciónal.',
+      'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y fase concéntrica explosiva.',
       'Ejemplos: band jab cross, band hook, med ball rotational throw, slip + counter, footwork.',
     ]
   }
 
   return [
-    'Base fisica: fuerza util, control tecnico, capacidad metabolica y recuperacion.',
-    'Transferencia: estabilidad, movilidad, control de eje y progresion de cargas.',
+    'Base física: fuerza util, control técnico, capacidad metabólica y recuperación.',
+    'Transferencia: estabilidad, movilidad, control de eje y progresión de cargas.',
   ]
 }
 
-function seleccionDeportivaMensual(objetivo, usarPliometria) {
+function seleccionDeportivaMensual(objetivo, usarPliometría) {
   if (objetivo === 'fighter') {
     return {
-      activacion: 'footwork drill + movilidad toracica + guardia activa',
+      activación: 'footwork drill + movilidad toracica + guardia activa',
       motor: 'band jab cross + cross-body chop oblicuo-serrato',
-      transferencia: usarPliometria
+      transferencia: usarPliometría
         ? 'lateral bound + fighting stance stick + med ball rotational throw'
-        : 'paso lateral + retorno a guardia sin salto + med ball rotational throw tecnico',
-      final: 'shuttle run corto + heavy bag tecnico',
+        : 'paso lateral + retorno a guardia sin salto + med ball rotational throw técnico',
+      final: 'shuttle run corto + heavy bag técnico',
     }
   }
 
   if (objetivo === 'tenis') {
     return {
-      activacion: 'split step tecnico + cadera/hombro + primer paso',
+      activación: 'split step técnico + cadera/hombro + primer paso',
       motor: 'band forehand/backhand + hip shoulder separation drill',
-      transferencia: usarPliometria
+      transferencia: usarPliometría
         ? 'split step rebound + lateral bound + med ball forehand throw'
-        : 'split step sin rebote + frenada lateral + med ball forehand throw tecnico',
-      final: 'cambio de direccion 5m + shadow swing tecnico',
+        : 'split step sin rebote + frenada lateral + med ball forehand throw técnico',
+      final: 'cambio de dirección 5m + shadow swing técnico',
     }
   }
 
   return {
-    activacion: 'movilidad de cadera/hombro + patron bisagra + core activo',
+    activación: 'movilidad de cadera/hombro + patrón bisagra + core activo',
     motor: 'kettlebell swing + pallof press + desplazamiento lateral',
-    transferencia: usarPliometria
-      ? 'pogo jump + medicine ball slam + aceleracion corta'
-      : 'mecanica de aterrizaje + desaceleracion lateral + core anti-rotacion',
-    final: 'row/bike/run + peso corporal tecnico',
+    transferencia: usarPliometría
+      ? 'pogo jump + medicine ball slam + aceleración corta'
+      : 'mecanica de aterrizaje + desaceleración lateral + core anti-rotación',
+    final: 'row/bike/run + peso corporal técnico',
   }
 }
 
@@ -356,7 +356,7 @@ function diaMensual({
   nombre,
   metodo,
   foco,
-  activacion,
+  activación,
   motor,
   fuerza,
   transferencia,
@@ -366,12 +366,12 @@ function diaMensual({
 }) {
   return [
     `${dia} - ${nombre}`,
-    `Metodo PowerFit: ${metodo}`,
+    `Método PowerFit: ${metodo}`,
     `Foco: ${foco}`,
     '',
-    'ACTIVACION',
-    `- ${activacion}`,
-    '- respiracion + movilidad dinamica + tecnica antes de velocidad',
+    'ACTIVACIÓN',
+    `- ${activación}`,
+    '- respiración + movilidad dinámica + técnica antes de velocidad',
     '',
     'BLOQUE 1 - FUNCIONAL / MOTOR TRANSVERSAL',
     `- ${motor}`,
@@ -381,7 +381,7 @@ function diaMensual({
     ...fuerza.map((linea) => `- ${linea}`),
     `- Contraste entre series: ${transferencia}`,
     '',
-    'BLOQUE 3 - SISTEMA METABOLICO',
+    'BLOQUE 3 - SISTEMA METABÓLICO',
     `- ${sistema}`,
     `- Final: ${final}`,
     '',
@@ -405,116 +405,116 @@ export function generarPlanMensual({
     {
       numero: 1,
       fase: 'acumulacion',
-      foco: 'base tecnica, volumen controlado y capacidad aerobica',
-      notaPliometria: 'Sin pliometria. Usar mecanica de aterrizaje, frenadas y patrones reactivos sin salto.',
+      foco: 'base técnica, volumen controlado y capacidad aeróbica',
+      notaPliometria: 'Sin pliometría. Usar mecanica de aterrizaje, frenadas y patrónes reactivos sin salto.',
     },
     {
       numero: 2,
       fase: 'acumulacion',
-      foco: 'progresion de volumen, fuerza submaxima y calidad de movimiento',
-      notaPliometria: 'Sin pliometria. Mantener saltos fuera del plan y mejorar desaceleracion.',
+      foco: 'progresión de volumen, fuerza submaxima y calidad de movimiento',
+      notaPliometria: 'Sin pliometría. Mantener saltos fuera del plan y mejorar desaceleración.',
     },
     {
       numero: 3,
       fase: 'transformacion',
-      foco: 'potencia, transferencia deportiva y HIIT lactico controlado',
-      notaPliometria: 'Iniciar pliometria: pocas repeticiones, descansos completos y maxima calidad.',
+      foco: 'potencia, transferencia deportiva y HIIT láctico controlado',
+      notaPliometria: 'Iniciar pliometría: pocas repeticiones, descansos completos y máxima calidad.',
     },
     {
       numero: 4,
       fase: 'realizacion',
-      foco: 'velocidad, potencia alactica y rendimiento tecnico',
-      notaPliometria: 'Pliometria corta y explosiva. Cortar la serie si baja la velocidad.',
+      foco: 'velocidad, potencia aláctica y rendimiento técnico',
+      notaPliometria: 'Pliometría corta y explosiva. Cortar la serie si baja la velocidad.',
     },
   ]
 
   const contenidoSemanas = semanas.map((semana) => {
-    const usarPliometria = permitePliometria(semana.fase)
+    const usarPliometría = permitePliometría(semana.fase)
     const faseCfg = configFase(semana.fase)
     const porcentajeBase = pick(faseCfg.porcentajes)
     const porcentaje = ajustarPorcentajeCiclo(porcentajeBase, cicloCfg)
-    const deportivo = seleccionDeportivaMensual(objetivo, usarPliometria)
-    const reglaPliometria = usarPliometria
-      ? 'pliometria especifica del deporte con pocas repeticiones, mucha pausa y maxima calidad'
-      : 'pre-pliometria sin salto: aterrizajes, frenadas, cambio de direccion tecnico y control del eje'
+    const deportivo = seleccionDeportivaMensual(objetivo, usarPliometría)
+    const reglaPliometría = usarPliometría
+      ? 'pliometría específica del deporte con pocas repeticiones, mucha pausa y máxima calidad'
+      : 'pre-pliometría sin salto: aterrizajes, frenadas, cambio de dirección técnico y control del eje'
 
     const dias = [
       diaMensual({
-        dia: 'Dia 1',
+        dia: 'Día 1',
         nombre: 'Base funcional + cadena posterior + motor transversal',
         metodo: `${pick(faseCfg.principales)} - ${faseCfg.sistema}`,
-        foco: 'fuerza util, bisagra, sentadilla, core cruzado y aceleracion corta',
-        activacion: deportivo.activacion,
+        foco: 'fuerza util, bisagra, sentadilla, core cruzado y aceleración corta',
+        activación: deportivo.activación,
         motor: deportivo.motor,
         fuerza: fuerzaMensual({ objetivo, dia: 1, porcentaje, rms, nivelCfg }),
         transferencia: deportivo.transferencia,
-        sistema: semana.fase === 'acumulacion' ? 'AMRAP 10-12 min tecnico oxidativo' : 'E2MOM 10 min potencia controlada',
+        sistema: semana.fase === 'acumulacion' ? 'AMRAP 10-12 min técnico oxidativo' : 'E2MOM 10 min potencia controlada',
         final: deportivo.final,
         notas: 'Descanso muscular: piernas 72h antes de otro estimulo fuerte. Esto no es hipertrofia; es fuerza funcional transferible.',
       }),
       diaMensual({
-        dia: 'Dia 2',
-        nombre: 'Empuje/traccion funcional + potencia rotacional',
+        dia: 'Día 2',
+        nombre: 'Empuje/traccion funcional + potencia rotaciónal',
         metodo: `${pick(faseCfg.principales)} - contraste fuerza/transferencia`,
         foco: 'empuje, traccion, serrato, escapula y cadena cruzada sin trabajo de volumen estetico',
-        activacion: 'scap push up + movilidad toracica + patron de golpeo/raqueta sin carga',
+        activación: 'scap push up + movilidad toracica + patrón de golpeo/raqueta sin carga',
         motor: objetivo === 'fighter'
-          ? 'elastic band hook rotation + slip counter tecnico'
+          ? 'elastic band hook rotation + slip counter técnico'
           : objetivo === 'tenis'
             ? 'elastic band backhand pattern + crossover step'
-            : 'pallof press + diagonal chop + bear crawl tecnico',
+            : 'pallof press + diagonal chop + bear crawl técnico',
         fuerza: fuerzaMensual({ objetivo, dia: 2, porcentaje, rms, nivelCfg }),
         transferencia: objetivo === 'fighter'
           ? '10 band jab cross + 8 med ball rotational throw por lado'
           : objetivo === 'tenis'
             ? '10 band forehand/backhand + 8 med ball scoop toss por lado'
             : '10 pallof press + 8 medicine ball slam',
-        sistema: 'INTERVALOS 40/20 con ejecucion limpia, no buscar fallo muscular',
-        final: 'core anti-rotacion + desplazamiento lateral',
+        sistema: 'INTERVALOS 40/20 con ejecución limpia, no buscar fallo muscular',
+        final: 'core anti-rotación + desplazamiento lateral',
         notas: 'Pecho/espalda descansan 72h. Brazos/hombros/gemelos/abdomen descansan 48h.',
       }),
       diaMensual({
-        dia: 'Dia 3',
+        dia: 'Día 3',
         nombre: 'Potencia funcional + transferencia deportiva',
         metodo: `${pick(faseCfg.principales)} - ${semana.foco}`,
-        foco: 'fase concentrica explosiva, calidad, potencia rotacional y velocidad usable',
-        activacion: deportivo.activacion,
+        foco: 'fase concéntrica explosiva, calidad, potencia rotaciónal y velocidad usable',
+        activación: deportivo.activación,
         motor: objetivo === 'fighter'
           ? 'crossover step to rotational punch + band anti-rotation punch'
           : objetivo === 'tenis'
             ? 'open stance rotational drive + split step primer paso'
             : 'kettlebell clean + desplazamiento lateral controlado',
         fuerza: fuerzaMensual({ objetivo, dia: 3, porcentaje, rms, nivelCfg }),
-        transferencia: reglaPliometria,
-        sistema: semana.fase === 'realizacion' ? 'HIIT alactico 10/50, 6-8 rondas' : 'HIIT aerobico/lactico tecnico 30/30, 8-10 rondas',
+        transferencia: reglaPliometría,
+        sistema: semana.fase === 'realizacion' ? 'HIIT aláctico 10/50, 6-8 rondas' : 'HIIT aeróbico/láctico técnico 30/30, 8-10 rondas',
         final: objetivo === 'fighter'
-          ? 'round tecnico de golpes con banda + footwork'
+          ? 'round técnico de golpes con banda + footwork'
           : objetivo === 'tenis'
-            ? 'split step + aceleracion lateral + sombra de golpe'
+            ? 'split step + aceleración lateral + sombra de golpe'
             : 'shuttle run + medicine ball slam',
         notas: semana.notaPliometria,
       }),
       diaMensual({
-        dia: 'Dia 4',
-        nombre: 'Metabolico funcional + control tecnico',
-        metodo: `${pick(faseCfg.finales)} - capacidad sin perder tecnica`,
-        foco: 'resistencia especifica, movilidad, core y evaluacion de calidad',
-        activacion: 'RAMP 8 min + movilidad cadera/hombro + respiracion',
-        motor: 'cadenas cruzadas + core anti-rotacion + desplazamiento tecnico',
+        dia: 'Día 4',
+        nombre: 'Metabolico funcional + control técnico',
+        metodo: `${pick(faseCfg.finales)} - capacidad sin perder técnica`,
+        foco: 'resistencia específica, movilidad, core y evaluación de calidad',
+        activación: 'RAMP 8 min + movilidad cadera/hombro + respiración',
+        motor: 'cadenas cruzadas + core anti-rotación + desplazamiento técnico',
         fuerza: fuerzaMensual({ objetivo, dia: 4, porcentaje, rms, nivelCfg }),
-        transferencia: usarPliometria
+        transferencia: usarPliometría
           ? '3-5 series cortas de reactivo especifico + descanso completo'
-          : 'frenadas, aterrizajes y cambios de direccion sin impacto alto',
-        sistema: semana.fase === 'acumulacion' ? 'ZONA 2 + TECNICA 18-25 min' : 'AMRAP 8-10 min de calidad o repeated sprint ability',
-        final: 'movilidad, respiracion y registro de tiempos/saltos/RPE',
-        notas: 'Dia para medir progreso sin destruir recuperacion. Si baja la tecnica, termina la serie.',
+          : 'frenadas, aterrizajes y cambios de dirección sin impacto alto',
+        sistema: semana.fase === 'acumulacion' ? 'ZONA 2 + TÉCNICA 18-25 min' : 'AMRAP 8-10 min de calidad o repeated sprint ability',
+        final: 'movilidad, respiración y registro de tiempos/saltos/RPE',
+        notas: 'Día para medir progreso sin destruir recuperación. Si baja la técnica, termina la serie.',
       }),
     ]
 
     return [
       `SEMANA ${semana.numero} - ATR ${semana.fase.toUpperCase()}`,
       `Foco: ${semana.foco}`,
-      `Pliometria: ${semana.notaPliometria}`,
+      `Pliometría: ${semana.notaPliometria}`,
       dias.join('\n\n'),
     ].join('\n\n')
   })
@@ -533,21 +533,21 @@ export function generarPlanMensual({
       `Intensidad base: ${nivelCfg.intensidad}`,
       ajusteCiclo,
       '',
-      'REGLAS DE RECUPERACION',
+      'REGLAS DE RECUPERACIÓN',
       ...descansoMuscularTexto().map((linea) => `- ${linea}`),
       '',
       'FOCO DEPORTIVO',
       ...focoDeportivo(objetivo).map((linea) => `- ${linea}`),
       '',
-      'REGLA DEL METODO POWERFIT',
-      '- Entrenamiento funcional antes que hipertrofia: fuerza util, patrones completos y transferencia deportiva.',
-      '- Cada sesion mezcla activacion, motor transversal, fuerza/RM, contraste funcional y sistema metabolico.',
-      '- La carga se sube solo si la tecnica se mantiene limpia y explosiva.',
+      'REGLA DEL MÉTODO POWERFIT',
+      '- Entrenamiento funcional antes que hipertrofia: fuerza útil, patrónes completos y transferencia deportiva.',
+      '- Cada sesión mezcla activación, motor transversal, fuerza/RM, contraste funcional y sistema metabólico.',
+      '- La carga se sube solo si la técnica se mantiene limpia y explosiva.',
       '',
       contenidoSemanas.join('\n\n'),
       '',
       'Control semanal: registrar tiempo, distancia, velocidad, saltos, VO2 estimado, RM usado y RPE.',
-      'Ajuste: si la tecnica baja o hay dolor, reducir volumen antes de subir intensidad.',
+      'Ajuste: si la técnica baja o hay dolor, reducir volumen antes de subir intensidad.',
     ].join('\n'),
   }
 }
@@ -651,7 +651,7 @@ export function generarEntrenamiento({
       'Band diagonal chop',
       'Band serratus punch',
     ],
-    balon: [
+    balón: [
       'Medicine Ball rotational throw',
       'Medicine Ball scoop toss',
       'Medicine Ball shot put throw',
@@ -667,7 +667,7 @@ export function generarEntrenamiento({
       'in-out footwork ladder',
       'side hop + arm open-close',
     ],
-    pliometria: {
+    pliometría: {
       fighter: [
         'Pogo jump guard stance',
         'Lateral bound + fighting stance stick',
@@ -699,8 +699,8 @@ export function generarEntrenamiento({
       ],
       perdida_grasa: [
         'Low impact skater step',
-        'Squat jump tecnico',
-        'Jumping jack rapido',
+        'Squat jump técnico',
+        'Jumping jack rápido',
         'Lateral line hop',
       ],
       general: [
@@ -780,13 +780,13 @@ export function generarEntrenamiento({
       motorTransversal:
         objetivo === 'fighter' || objetivo === 'tenis'
           ? [
-              'Base: aceleracion, potencia rotacional, cadenas cruzadas y fase concentrica explosiva.',
-              'Foco tecnico: efecto serape, diagonal oblicuo-serrato y transferencia cadera-hombro.',
-              'Criterio: calidad primero, velocidad despues; cortar la serie si se pierde eje o timing.',
+              'Base: aceleración, potencia rotaciónal, cadenas cruzadas y fase concéntrica explosiva.',
+              'Foco técnico: efecto serape, diagonal oblicuo-serrato y transferencia cadera-hombro.',
+              'Criterio: calidad primero, velocidad después; cortar la serie si se pierde eje o timing.',
             ]
           : null,
 
-      activacion: {
+      activación: {
         metodo: pick(['RAMP 8 MIN', 'RAMP 10 MIN', 'MOVILIDAD + PULSO 8 MIN']),
         ejercicios: [
           `2 min ${pick(pools.cardio)} suave`,

@@ -13,7 +13,13 @@ function montoCompra(solicitud) {
 }
 
 function generacionesCompra(solicitud) {
-  return Number(solicitud.generaciones || 1)
+  return Number(solicitud.generaciones ?? 1)
+}
+
+function textoGeneracionesCompra(generaciones) {
+  if (generaciones <= 0) return 'Plan mensual'
+
+  return `+${generaciones} generación${generaciones === 1 ? '' : 'es'}`
 }
 
 function toDateInput(date) {
@@ -197,7 +203,7 @@ export default function RegistroComprasPage({
 
       <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6">
         {[
-          ['dia', 'Dia'],
+          ['dia', 'Día'],
           ['semana', 'Semana'],
           ['mes', 'Mes'],
           ['anio', 'Año'],
@@ -256,7 +262,7 @@ export default function RegistroComprasPage({
             >
               <p className="font-black text-lg lg:text-base">{s.nombre_alumno || s.nombre || '-'}</p>
               <p>${montoCompra(s)}</p>
-              <p>+{generaciones} generacion</p>
+              <p>{textoGeneracionesCompra(generaciones)}</p>
               <EstadoCompra estado={estado} />
               <p>{fecha ? new Date(fecha).toLocaleDateString() : '-'}</p>
               <p className="text-xs text-zinc-400">
@@ -268,7 +274,9 @@ export default function RegistroComprasPage({
                   onClick={() => aprobarSolicitud(s)}
                   className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
                 >
-                  Aprobar generacion +{generaciones}
+                  {generaciones > 0
+                    ? `Aprobar generación +${generaciones}`
+                    : 'Aprobar plan mensual'}
                 </button>
               ) : (
                 <p className="text-green-400 font-black">Aprobado</p>

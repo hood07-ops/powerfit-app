@@ -123,9 +123,9 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
         return
       }
 
-      const diaMatch = linea.match(/^Dia\s+(\d+)\s+-\s+(.+)$/i)
+      const diaMatch = linea.match(/^D[ií]a\s+(\d+)\s+-\s+(.+)$/i)
       if (diaMatch) {
-        estado.dia = `Dia ${diaMatch[1]}`
+        estado.dia = `Día ${diaMatch[1]}`
         estado.sesion = diaMatch[2]
         estado.metodo = ''
         estado.foco = ''
@@ -133,8 +133,9 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
         return
       }
 
-      if (linea.startsWith('Metodo PowerFit:')) {
-        estado.metodo = linea.replace('Metodo PowerFit:', '').trim()
+      const metodoMatch = linea.match(/^M[eé]todo PowerFit:\s*(.+)$/i)
+      if (metodoMatch) {
+        estado.metodo = metodoMatch[1].trim()
         return
       }
 
@@ -145,6 +146,7 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
 
       if (
         linea === 'ACTIVACION' ||
+        linea === 'ACTIVACIÓN' ||
         linea.startsWith('BLOQUE 1') ||
         linea.startsWith('BLOQUE 2') ||
         linea.startsWith('BLOQUE 3')
@@ -216,10 +218,10 @@ function descargarExcelMensual(contenido, nombreAlumno) {
     'Alumno',
     'Semana',
     'Fase ATR',
-    'Dia',
-    'Sesion',
+    'Día',
+    'Sesión',
     'Bloque',
-    'Metodo',
+    'Método',
     'Foco',
     'Trabajo / Ejercicio',
     'Ejercicio base',
@@ -228,7 +230,7 @@ function descargarExcelMensual(contenido, nombreAlumno) {
     'Carga sugerida',
     'Descanso',
     'Contraste / transferencia',
-    'Sistema metabolico',
+    'Sistema metabólico',
     'Notas',
     'RPE',
     'Resultado',
@@ -309,7 +311,7 @@ function agruparPlanMensualVista(contenido, nombreAlumno) {
 
   return filas.reduce((semanas, fila) => {
     const semanaKey = `${fila.semana || 'Semana'} - ${fila.fase || 'ATR'}`
-    const diaKey = `${fila.dia || 'Dia'} - ${fila.sesion || 'Sesion'}`
+    const diaKey = `${fila.dia || 'Día'} - ${fila.sesion || 'Sesión'}`
     const bloqueKey = fila.bloque || 'Bloque'
 
     if (!semanas[semanaKey]) {
@@ -543,7 +545,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
 
     const totalGeneraciones = (data || [])
       .filter((compra) => Number(compra.monto || 0) !== PRECIO_PLAN_MENSUAL)
-      .reduce((total, compra) => total + Number(compra.generaciones || 1), 0)
+      .reduce((total, compra) => total + Number(compra.generaciones ?? 1), 0)
     const totalMensuales = (data || []).filter(
       (compra) => Number(compra.monto || 0) === PRECIO_PLAN_MENSUAL
     ).length
@@ -607,7 +609,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     if (p.tipo === 'mensual') {
       return `
 POWERFIT 360
-PLANIFICACION MENSUAL ${numero}
+PLANIFICACIÓN MENSUAL ${numero}
 
 Fecha: ${new Date().toLocaleString()}
 Alumno: ${student?.nombre || ''}
@@ -618,7 +620,7 @@ ${p.contenido}
 
     return `
 POWERFIT 360
-PLANIFICACION ${numero}
+PLANIFICACIÓN ${numero}
 
 Fecha: ${new Date().toLocaleString()}
 Alumno: ${student?.nombre || ''}
@@ -626,7 +628,7 @@ Objetivo: ${p.objetivo}
 Nivel: ${p.nivel}
 Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
-Sistema metabolico: ${p.sistemaMetabolico || 'No especificado'}
+Sistema metabólico: ${p.sistemaMetabolico || 'No especificado'}
 Variante: ${p.variante}
 ${p.motorTransversal ? `
 MOTOR TRANSVERSAL
@@ -639,31 +641,31 @@ Ajuste carga: ${p.cicloMenstrual.ajusteCarga}
 Porcentaje ATR base: ${p.cicloMenstrual.porcentajeBase}
 Porcentaje aplicado: ${p.cicloMenstrual.porcentajeAplicado}
 Foco: ${p.cicloMenstrual.foco}
-Recomendacion: ${p.cicloMenstrual.recomendacion}
+Recomendación: ${p.cicloMenstrual.recomendacion}
 Nota: si hay dolor, mareos o malestar importante, reducir intensidad y consultar a un profesional.
 ` : ''}
 
-ACTIVACION
-Metodo: ${p.activacion.metodo}
+ACTIVACIÓN
+Método: ${p.activacion.metodo}
 ${p.activacion.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 BLOQUE 1
-Metodo: ${p.bloque1.metodo}
-Duracion: ${p.bloque1.duracion}
+Método: ${p.bloque1.metodo}
+Duración: ${p.bloque1.duracion}
 ${p.bloque1.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 2 - FUERZA / RM INTELIGENTE
-Metodo: ${p.bloque2.metodo}
-Duracion: ${p.bloque2.duracion}
+Método: ${p.bloque2.metodo}
+Duración: ${p.bloque2.duracion}
 ${p.bloque2.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 3
-Metodo: ${p.bloque3.metodo}
-Duracion: ${p.bloque3.duracion}
+Método: ${p.bloque3.metodo}
+Duración: ${p.bloque3.duracion}
 ${p.bloque3.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 Vuelta a la calma: dirigida en clase.
@@ -746,8 +748,8 @@ Vuelta a la calma: dirigida en clase.
       if (cantidadFinal < 0 || (tipoPlan !== 'mensual' && cantidadFinal <= 0)) {
         setMensaje(
           tipoPlan === 'mensual'
-            ? `El plan mensual completo cuesta $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}. Solicita la planificacion mensual para continuar.`
-            : `No tienes generaciones disponibles. La siguiente generacion cuesta $${tramoActual.precio.toLocaleString('es-CL')}.`
+            ? `El plan mensual completo cuesta $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}. Solicita la planificación mensual para continuar.`
+            : `No tienes generaciones disponibles. La siguiente generación cuesta $${tramoActual.precio.toLocaleString('es-CL')}.`
         )
         return
       }
@@ -784,7 +786,7 @@ Vuelta a la calma: dirigida en clase.
         .select()
 
       if (insertError) {
-        setMensaje(`Error guardando planificacion: ${insertError.message}`)
+        setMensaje(`Error guardando planificación: ${insertError.message}`)
         return
       }
 
@@ -825,8 +827,8 @@ Vuelta a la calma: dirigida en clase.
 
       setMensaje(
         tipoPlan === 'mensual'
-          ? 'Plan mensual generado, guardado y descargado en Excel. Se uso 1 credito mensual aprobado.'
-          : '1 planificacion generada, guardada y descargada.'
+          ? 'Plan mensual generado, guardado y descargado en Excel. Se usó 1 crédito mensual aprobado.'
+          : '1 planificación generada, guardada y descargada.'
       )
 
       await cargarPlanificacionesMes()
@@ -862,8 +864,8 @@ Vuelta a la calma: dirigida en clase.
     }
 
     const texto = compraMensual
-      ? `Hola Robinson, soy ${student.nombre}. Quiero solicitar una planificacion mensual PowerFit completa por $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}.`
-      : `Hola Robinson, soy ${student.nombre}. Quiero comprar 1 generacion PowerFit (${tramoActual.nombre}) por $${tramoActual.precio.toLocaleString('es-CL')}.`
+      ? `Hola Robinson, soy ${student.nombre}. Quiero solicitar una planificación mensual PowerFit completa por $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}.`
+      : `Hola Robinson, soy ${student.nombre}. Quiero comprar 1 generación PowerFit (${tramoActual.nombre}) por $${tramoActual.precio.toLocaleString('es-CL')}.`
 
     window.open(
       `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
@@ -899,13 +901,13 @@ Vuelta a la calma: dirigida en clase.
       <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
         <div>
           <h2 className="text-2xl font-black text-green-400">
-            PRECIOS Y TIPO DE GENERACION
+            PRECIOS Y TIPO DE GENERACIÓN
           </h2>
           <p className="text-zinc-400 mt-2">
-            Precio por generacion: las primeras 4 cuestan $2.500 cada una, las siguientes 10 cuestan $5.000 cada una y despues cuestan $7.500 cada una. Plan mensual completo: $60.000.
+            Precio por generación: las primeras 4 cuestan $2.500 cada una, las siguientes 10 cuestan $5.000 cada una y después cuestan $7.500 cada una. Plan mensual completo: $60.000.
           </p>
           <p className="text-sm text-green-300 mt-2 font-black">
-            Generaciones compradas aprobadas: {generacionesCompradas}. Precio actual: ${tramoActual.precio.toLocaleString('es-CL')} por 1 generacion
+            Generaciones compradas aprobadas: {generacionesCompradas}. Precio actual: ${tramoActual.precio.toLocaleString('es-CL')} por 1 generación
             {restantesTramoActual === null
               ? '.'
               : ` (${restantesTramoActual} disponibles en este tramo).`}
@@ -950,7 +952,7 @@ Vuelta a la calma: dirigida en clase.
               tipoPlan === 'sesion' ? 'bg-red-600' : 'bg-zinc-800'
             }`}
           >
-            Sesion IA - usa 1 generacion
+            Sesión IA - usa 1 generación
           </button>
 
           <button
@@ -971,7 +973,7 @@ Vuelta a la calma: dirigida en clase.
               RM / CARGAS DE PESAS
             </h2>
             <p className="text-zinc-400 mt-2">
-              Ingresa la repeticion maxima para que la IA calcule los kg sugeridos en fuerza.
+              Ingresa la repetición máxima para que la IA calcule los kg sugeridos en fuerza.
             </p>
           </div>
 
@@ -1022,7 +1024,7 @@ Vuelta a la calma: dirigida en clase.
               ))
             ) : (
               <p className="text-zinc-500">
-                Aun no hay RM guardados. Si no existe RM, el plan dira "RM no registrado".
+                Aún no hay RM guardados. Si no existe RM, el plan dirá "RM no registrado".
               </p>
             )}
           </div>
@@ -1034,7 +1036,7 @@ Vuelta a la calma: dirigida en clase.
               CICLO MENSTRUAL
             </h2>
             <p className="text-zinc-400 mt-2">
-              Ajuste opcional para modificar cargas y foco segun la fase del mes.
+              Ajuste opcional para modificar cargas y foco según la fase del mes.
             </p>
           </div>
 
@@ -1054,15 +1056,15 @@ Vuelta a la calma: dirigida en clase.
               onChange={(e) => setFaseMenstrual(e.target.value)}
               className="w-full bg-zinc-800 p-4 rounded-2xl"
             >
-              <option value="menstrual">Fase menstrual - bajar carga y priorizar tecnica</option>
+              <option value="menstrual">Fase menstrual - bajar carga y priorizar técnica</option>
               <option value="folicular">Fase folicular - mejor fase para progresar fuerza</option>
               <option value="ovulatoria">Fase ovulatoria - potencia controlada</option>
-              <option value="lutea">Fase lutea - moderar volumen e intensidad</option>
+              <option value="lutea">Fase lútea - moderar volumen e intensidad</option>
             </select>
           )}
 
           <p className="text-sm text-zinc-500">
-            Es una guia orientativa: cada alumna puede responder distinto. Si hay dolor, fatiga alta o malestar, se baja intensidad.
+            Es una guía orientativa: cada alumna puede responder distinto. Si hay dolor, fatiga alta o malestar, se baja intensidad.
           </p>
         </div>
       </div>
@@ -1076,7 +1078,7 @@ Vuelta a la calma: dirigida en clase.
           <option value="fighter">Fighter</option>
           <option value="tenis">Tenis</option>
           <option value="fuerza">Fuerza</option>
-          <option value="perdida_grasa">Perdida grasa</option>
+          <option value="perdida_grasa">Pérdida grasa</option>
           <option value="cardio">Cardio</option>
         </select>
 
@@ -1085,7 +1087,7 @@ Vuelta a la calma: dirigida en clase.
           onChange={(e) => setNivel(e.target.value)}
           className="bg-zinc-800 p-4 rounded-2xl"
         >
-          <option value="basico">Basico</option>
+          <option value="basico">Básico</option>
           <option value="intermedio">Intermedio</option>
           <option value="avanzado">Avanzado</option>
         </select>
@@ -1095,9 +1097,9 @@ Vuelta a la calma: dirigida en clase.
           onChange={(e) => setFaseATR(e.target.value)}
           className="bg-zinc-800 p-4 rounded-2xl"
         >
-          <option value="acumulacion">ATR Acumulacion</option>
-          <option value="transformacion">ATR Transformacion</option>
-          <option value="realizacion">ATR Realizacion</option>
+          <option value="acumulacion">ATR Acumulación</option>
+          <option value="transformacion">ATR Transformación</option>
+          <option value="realizacion">ATR Realización</option>
         </select>
       </div>
 
@@ -1124,7 +1126,7 @@ Vuelta a la calma: dirigida en clase.
             ? 'SIN PLANIFICACIONES DISPONIBLES'
             : tipoPlan === 'mensual'
               ? 'GENERAR PLAN MENSUAL'
-              : 'GENERAR 1 PLANIFICACION'}
+              : 'GENERAR 1 PLANIFICACIÓN'}
       </button>
 
       <button
@@ -1133,7 +1135,7 @@ Vuelta a la calma: dirigida en clase.
       >
         {tipoPlan === 'mensual'
           ? `SOLICITAR PLAN MENSUAL - $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}`
-          : `COMPRAR 1 GENERACION - $${tramoActual.precio.toLocaleString('es-CL')}`}
+          : `COMPRAR 1 GENERACIÓN - $${tramoActual.precio.toLocaleString('es-CL')}`}
       </button>
 
       {mensaje && (
@@ -1161,7 +1163,7 @@ Vuelta a la calma: dirigida en clase.
                 onClick={() => setPlanAbierto(plan)}
                 className="bg-red-600 px-5 py-3 rounded-2xl font-black"
               >
-                Ver planificacion
+                Ver planificación
               </button>
 
               <button
@@ -1184,7 +1186,7 @@ Vuelta a la calma: dirigida en clase.
           <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-4xl w-full max-h-[96vh] sm:max-h-[85vh] overflow-auto">
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-5">
               <h2 className="text-2xl sm:text-3xl font-black text-yellow-400">
-                Planificacion
+                Planificación
               </h2>
 
               <div className="grid sm:flex gap-2">

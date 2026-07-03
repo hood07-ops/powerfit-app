@@ -93,16 +93,16 @@ const EVALUACIONES = [
   {
     id: 'salto',
     nombre: 'Test salto vertical',
-    metodo: 'Evaluacion potencia',
+    metodo: 'Evaluación potencia',
     tipo: 'repeticiones',
     label: 'Mejor salto',
     unidad: 'cm',
-    descripcion: '3 intentos, registrar el mejor salto en centimetros.',
+    descripcion: '3 intentos, registrar el mejor salto en centímetros.',
   },
   {
     id: 'cooper',
     nombre: 'Test Cooper / VO2',
-    metodo: 'Evaluacion aerobica 12 min',
+    metodo: 'Evaluación aeróbica 12 min',
     tipo: 'repeticiones',
     label: 'Distancia 12 min',
     unidad: 'metros',
@@ -111,7 +111,7 @@ const EVALUACIONES = [
   {
     id: 'velocidad',
     nombre: 'Sprint 30m',
-    metodo: 'Evaluacion velocidad',
+    metodo: 'Evaluación velocidad',
     tipo: 'tiempo',
     label: 'Mejor tiempo',
     unidad: 'segundos',
@@ -129,7 +129,7 @@ const EVALUACIONES = [
   {
     id: 'for_time',
     nombre: 'For Time / WOD',
-    metodo: 'Evaluacion tiempo bajo fatiga',
+    metodo: 'Evaluación tiempo bajo fatiga',
     tipo: 'tiempo',
     label: 'Tiempo final',
     unidad: 'segundos',
@@ -138,7 +138,7 @@ const EVALUACIONES = [
   {
     id: 'vueltas',
     nombre: 'AMRAP / vueltas',
-    metodo: 'Evaluacion densidad',
+    metodo: 'Evaluación densidad',
     tipo: 'vueltas',
     label: 'Vueltas completadas',
     unidad: 'vueltas',
@@ -147,7 +147,7 @@ const EVALUACIONES = [
   {
     id: 'reps',
     nombre: 'Repeticiones totales',
-    metodo: 'Evaluacion volumen',
+    metodo: 'Evaluación volumen',
     tipo: 'repeticiones',
     label: 'Repeticiones',
     unidad: 'reps',
@@ -155,8 +155,8 @@ const EVALUACIONES = [
   },
   {
     id: 'rm',
-    nombre: 'RM / fuerza maxima',
-    metodo: 'Evaluacion RM',
+    nombre: 'RM / fuerza máxima',
+    metodo: 'Evaluación RM',
     tipo: 'peso',
     label: 'Peso levantado',
     unidad: 'kg',
@@ -260,9 +260,10 @@ function unidadRecord(record) {
 
 function metadataRecord(record) {
   const metodo = String(record.metodo || '')
+  const metodoNormalizado = metodo.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
 
   function buscar(campo) {
-    const match = metodo.match(new RegExp(`${campo}:([^|]+)`))
+    const match = metodoNormalizado.match(new RegExp(`${campo}:([^|]+)`))
     return match ? match[1].trim() : ''
   }
 
@@ -282,7 +283,21 @@ function fechaRecord(record) {
 }
 
 function faseAtrRecord(record) {
-  return metadataRecord(record).atr || faseAtrPorFecha(fechaRecord(record))
+  const atr = metadataRecord(record).atr || faseAtrPorFecha(fechaRecord(record))
+
+  return normalizarFaseAtr(atr)
+}
+
+function normalizarFaseAtr(fase) {
+  const normalizada = String(fase || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+
+  if (normalizada === 'Acumulacion') return 'Acumulación'
+  if (normalizada === 'Transformacion') return 'Transformación'
+  if (normalizada === 'Realizacion') return 'Realización'
+
+  return fase || '-'
 }
 
 function mejorRecord(records, filtro, menorEsMejor = false) {
@@ -302,9 +317,9 @@ function mejorRecord(records, filtro, menorEsMejor = false) {
 function faseAtrPorFecha(fecha) {
   const dia = new Date(fecha).getDate()
 
-  if (dia <= 14) return 'Acumulacion'
-  if (dia <= 24) return 'Transformacion'
-  return 'Realizacion'
+  if (dia <= 14) return 'Acumulación'
+  if (dia <= 24) return 'Transformación'
+  return 'Realización'
 }
 
 function scoreRecord(record) {
@@ -322,7 +337,7 @@ function datosAtrMensual(records) {
     return fecha.getMonth() === hoy.getMonth() && fecha.getFullYear() === hoy.getFullYear()
   })
 
-  return ['Acumulacion', 'Transformacion', 'Realizacion'].map((fase) => {
+  return ['Acumulación', 'Transformación', 'Realización'].map((fase) => {
     const registros = delMes.filter((record) => faseAtrRecord(record) === fase)
     const total = registros.reduce((sum, record) => sum + scoreRecord(record), 0)
     const promedio = registros.length ? total / registros.length : 0
@@ -412,7 +427,7 @@ function semaforoCarga(records, asistencias, student) {
     return {
       color: 'bg-red-600',
       label: 'Rojo',
-      accion: 'Bajar carga, reducir volumen y priorizar recuperacion tecnica.',
+      accion: 'Bajar carga, reducir volumen y priorizar recuperación técnica.',
     }
   }
 
@@ -420,7 +435,7 @@ function semaforoCarga(records, asistencias, student) {
     return {
       color: 'bg-yellow-500 text-black',
       label: 'Amarillo',
-      accion: 'Mantener carga, controlar tecnica y observar respuesta del alumno.',
+      accion: 'Mantener carga, controlar técnica y observar respuesta del alumno.',
     }
   }
 
@@ -467,7 +482,7 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
       <div>
         <h3 className="text-3xl font-black text-red-500">Progreso PowerFit</h3>
         <p className="text-zinc-400 mt-2">
-          Graficos de crecimiento por records, tests, asistencia, RM y mesociclo ATR.
+          Gráficos de crecimiento por records, tests, asistencia, RM y mesociclo ATR.
         </p>
       </div>
 
@@ -481,7 +496,7 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
       <div className="bg-zinc-800 rounded-2xl p-4">
         <div className="flex flex-wrap items-center gap-3">
           <span className={`rounded-2xl px-4 py-2 font-black ${semaforo.color}`}>
-            Semaforo {semaforo.label}
+            Semáforo {semaforo.label}
           </span>
           <p className="text-zinc-300 font-bold">{semaforo.accion}</p>
         </div>
@@ -511,7 +526,7 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
 
       <div className="grid lg:grid-cols-2 gap-4">
         <div className="bg-zinc-800 rounded-2xl p-4">
-          <p className="font-black text-yellow-400 mb-3">Ultimos registros</p>
+          <p className="font-black text-yellow-400 mb-3">Últimos registros</p>
           <div className="space-y-2">
             {ultimos.map((record) => (
               <div key={record.id} className="bg-black/40 rounded-xl p-3">
@@ -522,7 +537,7 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
               </div>
             ))}
             {ultimos.length === 0 && (
-              <p className="text-zinc-500">Aun no hay records. Guarda tests desde Evaluaciones.</p>
+              <p className="text-zinc-500">Aún no hay records. Guarda tests desde Evaluaciones.</p>
             )}
           </div>
         </div>
@@ -532,10 +547,10 @@ function ProgressDashboard({ records, rms, asistencias, student }) {
           <div className="grid sm:grid-cols-2 gap-2 text-sm text-zinc-300">
             <p className="bg-black/40 rounded-xl p-3">Salto vertical: potencia de piernas.</p>
             <p className="bg-black/40 rounded-xl p-3">Cooper 12 min: VO2 max estimado.</p>
-            <p className="bg-black/40 rounded-xl p-3">Sprint 30m: velocidad/aceleracion.</p>
-            <p className="bg-black/40 rounded-xl p-3">RM: fuerza maxima por ejercicio.</p>
+            <p className="bg-black/40 rounded-xl p-3">Sprint 30m: velocidad/aceleración.</p>
+            <p className="bg-black/40 rounded-xl p-3">RM: fuerza máxima por ejercicio.</p>
             <p className="bg-black/40 rounded-xl p-3">Tiempo For Time: capacidad bajo fatiga.</p>
-            <p className="bg-black/40 rounded-xl p-3">Distancia controlada: volumen aerobico.</p>
+            <p className="bg-black/40 rounded-xl p-3">Distancia controlada: volumen aeróbico.</p>
           </div>
         </div>
       </div>
@@ -547,7 +562,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
   const [form, setForm] = useState({
     evaluacion: EVALUACIONES[0].id,
     fecha: fechaHoy(),
-    faseATR: 'Acumulacion',
+    faseATR: 'Acumulación',
     valor: '',
     ejercicio: RM_EJERCICIOS[0],
     rpe: '6',
@@ -595,7 +610,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
     const valor = Number(form.valor)
 
     if (!valor || valor <= 0) {
-      setMensaje('Ingresa un valor valido para la evaluacion.')
+      setMensaje('Ingresa un valor válido para la evaluación.')
       return
     }
 
@@ -608,8 +623,8 @@ function EvaluacionesPage({ student, user, onSaved }) {
         `Fecha:${form.fecha}`,
         `ATR:${form.faseATR}`,
         `RPE:${form.rpe}`,
-        `Energia:${form.energia}`,
-        `Sueno:${form.sueno}`,
+        `Energía:${form.energia}`,
+        `Sueño:${form.sueno}`,
         `Dolor:${form.dolor}`,
         `Obs:${String(form.observacion || '').replaceAll('|', '/')}`,
       ].join(' | ')
@@ -633,20 +648,20 @@ function EvaluacionesPage({ student, user, onSaved }) {
       const { error } = await supabase.from('records_entrenamiento').insert([payload])
 
       if (error) {
-        setMensaje(`Error guardando evaluacion: ${error.message}`)
+        setMensaje(`Error guardando evaluación: ${error.message}`)
         return
       }
 
       if (evaluacion.id === 'rm') {
         const rmError = await guardarRM(valor)
         if (rmError) {
-          setMensaje(`Evaluacion guardada, pero no se pudo actualizar RM: ${rmError.message}`)
+          setMensaje(`Evaluación guardada, pero no se pudo actualizar RM: ${rmError.message}`)
           return
         }
       }
 
       setForm((prev) => ({ ...prev, valor: '', observacion: '' }))
-      setMensaje('Evaluacion guardada. La ficha personal ya puede mostrar el progreso.')
+      setMensaje('Evaluación guardada. La ficha personal ya puede mostrar el progreso.')
       onSaved?.()
     } finally {
       setGuardando(false)
@@ -660,7 +675,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
           Evaluaciones
         </h2>
         <p className="text-zinc-400 mt-2">
-          Aqui se ingresan los records: tiempos, saltos, vueltas, distancia, VO2, RM y control de carga.
+          Aquí se ingresan los records: tiempos, saltos, vueltas, distancia, VO2, RM y control de carga.
         </p>
       </div>
 
@@ -690,9 +705,9 @@ function EvaluacionesPage({ student, user, onSaved }) {
             onChange={(e) => update('faseATR', e.target.value)}
             className="bg-black p-4 rounded-2xl"
           >
-            <option value="Acumulacion">ATR Acumulacion</option>
-            <option value="Transformacion">ATR Transformacion</option>
-            <option value="Realizacion">ATR Realizacion</option>
+            <option value="Acumulación">ATR Acumulación</option>
+            <option value="Transformación">ATR Transformación</option>
+            <option value="Realización">ATR Realización</option>
           </select>
 
           {evaluacion.id === 'rm' && (
@@ -722,14 +737,14 @@ function EvaluacionesPage({ student, user, onSaved }) {
           <textarea
             value={form.observacion}
             onChange={(e) => update('observacion', e.target.value)}
-            placeholder="Observacion del coach o del alumno"
+            placeholder="Observación del coach o del alumno"
             className="bg-black p-4 rounded-2xl sm:col-span-2 min-h-24"
           />
         </div>
 
         <div className="bg-zinc-800 rounded-2xl p-4 space-y-4">
           <div>
-            <p className="font-black text-yellow-400">Guia del test</p>
+            <p className="font-black text-yellow-400">Guía del test</p>
             <p className="text-zinc-300 mt-2">{evaluacion.descripcion}</p>
           </div>
 
@@ -746,7 +761,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
               />
             </label>
             <label className="space-y-1">
-              <span className="text-sm text-zinc-400">Energia 1-10</span>
+              <span className="text-sm text-zinc-400">Energía 1-10</span>
               <input
                 type="number"
                 min="1"
@@ -757,7 +772,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
               />
             </label>
             <label className="space-y-1">
-              <span className="text-sm text-zinc-400">Sueno 1-10</span>
+              <span className="text-sm text-zinc-400">Sueño 1-10</span>
               <input
                 type="number"
                 min="1"
@@ -787,7 +802,7 @@ function EvaluacionesPage({ student, user, onSaved }) {
         disabled={guardando}
         className="w-full bg-cyan-600 hover:bg-cyan-700 disabled:opacity-50 rounded-2xl p-5 font-black text-xl"
       >
-        {guardando ? 'Guardando...' : 'Guardar evaluacion'}
+        {guardando ? 'Guardando...' : 'Guardar evaluación'}
       </button>
 
       {mensaje && (
@@ -840,14 +855,14 @@ function AdminAlumnoModal({
 
         {alumno.estado_pago === 'Pagado' && diasVence !== null && diasVence <= 5 && (
           <div className="bg-yellow-500 text-black rounded-2xl p-4 mb-6 font-black">
-            Membresia por vencer:{' '}
-            {diasVence <= 0 ? 'vence hoy' : `faltan ${diasVence} dia(s)`}.
+            Membresía por vencer:{' '}
+            {diasVence <= 0 ? 'vence hoy' : `faltan ${diasVence} día(s)`}.
           </div>
         )}
 
         {alumno.estado_pago === 'Moroso' && (
           <div className="bg-red-900 border border-red-500 rounded-2xl p-4 mb-6 font-black">
-            Membresia vencida. El alumno queda bloqueado hasta registrar pago o confirmar Webpay.
+            Membresía vencida. El alumno queda bloqueado hasta registrar pago o confirmar Webpay.
           </div>
         )}
 
@@ -855,11 +870,11 @@ function AdminAlumnoModal({
           <Info label="Asistencias total" value={resumen.total} />
           <Info label="Asistencias este mes" value={resumen.mes} />
           <Info
-            label="Ultima asistencia"
+            label="Última asistencia"
             value={resumen.ultima ? new Date(resumen.ultima).toLocaleDateString() : '-'}
           />
           <Info
-            label="Dias sin asistir"
+            label="Días sin asistir"
             value={resumen.diasSinAsistir === null ? 'Sin registros' : resumen.diasSinAsistir}
           />
         </div>
@@ -881,7 +896,7 @@ function AdminAlumnoModal({
                 defaultValue={alumno.telefono || ''}
                 onBlur={(e) => onUpdate(alumno.id, 'telefono', e.target.value)}
                 className="bg-black p-3 rounded-xl"
-                placeholder="Telefono"
+                placeholder="Teléfono"
               />
               <input
                 type="number"
@@ -1027,7 +1042,7 @@ function AdminAlumnosPanel({
       <input
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre, correo, telefono, estado o rol..."
+        placeholder="Buscar por nombre, correo, teléfono, estado o rol..."
         className="w-full bg-black p-4 rounded-2xl mb-6"
       />
 
@@ -1058,8 +1073,8 @@ function AdminAlumnosPanel({
                   {diasVence === null
                     ? 'Sin fecha'
                     : diasVence < 0
-                      ? `Vencida hace ${Math.abs(diasVence)} dia(s)`
-                      : `Faltan ${diasVence} dia(s)`}
+                      ? `Vencida hace ${Math.abs(diasVence)} día(s)`
+                      : `Faltan ${diasVence} día(s)`}
                 </p>
               </div>
 
@@ -1092,7 +1107,7 @@ function AdminAlumnosPanel({
         })}
 
         {alumnosFiltrados.length === 0 && (
-          <p className="text-zinc-400">No hay alumnos para esa busqueda.</p>
+          <p className="text-zinc-400">No hay alumnos para esa búsqueda.</p>
         )}
       </div>
     </div>
@@ -1397,7 +1412,7 @@ export default function App() {
           onClick={cerrarSesion}
           className="bg-red-600 px-5 py-3 rounded-2xl font-black w-full sm:w-auto"
         >
-          Cerrar sesion
+          Cerrar sesión
         </button>
       </div>
 
@@ -1420,8 +1435,8 @@ export default function App() {
         <div className="bg-red-950 border border-red-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
           <h2 className="text-2xl sm:text-3xl font-black text-red-400">SERVICIOS BLOQUEADOS</h2>
           <p className="text-zinc-300 mt-2">
-            Tu cuenta esta pendiente o morosa. Regulariza el pago para desbloquear rutinas,
-            generador IA y metodos.
+            Tu cuenta está pendiente o morosa. Regulariza el pago para desbloquear rutinas,
+            generador IA y métodos.
           </p>
           <button
             onClick={abrirPagoMensualidad}
@@ -1434,10 +1449,10 @@ export default function App() {
 
       {mostrarAvisoVencimiento && (
         <div className="bg-yellow-500 text-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
-          <h2 className="text-2xl sm:text-3xl font-black">MEMBRESIA POR VENCER</h2>
+          <h2 className="text-2xl sm:text-3xl font-black">MEMBRESÍA POR VENCER</h2>
           <p className="mt-2 font-bold">
-            Tu membresia vence {diasParaVencer === 0 ? 'hoy' : `en ${diasParaVencer} dia(s)`}.
-            Regulariza el pago para evitar el bloqueo automatico.
+            Tu membresía vence {diasParaVencer === 0 ? 'hoy' : `en ${diasParaVencer} día(s)`}.
+            Regulariza el pago para evitar el bloqueo automático.
           </p>
           <button
             onClick={abrirPagoMensualidad}
@@ -1455,7 +1470,7 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
             <Info label="Correo" value={student?.email || user.email} />
-            <Info label="Telefono" value={student?.telefono} />
+            <Info label="Teléfono" value={student?.telefono} />
             <Info label="Peso" value={student?.peso} />
             <Info label="Fecha ingreso" value={student?.fecha_ingreso} />
             <Info label="Fecha pago" value={student?.fecha_pago} />

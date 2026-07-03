@@ -9,7 +9,7 @@ export default function LoginPage({ onLogin }) {
     password: '',
     telefono: '',
     fecha_ingreso: '',
-    categoria: '',
+    categoría: '',
     edad: '',
     peso: '',
     altura: '',
@@ -48,13 +48,13 @@ export default function LoginPage({ onLogin }) {
             user_id: data.user.id,
             telefono: form.telefono,
             fecha_ingreso: form.fecha_ingreso || null,
-            categoria: form.categoria,
+            categoría: form.categoría,
             edad: form.edad ? Number(form.edad) : null,
             peso: form.peso ? Number(form.peso) : null,
             altura: form.altura ? Number(form.altura) : null,
             contacto_emergencia: form.contacto_emergencia,
             observaciones: form.observaciones,
-            plan: 'Basico',
+            plan: 'Básico',
             estado_pago: 'Pendiente',
             monto: 0,
             xp: 0,
@@ -109,7 +109,7 @@ export default function LoginPage({ onLogin }) {
               <Input label="Nombre completo" value={form.nombre} onChange={(v) => update('nombre', v)} />
               <Input label="Teléfono" value={form.telefono} onChange={(v) => update('telefono', v)} />
               <Input type="date" label="Fecha ingreso" value={form.fecha_ingreso} onChange={(v) => update('fecha_ingreso', v)} />
-              <Input label="Categoría" value={form.categoria} onChange={(v) => update('categoria', v)} />
+              <Input label="Categoría" value={form.categoría} onChange={(v) => update('categoría', v)} />
               <Input type="number" label="Edad" value={form.edad} onChange={(v) => update('edad', v)} />
               <Input type="number" label="Peso kg" value={form.peso} onChange={(v) => update('peso', v)} />
               <Input type="number" label="Altura cm" value={form.altura} onChange={(v) => update('altura', v)} />
