@@ -22,6 +22,31 @@ $$;
 
 grant execute on function public.is_powerfit_admin() to authenticated;
 
+create or replace function public.powerfit_safe_date(value text)
+returns date
+language plpgsql
+immutable
+set search_path = public, pg_temp
+as $$
+begin
+  if value is null or trim(value) = '' or lower(trim(value)) in ('dd-mm-aaaa', 'null') then
+    return null;
+  end if;
+
+  begin
+    return value::date;
+  exception when others then
+    begin
+      return to_date(value, 'DD-MM-YYYY');
+    exception when others then
+      return null;
+    end;
+  end;
+end;
+$$;
+
+grant execute on function public.powerfit_safe_date(text) to anon, authenticated;
+
 create or replace function public.get_powerfit_checkin_alumno(p_alumno_id text)
 returns jsonb
 language plpgsql
@@ -33,6 +58,7 @@ declare
   v_estado text;
   v_ya_registrado boolean;
   v_hoy date := current_date;
+  v_vencimiento date;
 begin
   select *
   into v_alumno
@@ -45,9 +71,9 @@ begin
   end if;
 
   v_estado := coalesce(v_alumno.estado_pago, 'Pendiente');
+  v_vencimiento := public.powerfit_safe_date(v_alumno.fecha_vencimiento::text);
 
-  if v_alumno.fecha_vencimiento is not null
-     and v_alumno.fecha_vencimiento::date < v_hoy then
+  if v_vencimiento is not null and v_vencimiento < v_hoy then
     v_estado := 'Moroso';
     update public.alumnos
     set estado_pago = 'Moroso'
@@ -88,6 +114,7 @@ declare
   v_ya_registrado boolean;
   v_fecha timestamptz := now();
   v_hoy date := current_date;
+  v_vencimiento date;
   v_exp numeric;
   v_rango text;
 begin
@@ -102,9 +129,9 @@ begin
   end if;
 
   v_estado := coalesce(v_alumno.estado_pago, 'Pendiente');
+  v_vencimiento := public.powerfit_safe_date(v_alumno.fecha_vencimiento::text);
 
-  if v_alumno.fecha_vencimiento is not null
-     and v_alumno.fecha_vencimiento::date < v_hoy then
+  if v_vencimiento is not null and v_vencimiento < v_hoy then
     v_estado := 'Moroso';
     update public.alumnos
     set estado_pago = 'Moroso'
