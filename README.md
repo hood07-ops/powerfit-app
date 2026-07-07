@@ -1,16 +1,59 @@
-# React + Vite
+# PowerFit 360
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicacion web y Android para gestion de alumnos, asistencia QR, rutinas, IA, reportes, pagos y progreso deportivo.
 
-Currently, two official plugins are available:
+## Flujo de pago Mercado Pago
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+El flujo esperado queda preparado asi:
 
-## React Compiler
+1. Alumno presiona **Pagar mensualidad**.
+2. La app llama a `VITE_PAYMENT_URL`.
+3. El backend crea una preferencia en Mercado Pago.
+4. Mercado Pago devuelve `init_point`.
+5. La app abre el link de pago.
+6. Alumno paga.
+7. Mercado Pago llama al webhook.
+8. El webhook verifica el pago con Mercado Pago.
+9. Supabase actualiza `alumnos`:
+   - `estado_pago = Pagado`
+   - `fecha_pago = hoy`
+   - `fecha_vencimiento = +1 mes`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Funciones Supabase
 
-## Expanding the ESLint configuration
+Se agregaron dos Edge Functions:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- `supabase/functions/create-mercadopago-preference`
+- `supabase/functions/mercadopago-webhook`
+
+## Variables necesarias
+
+Frontend:
+
+```env
+VITE_PAYMENT_URL=https://TU-PROYECTO.supabase.co/functions/v1/create-mercadopago-preference
+```
+
+Supabase Edge Functions:
+
+```env
+MP_ACCESS_TOKEN=APP_USR_xxx
+POWERFIT_APP_URL=https://tu-app.vercel.app
+MERCADOPAGO_WEBHOOK_URL=https://TU-PROYECTO.supabase.co/functions/v1/mercadopago-webhook
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=xxx
+```
+
+## Comandos utiles
+
+```powershell
+npm run build
+npx cap sync android
+```
+
+Para revisar APK en GitHub Actions:
+
+```powershell
+gh run list --limit 5
+gh run view --web
+```

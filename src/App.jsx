@@ -862,7 +862,7 @@ function AdminAlumnoModal({
 
         {alumno.estado_pago === 'Moroso' && (
           <div className="bg-red-900 border border-red-500 rounded-2xl p-4 mb-6 font-black">
-            Membresía vencida. El alumno queda bloqueado hasta registrar pago o confirmar Webpay.
+            Membresía vencida. El alumno queda bloqueado hasta registrar pago o confirmar la pasarela de pago.
           </div>
         )}
 
@@ -969,9 +969,9 @@ function AdminAlumnoModal({
             </div>
 
             <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4 mt-5">
-              <p className="font-black text-yellow-400">Webpay</p>
+              <p className="font-black text-yellow-400">Mercado Pago</p>
               <p className="text-zinc-400 mt-2">
-                Cuando Webpay confirme el pago, el backend debe actualizar esta misma ficha:
+                Cuando Mercado Pago confirme el pago, el webhook debe actualizar esta misma ficha:
                 fecha de pago hoy, vencimiento +1 mes, estado Pagado y generaciones disponibles.
               </p>
             </div>
@@ -1618,18 +1618,38 @@ export default function App() {
     await cargarUsuario()
   }
 
-  function abrirPagoAlumno(alumno) {
+  async function abrirPagoAlumno(alumno) {
     if (!alumno) return
 
     const paymentUrl = import.meta.env.VITE_PAYMENT_URL
 
     if (paymentUrl) {
-      const url = new URL(paymentUrl)
-      url.searchParams.set('alumno_id', alumno.id)
-      url.searchParams.set('user_id', alumno.user_id || user.id)
-      url.searchParams.set('nombre', alumno.nombre || '')
-      url.searchParams.set('monto', String(alumno.monto || 0))
-      window.open(url.toString(), '_blank', 'noopener,noreferrer')
+      const popup = window.open('', '_blank', 'noopener,noreferrer')
+      const response = await fetch(paymentUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          alumno_id: alumno.id,
+          user_id: alumno.user_id || user.id,
+          nombre: alumno.nombre || user.email,
+          monto: Number(alumno.monto || 0),
+        }),
+      })
+      const data = await response.json()
+
+      if (!response.ok || !data.init_point) {
+        popup?.close()
+        window.alert(data.error || 'No se pudo crear el pago en Mercado Pago.')
+        return
+      }
+
+      if (popup) {
+        popup.location.href = data.init_point
+      } else {
+        window.open(data.init_point, '_blank', 'noopener,noreferrer')
+      }
       return
     }
 
