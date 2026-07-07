@@ -1114,6 +1114,301 @@ function AdminAlumnosPanel({
   )
 }
 
+function experienciaAlumno(alumno) {
+  return Number(alumno?.experiencia || alumno?.xp || 0)
+}
+
+function rangoPorXP(xp) {
+  if (xp >= 5000) return 'Leyenda PowerFit'
+  if (xp >= 2500) return 'Diamante'
+  if (xp >= 1200) return 'Oro'
+  if (xp >= 500) return 'Plata'
+  return 'Bronce'
+}
+
+function AsistenciaQrPanel({ student, students, asistencias, isAdmin }) {
+  const registros = isAdmin
+    ? asistencias
+    : asistencias.filter((item) => String(item.alumno_id) === String(student?.id))
+  const ultimos = [...registros]
+    .sort((a, b) => new Date(fechaAsistencia(b) || 0) - new Date(fechaAsistencia(a) || 0))
+    .slice(0, 12)
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-zinc-900 border border-cyan-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-cyan-400">
+          Asistencia QR
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Control de ingreso por QR, estado de pago, XP y registro de asistencia.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <Info label="Asistencias registradas" value={registros.length} />
+        <Info label="Alumnos activos" value={isAdmin ? students.length : 1} />
+        <Info label="Mi QR" value="Disponible" />
+      </div>
+
+      <MiQRPage student={student} />
+
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h3 className="text-2xl font-black text-cyan-300 mb-4">
+          Últimas asistencias
+        </h3>
+        <div className="space-y-3">
+          {ultimos.map((item) => (
+            <div
+              key={item.id}
+              className="grid sm:grid-cols-4 gap-3 bg-zinc-800 rounded-2xl p-4"
+            >
+              <p className="font-black">{item.nombre_alumno || item.alumno_id}</p>
+              <p>{new Date(fechaAsistencia(item)).toLocaleDateString()}</p>
+              <p>{new Date(fechaAsistencia(item)).toLocaleTimeString()}</p>
+              <StatusBadge estado={item.estado_pago || 'Pendiente'} />
+            </div>
+          ))}
+          {ultimos.length === 0 && (
+            <p className="text-zinc-400">Todavía no hay asistencias registradas.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function XpRangosPanel({ student, students, isAdmin }) {
+  const alumnos = isAdmin ? students : [student].filter(Boolean)
+  const ranking = [...alumnos]
+    .map((alumno) => ({ ...alumno, xpTotal: experienciaAlumno(alumno) }))
+    .sort((a, b) => b.xpTotal - a.xpTotal)
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
+          XP y rangos
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Ranking de constancia: asistencia QR suma XP y actualiza rangos.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-5 gap-3">
+        {['Bronce', 'Plata', 'Oro', 'Diamante', 'Leyenda PowerFit'].map((rango) => (
+          <div key={rango} className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+            <p className="font-black text-yellow-300">{rango}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h3 className="text-2xl font-black text-yellow-300 mb-4">Ranking</h3>
+        <div className="space-y-3">
+          {ranking.map((alumno, index) => (
+            <div
+              key={alumno.id || index}
+              className="grid sm:grid-cols-4 gap-3 bg-zinc-800 rounded-2xl p-4 items-center"
+            >
+              <p className="font-black">#{index + 1}</p>
+              <p>{alumno.nombre || 'Alumno'}</p>
+              <p>{alumno.xpTotal} XP</p>
+              <p className="text-yellow-300 font-black">
+                {alumno.rango || rangoPorXP(alumno.xpTotal)}
+              </p>
+            </div>
+          ))}
+          {ranking.length === 0 && (
+            <p className="text-zinc-400">Todavía no hay alumnos con XP.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PremiumPanel({ student, abrirPagoMensualidad }) {
+  const premiumActivo = Number(student?.premium || 0) === 1 || student?.plan === 'Premium'
+
+  return (
+    <div className="bg-zinc-900 border border-purple-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-5">
+      <div>
+        <h2 className="text-3xl sm:text-4xl font-black text-purple-300">
+          Premium
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Planes avanzados, IA mensual, biblioteca completa y seguimiento de progreso.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <Info label="Estado premium" value={premiumActivo ? 'Activo' : 'No activo'} />
+        <Info label="Plan mensual IA" value="$60.000" />
+        <Info label="Generaciones IA" value={student?.generaciones_disponibles || 0} />
+      </div>
+
+      <button
+        onClick={abrirPagoMensualidad}
+        className="w-full bg-purple-600 hover:bg-purple-700 rounded-2xl p-5 font-black"
+      >
+        Solicitar o renovar Premium
+      </button>
+    </div>
+  )
+}
+
+function ReportesPanel({ students, asistencias, registroCompras, descargarCSV }) {
+  const comprasAprobadas = registroCompras.filter(
+    (compra) => (compra.estado || compra.estado_pago) === 'Aprobado'
+  )
+  const totalCompras = comprasAprobadas.reduce(
+    (sum, compra) => sum + Number(compra.monto || 0),
+    0
+  )
+  const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso')
+
+  function descargarReporte() {
+    descargarCSV(
+      'reporte_powerfit_360.csv',
+      'Metrica,Valor',
+      [
+        `Alumnos,${students.length}`,
+        `Asistencias,${asistencias.length}`,
+        `Morosos,${morosos.length}`,
+        `Compras aprobadas,${comprasAprobadas.length}`,
+        `Total compras,${totalCompras}`,
+      ],
+      'Total financiero',
+      totalCompras
+    )
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-zinc-900 border border-blue-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-blue-400">Reportes</h2>
+        <p className="text-zinc-400 mt-2">
+          Resumen operativo y financiero para administrar PowerFit 360.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        <Info label="Alumnos" value={students.length} />
+        <Info label="Asistencias" value={asistencias.length} />
+        <Info label="Morosos" value={morosos.length} />
+        <Info label="Ingresos compras" value={`$${totalCompras}`} />
+      </div>
+
+      <button
+        onClick={descargarReporte}
+        className="w-full bg-blue-600 hover:bg-blue-700 rounded-2xl p-5 font-black"
+      >
+        Descargar reporte CSV
+      </button>
+    </div>
+  )
+}
+
+function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
+  const pagados = students.filter((alumno) => alumno.estado_pago === 'Pagado').length
+  const pendientes = students.filter((alumno) => alumno.estado_pago === 'Pendiente').length
+  const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso').length
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-green-400">
+          Estadísticas
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Lectura rápida de alumnos, pagos, asistencias y evaluaciones registradas.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        <Info label="Pagados" value={pagados} />
+        <Info label="Pendientes" value={pendientes} />
+        <Info label="Morosos" value={morosos} />
+        <Info label="Evaluaciones" value={recordsEntrenamiento.length} />
+      </div>
+
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h3 className="text-2xl font-black text-green-300 mb-4">
+          Asistencia por alumno
+        </h3>
+        <div className="space-y-3">
+          {students.slice(0, 12).map((alumno) => {
+            const total = asistencias.filter(
+              (item) => String(item.alumno_id) === String(alumno.id)
+            ).length
+
+            return (
+              <div key={alumno.id} className="grid sm:grid-cols-3 gap-3 bg-zinc-800 rounded-2xl p-4">
+                <p className="font-black">{alumno.nombre}</p>
+                <p>{total} asistencias</p>
+                <StatusBadge estado={alumno.estado_pago} />
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function NotificacionesPanel({ students, registroCompras, student, isAdmin }) {
+  const comprasPendientes = registroCompras.filter(
+    (compra) => (compra.estado || compra.estado_pago || 'Pendiente') !== 'Aprobado'
+  )
+  const alumnosPorVencer = students.filter((alumno) => {
+    const dias = diferenciaDias(alumno.fecha_vencimiento)
+    return alumno.estado_pago === 'Pagado' && dias !== null && dias <= 5
+  })
+  const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso')
+  const misDias = diferenciaDias(student?.fecha_vencimiento)
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-zinc-900 border border-orange-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-orange-400">
+          Notificaciones
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Alertas de pagos, vencimientos, bloqueos y solicitudes pendientes.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        <Info label="Compras pendientes" value={comprasPendientes.length} />
+        <Info label="Membresías por vencer" value={alumnosPorVencer.length} />
+        <Info label="Morosos" value={morosos.length} />
+      </div>
+
+      {!isAdmin && misDias !== null && misDias <= 5 && (
+        <div className="bg-yellow-500 text-black rounded-2xl p-5 font-black">
+          Tu membresía vence {misDias <= 0 ? 'hoy' : `en ${misDias} día(s)`}.
+        </div>
+      )}
+
+      {isAdmin && (
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-3">
+          {[...comprasPendientes, ...alumnosPorVencer, ...morosos].slice(0, 16).map((item, index) => (
+            <div key={item.id || index} className="bg-zinc-800 rounded-2xl p-4">
+              <p className="font-black">{item.nombre_alumno || item.nombre || 'Alumno'}</p>
+              <p className="text-zinc-400">
+                {item.monto
+                  ? `Solicitud pendiente por $${item.monto}`
+                  : `Estado: ${item.estado_pago || 'Pendiente'} - vence ${item.fecha_vencimiento || '-'}`}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
@@ -1122,7 +1417,7 @@ export default function App() {
   const [recordsEntrenamiento, setRecordsEntrenamiento] = useState([])
   const [rmsAlumno, setRmsAlumno] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
-  const [section, setSection] = useState('Ficha')
+  const [section, setSection] = useState('AsistenciaQR')
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -1418,14 +1713,19 @@ export default function App() {
 
       <div className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
+          <Btn text="Asistencia QR" active={section === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
+          <Btn text="XP y rangos" active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
+          <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
+          <Btn text="IA funcionando" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn text="Premium" active={section === 'Premium'} set={() => setSection('Premium')} />
+          <Btn text="Reportes" active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
+          <Btn text="Estadísticas" active={section === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
+          <Btn text="Notificaciones" active={section === 'Notificaciones'} set={() => setSection('Notificaciones')} />
+
           <Btn text="Ficha personal" active={section === 'Ficha'} set={() => setSection('Ficha')} />
           <Btn text="Pago / deuda" active={section === 'Pago'} set={() => setSection('Pago')} />
-          <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
           <Btn text="Evaluaciones" active={section === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
-          <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
-          <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
-          <Btn text="MI QR" active={section === 'MiQR'} set={() => setSection('MiQR')} />
-
           {isAdmin && <Btn text="ADMIN ALUMNOS" active={section === 'Admin'} set={() => setSection('Admin')} />}
           {isAdmin && <Btn text="Registro compras" active={section === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
         </div>
@@ -1461,6 +1761,66 @@ export default function App() {
             Pagar mensualidad
           </button>
         </div>
+      )}
+
+      {section === 'AsistenciaQR' && (
+        <AsistenciaQrPanel
+          student={student}
+          students={students}
+          asistencias={asistencias}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {section === 'XPRangos' && !bloqueado && (
+        <XpRangosPanel
+          student={student}
+          students={students}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {section === 'Metodos' && !bloqueado && <MetodosPage />}
+
+      {section === 'Generador' && !bloqueado && (
+        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
+      )}
+
+      {section === 'Rutinas' && !bloqueado && (
+        <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
+      )}
+
+      {section === 'Premium' && (
+        <PremiumPanel
+          student={student}
+          abrirPagoMensualidad={abrirPagoMensualidad}
+        />
+      )}
+
+      {section === 'Reportes' && isAdmin && (
+        <ReportesPanel
+          students={students}
+          asistencias={asistencias}
+          registroCompras={registroCompras}
+          descargarCSV={descargarCSV}
+        />
+      )}
+
+      {section === 'Estadísticas' && !bloqueado && (
+        <EstadísticasPanel
+          students={students}
+          asistencias={asistencias}
+          recordsEntrenamiento={recordsEntrenamiento}
+        />
+      )}
+
+      {section === 'Notificaciones' && (
+        <NotificacionesPanel
+          students={students}
+          registroCompras={registroCompras}
+          student={student}
+          isAdmin={isAdmin}
+        />
       )}
 
       {section === 'Ficha' && (
@@ -1508,10 +1868,6 @@ export default function App() {
         </div>
       )}
 
-      {section === 'Rutinas' && !bloqueado && (
-        <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
-      )}
-
       {section === 'Evaluaciones' && !bloqueado && (
         <EvaluacionesPage
           student={student}
@@ -1519,14 +1875,6 @@ export default function App() {
           onSaved={() => cargarUsuario()}
         />
       )}
-
-      {section === 'Generador' && !bloqueado && (
-        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
-      )}
-
-      {section === 'Metodos' && !bloqueado && <MetodosPage />}
-
-      {section === 'MiQR' && <MiQRPage student={student} />}
 
       {section === 'Admin' && isAdmin && (
         <AdminAlumnosPanel
