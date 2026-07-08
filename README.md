@@ -7,7 +7,7 @@ Aplicacion web y Android para gestion de alumnos, asistencia QR, rutinas, IA, re
 El flujo esperado queda preparado asi:
 
 1. Alumno presiona **Pagar mensualidad**.
-2. La app llama a `VITE_PAYMENT_URL`.
+2. La app llama a Supabase Edge Function `create-preference` o a `VITE_PAYMENT_URL` si se configura una URL manual.
 3. El backend crea una preferencia en Mercado Pago.
 4. Mercado Pago devuelve `init_point`.
 5. La app abre el link de pago.
@@ -23,7 +23,8 @@ El flujo esperado queda preparado asi:
 
 Se agregaron dos Edge Functions:
 
-- `supabase/functions/create-mercadopago-preference`
+- `supabase/functions/create-preference`
+- `supabase/functions/create-mercadopago-preference` queda como alias compatible.
 - `supabase/functions/mercadopago-webhook`
 
 ## Variables necesarias
@@ -31,8 +32,12 @@ Se agregaron dos Edge Functions:
 Frontend:
 
 ```env
-VITE_PAYMENT_URL=https://TU-PROYECTO.supabase.co/functions/v1/create-mercadopago-preference
+VITE_MP_PUBLIC_KEY=TU_PUBLIC_KEY_DE_PRUEBA
+VITE_PAYMENT_URL=https://TU-PROYECTO.supabase.co/functions/v1/create-preference
 ```
+
+`VITE_PAYMENT_URL` es opcional si la app usa `supabase.functions.invoke('create-preference')`.
+`VITE_MP_PUBLIC_KEY` puede quedar lista para Checkout Pro/SDK del frontend, pero el flujo actual abre el `init_point` devuelto por backend.
 
 Supabase Edge Functions:
 

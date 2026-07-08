@@ -16,9 +16,9 @@ function jsonResponse(body: unknown, status = 200) {
   })
 }
 
-function addOneMonth(date: Date) {
+function addThirtyDays(date: Date) {
   const next = new Date(date)
-  next.setMonth(next.getMonth() + 1)
+  next.setDate(next.getDate() + 30)
   return next
 }
 
@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
   }
 
   const hoy = new Date()
-  const vencimiento = addOneMonth(hoy)
+  const vencimiento = addThirtyDays(hoy)
   const supabase = createClient(supabaseUrl, serviceRoleKey)
 
   const updateData = {
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
       generaciones: 0,
       estado: 'Aprobado',
       payment_id: String(paymentId),
-      referencia: 'Mercado Pago mensualidad',
+      referencia: `Mercado Pago mensualidad aprobada - comprobante ${paymentId}`,
     },
   ])
 

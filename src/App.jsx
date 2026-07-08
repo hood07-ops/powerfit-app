@@ -1622,6 +1622,12 @@ export default function App() {
     if (!alumno) return
 
     const paymentUrl = import.meta.env.VITE_PAYMENT_URL
+    const paymentPayload = {
+      alumno_id: alumno.id,
+      user_id: alumno.user_id || user.id,
+      nombre: alumno.nombre || user.email,
+      monto: Number(alumno.monto || 0),
+    }
 
     if (paymentUrl) {
       const popup = window.open('', '_blank', 'noopener,noreferrer')
@@ -1630,26 +1636,32 @@ export default function App() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          alumno_id: alumno.id,
-          user_id: alumno.user_id || user.id,
-          nombre: alumno.nombre || user.email,
-          monto: Number(alumno.monto || 0),
-        }),
+        body: JSON.stringify(paymentPayload),
       })
       const data = await response.json()
+      const checkoutUrl = data.init_point || data.sandbox_init_point
 
-      if (!response.ok || !data.init_point) {
+      if (!response.ok || !checkoutUrl) {
         popup?.close()
         window.alert(data.error || 'No se pudo crear el pago en Mercado Pago.')
         return
       }
 
       if (popup) {
-        popup.location.href = data.init_point
+        popup.location.href = checkoutUrl
       } else {
-        window.open(data.init_point, '_blank', 'noopener,noreferrer')
+        window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
       }
+      return
+    }
+
+    const { data, error } = await supabase.functions.invoke('create-preference', {
+      body: paymentPayload,
+    })
+    const checkoutUrl = data?.init_point || data?.sandbox_init_point
+
+    if (!error && checkoutUrl) {
+      window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
       return
     }
 

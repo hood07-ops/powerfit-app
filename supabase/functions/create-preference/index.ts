@@ -87,8 +87,8 @@ Deno.serve(async (req) => {
   }
 
   return jsonResponse({
-    id: data.id,
     preferenceId: data.id,
+    id: data.id,
     init_point: data.init_point,
     sandbox_init_point: data.sandbox_init_point,
   })
