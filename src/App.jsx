@@ -1621,6 +1621,7 @@ export default function App() {
   async function abrirPagoAlumno(alumno) {
     if (!alumno) return
 
+    const popup = window.open('', '_blank', 'noopener,noreferrer')
     const paymentUrl = import.meta.env.VITE_PAYMENT_URL
     const paymentPayload = {
       alumno_id: alumno.id,
@@ -1628,49 +1629,74 @@ export default function App() {
       nombre: alumno.nombre || user.email,
       monto: Number(alumno.monto || 0),
     }
+    const whatsappUrl = `https://wa.me/56988497852?text=${encodeURIComponent(
+      `Hola Robinson, soy ${alumno.nombre || user.email}. Quiero pagar mi mensualidad PowerFit de $${alumno.monto || 0}.`
+    )}`
 
-    if (paymentUrl) {
-      const popup = window.open('', '_blank', 'noopener,noreferrer')
-      const response = await fetch(paymentUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(paymentPayload),
-      })
-      const data = await response.json()
-      const checkoutUrl = data.init_point || data.sandbox_init_point
+    function abrirFallback(mensaje) {
+      if (popup) {
+        popup.location.href = whatsappUrl
+      } else {
+        window.location.href = whatsappUrl
+      }
 
-      if (!response.ok || !checkoutUrl) {
-        popup?.close()
-        window.alert(data.error || 'No se pudo crear el pago en Mercado Pago.')
+      if (mensaje) {
+        window.alert(mensaje)
+      }
+    }
+
+    if (!paymentPayload.monto || paymentPayload.monto <= 0) {
+      abrirFallback('La mensualidad no tiene monto configurado. Te abrí WhatsApp para coordinar el pago.')
+      return
+    }
+
+    try {
+      if (paymentUrl) {
+        const response = await fetch(paymentUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(paymentPayload),
+        })
+        const data = await response.json()
+        const checkoutUrl = data.init_point || data.sandbox_init_point
+
+        if (!response.ok || !checkoutUrl) {
+          abrirFallback(data.error || 'No se pudo crear el pago en Mercado Pago. Te abrí WhatsApp como respaldo.')
+          return
+        }
+
+        if (popup) {
+          popup.location.href = checkoutUrl
+        } else {
+          window.location.href = checkoutUrl
+        }
         return
       }
 
-      if (popup) {
-        popup.location.href = checkoutUrl
-      } else {
-        window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
+      const { data, error } = await supabase.functions.invoke('create-preference', {
+        body: paymentPayload,
+      })
+      const checkoutUrl = data?.init_point || data?.sandbox_init_point
+
+      if (!error && checkoutUrl) {
+        if (popup) {
+          popup.location.href = checkoutUrl
+        } else {
+          window.location.href = checkoutUrl
+        }
+        return
       }
-      return
+
+      abrirFallback(
+        'Mercado Pago todavía no está configurado o la función create-preference no está desplegada. Te abrí WhatsApp como respaldo.'
+      )
+    } catch (error) {
+      abrirFallback(
+        `No se pudo iniciar Mercado Pago (${error.message}). Te abrí WhatsApp como respaldo.`
+      )
     }
-
-    const { data, error } = await supabase.functions.invoke('create-preference', {
-      body: paymentPayload,
-    })
-    const checkoutUrl = data?.init_point || data?.sandbox_init_point
-
-    if (!error && checkoutUrl) {
-      window.open(checkoutUrl, '_blank', 'noopener,noreferrer')
-      return
-    }
-
-    const texto = `Hola Robinson, soy ${alumno.nombre || user.email}. Quiero pagar mi mensualidad PowerFit de $${alumno.monto || 0}.`
-    window.open(
-      `https://wa.me/56988497852?text=${encodeURIComponent(texto)}`,
-      '_blank',
-      'noopener,noreferrer'
-    )
   }
 
   function abrirPagoMensualidad() {
