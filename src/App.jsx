@@ -1629,24 +1629,15 @@ export default function App() {
       nombre: alumno.nombre || user.email,
       monto: Number(alumno.monto || 0),
     }
-    const whatsappUrl = `https://wa.me/56988497852?text=${encodeURIComponent(
-      `Hola Robinson, soy ${alumno.nombre || user.email}. Quiero pagar mi mensualidad PowerFit de $${alumno.monto || 0}.`
-    )}`
-
-    function abrirFallback(mensaje) {
-      if (popup) {
-        popup.location.href = whatsappUrl
-      } else {
-        window.location.href = whatsappUrl
-      }
-
+    function cerrarPagoConAviso(mensaje) {
+      popup?.close()
       if (mensaje) {
         window.alert(mensaje)
       }
     }
 
     if (!paymentPayload.monto || paymentPayload.monto <= 0) {
-      abrirFallback('La mensualidad no tiene monto configurado. Te abrí WhatsApp para coordinar el pago.')
+      cerrarPagoConAviso('La mensualidad no tiene monto configurado. Corrige el monto del alumno antes de pagar por Mercado Pago.')
       return
     }
 
@@ -1663,7 +1654,7 @@ export default function App() {
         const checkoutUrl = data.init_point || data.sandbox_init_point
 
         if (!response.ok || !checkoutUrl) {
-          abrirFallback(data.error || 'No se pudo crear el pago en Mercado Pago. Te abrí WhatsApp como respaldo.')
+          cerrarPagoConAviso(data.error || 'No se pudo crear el pago en Mercado Pago. Revisa las credenciales y la función backend.')
           return
         }
 
@@ -1689,12 +1680,12 @@ export default function App() {
         return
       }
 
-      abrirFallback(
-        'Mercado Pago todavía no está configurado o la función create-preference no está desplegada. Te abrí WhatsApp como respaldo.'
+      cerrarPagoConAviso(
+        'Mercado Pago todavía no está configurado o la función create-preference no está desplegada. Configura MP_ACCESS_TOKEN y despliega la función para abrir Checkout Pro.'
       )
     } catch (error) {
-      abrirFallback(
-        `No se pudo iniciar Mercado Pago (${error.message}). Te abrí WhatsApp como respaldo.`
+      cerrarPagoConAviso(
+        `No se pudo iniciar Mercado Pago (${error.message}). Revisa la configuración de Mercado Pago.`
       )
     }
   }
