@@ -3,6 +3,7 @@ import './App.css'
 import { supabase } from './supabase'
 
 import CheckInPage from './pages/CheckInPage'
+import ConstructorPage from './pages/ConstructorPage'
 import GeneradorPage from './pages/GeneradorPage'
 import LoginPage from './pages/LoginPage'
 import MetodosPage from './pages/MetodosPage'
@@ -65,6 +66,7 @@ const UI_TEXT = {
     xpRanks: 'XP y rangos',
     library: 'Biblioteca',
     aiGenerator: 'Generador IA',
+    workoutBuilder: 'Constructor',
     routines: 'Rutinas',
     premium: 'Premium',
     reports: 'Reportes',
@@ -90,6 +92,7 @@ const UI_TEXT = {
     xpRanks: 'XP and ranks',
     library: 'Library',
     aiGenerator: 'AI generator',
+    workoutBuilder: 'Workout builder',
     routines: 'Routines',
     premium: 'Premium',
     reports: 'Reports',
@@ -1977,6 +1980,7 @@ export default function App() {
           <Btn text={t.xpRanks} active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
           <Btn text={t.library} active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
           <Btn text={t.aiGenerator} active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn text={t.workoutBuilder} active={section === 'Constructor'} disabled={bloqueado} set={() => setSection('Constructor')} />
           <Btn text={t.routines} active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
           <Btn text={t.premium} active={section === 'Premium'} set={() => setSection('Premium')} />
           <Btn text={t.reports} active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
@@ -2044,6 +2048,10 @@ export default function App() {
 
       {section === 'Generador' && !bloqueado && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+      )}
+
+      {section === 'Constructor' && !bloqueado && (
+        <ConstructorPage student={student} idioma={idioma} />
       )}
 
       {section === 'Rutinas' && !bloqueado && (
