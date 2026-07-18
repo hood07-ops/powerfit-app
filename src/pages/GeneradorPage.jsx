@@ -474,6 +474,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
     0,
     planesMensualesComprados - planesMensualesUsados
   )
+  const generacionesDisponibles = Number(disponiblesLocal || 0)
 
   async function cargarRM() {
     if (!student?.id) {
@@ -568,7 +569,8 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   }
 
   async function refrescarGeneraciones() {
-    if (!student?.id) return 0
+    const fallback = Number(student?.generaciones_disponibles || disponiblesLocal || 0)
+    if (!student?.id) return fallback
 
     const { data, error } = await supabase
       .from('alumnos')
@@ -578,10 +580,11 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
 
     if (error) {
       setMensaje(`Error actualizando generaciones: ${error.message}`)
-      return Number(disponiblesLocal || 0)
+      setDisponiblesLocal(fallback)
+      return fallback
     }
 
-    const disponibles = Number(data?.generaciones_disponibles || 0)
+    const disponibles = Number(data?.generaciones_disponibles ?? fallback)
     setDisponiblesLocal(disponibles)
     return disponibles
   }
@@ -790,29 +793,32 @@ Vuelta a la calma: dirigida en clase.
         return
       }
 
-      const { data: alumnoActualizado, error: updateError } = await supabase
-        .from('alumnos')
-        .update({
-          generaciones_disponibles: disponibles - cantidadFinal,
-        })
-        .eq('id', student.id)
-        .eq('generaciones_disponibles', disponibles)
-        .select('generaciones_disponibles')
+      let disponiblesRestantes = disponibles
 
-      if (updateError || !alumnoActualizado?.length) {
-        await borrarPlanesInsertados(nuevosPlanes || [])
-        setMensaje(
-          updateError
-            ? `Error descontando generaciones: ${updateError.message}`
-            : 'Tus generaciones cambiaron mientras se creaba el plan. Intenta nuevamente.'
+      if (cantidadFinal > 0) {
+        const { data: alumnoActualizado, error: updateError } = await supabase
+          .from('alumnos')
+          .update({
+            generaciones_disponibles: Math.max(0, disponibles - cantidadFinal),
+          })
+          .eq('id', student.id)
+          .select('generaciones_disponibles')
+
+        if (updateError || !alumnoActualizado?.length) {
+          await borrarPlanesInsertados(nuevosPlanes || [])
+          setMensaje(
+            updateError
+              ? `Error descontando generaciones: ${updateError.message}`
+              : 'No se pudo descontar la generacion disponible. Intenta nuevamente.'
+          )
+          await refrescarGeneraciones()
+          return
+        }
+
+        disponiblesRestantes = Number(
+          alumnoActualizado[0]?.generaciones_disponibles || 0
         )
-        await refrescarGeneraciones()
-        return
       }
-
-      const disponiblesRestantes = Number(
-        alumnoActualizado[0]?.generaciones_disponibles || 0
-      )
 
       setDisponiblesLocal(disponiblesRestantes)
       const contenidoDescarga = (nuevosPlanes || [])
@@ -876,7 +882,7 @@ Vuelta a la calma: dirigida en clase.
     setMensaje('Solicitud enviada correctamente.')
   }
 
-  const sinDisponibles = Number(disponiblesLocal || 0) < 1
+  const sinDisponibles = generacionesDisponibles < 1
   const generacionBloqueada =
     tipoPlan === 'mensual'
       ? planesMensualesDisponibles <= 0
@@ -890,7 +896,7 @@ Vuelta a la calma: dirigida en clase.
         </h1>
 
         <p className="text-yellow-400 mt-3 font-black text-xl">
-          Generaciones disponibles: {disponiblesLocal}
+          Generaciones disponibles: {generacionesDisponibles}
         </p>
 
         <p className="text-zinc-400 mt-2">

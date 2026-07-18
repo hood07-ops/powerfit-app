@@ -1899,7 +1899,7 @@ export default function App() {
           <Btn text="Asistencia QR" active={section === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
           <Btn text="XP y rangos" active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
           <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
-          <Btn text="IA funcionando" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
           <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
           <Btn text="Premium" active={section === 'Premium'} set={() => setSection('Premium')} />
           <Btn text="Reportes" active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
