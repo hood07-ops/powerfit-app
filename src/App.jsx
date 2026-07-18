@@ -1475,18 +1475,56 @@ export default function App() {
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [passwordRecovery, setPasswordRecovery] = useState(false)
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
 
-  async function cargarUsuario(currentUser = user) {
-    if (!currentUser) return
+  function alumnoPayloadDesdeAuth(currentUser) {
+    const email = currentUser?.email || ''
+    const metadata = currentUser?.user_metadata || {}
 
-    const { data: alumno } = await supabase
+    return {
+      nombre: metadata.nombre || (email ? email.split('@')[0] : 'Alumno'),
+      email,
+      user_id: currentUser.id,
+      telefono: metadata.telefono || '',
+      fecha_nacimiento: metadata.fecha_nacimiento || null,
+      fecha_ingreso: fechaHoy(),
+      categoria: metadata.categoria || '',
+      plan: 'Basico',
+      estado_pago: 'Pendiente',
+      monto: 0,
+      xp: 0,
+      bloques_premium: 0,
+      generaciones_disponibles: 6,
+    }
+  }
+
+  async function asegurarFichaAlumno(currentUser) {
+    if (!currentUser?.id) return null
+
+    const { data: existente, error: buscarError } = await supabase
       .from('alumnos')
       .select('*')
       .eq('user_id', currentUser.id)
-      .single()
+      .maybeSingle()
+
+    if (buscarError || existente) return existente
+
+    const { data: creado } = await supabase
+      .from('alumnos')
+      .insert([alumnoPayloadDesdeAuth(currentUser)])
+      .select('*')
+      .maybeSingle()
+
+    return creado || null
+  }
+
+  async function cargarUsuario(currentUser = user) {
+    if (!currentUser) return
+
+    const alumno = await asegurarFichaAlumno(currentUser)
 
     const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
     setStudent(alumnoActual)
@@ -1575,7 +1613,19 @@ export default function App() {
   }
 
   useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY' && session?.user) {
+        setUser(session.user)
+        setPasswordRecovery(true)
+        setLoading(false)
+      }
+    })
+
     Promise.resolve().then(() => checkUser())
+
+    return () => {
+      data.subscription.unsubscribe()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1761,6 +1811,16 @@ export default function App() {
 
   if (alumnoCheckIn) {
     return <CheckInPage alumnoId={alumnoCheckIn} />
+  }
+
+  if (passwordRecovery) {
+    return (
+      <LoginPage
+        onLogin={checkUser}
+        initialMode="update_password"
+        onPasswordUpdated={() => setPasswordRecovery(false)}
+      />
+    )
   }
 
   if (!user) return <LoginPage onLogin={checkUser} />

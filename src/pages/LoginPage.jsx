@@ -1,8 +1,12 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 
-export default function LoginPage({ onLogin }) {
-  const [mode, setMode] = useState('login')
+export default function LoginPage({
+  onLogin,
+  initialMode = 'login',
+  onPasswordUpdated,
+}) {
+  const [mode, setMode] = useState(initialMode)
   const [form, setForm] = useState({
     nombre: '',
     email: '',
@@ -29,19 +33,20 @@ export default function LoginPage({ onLogin }) {
     const nombreBase = email ? email.split('@')[0] : 'Alumno'
 
     return {
-      nombre: values.nombre || nombreBase,
+      nombre: values.nombre || user?.user_metadata?.nombre || nombreBase,
       email,
       user_id: user.id,
-      telefono: values.telefono || '',
-      fecha_nacimiento: values.fecha_nacimiento || null,
+      telefono: values.telefono || user?.user_metadata?.telefono || '',
+      fecha_nacimiento:
+        values.fecha_nacimiento || user?.user_metadata?.fecha_nacimiento || null,
       fecha_ingreso: values.fecha_ingreso || null,
-      categoria: values.categoria || '',
+      categoria: values.categoria || user?.user_metadata?.categoria || '',
       edad: values.edad ? Number(values.edad) : null,
       peso: values.peso ? Number(values.peso) : null,
       altura: values.altura ? Number(values.altura) : null,
       contacto_emergencia: values.contacto_emergencia || '',
       observaciones: values.observaciones || '',
-      plan: 'Básico',
+      plan: 'Basico',
       estado_pago: 'Pendiente',
       monto: 0,
       xp: 0,
@@ -76,7 +81,7 @@ export default function LoginPage({ onLogin }) {
     })
 
     if (error) {
-      setMessage('Correo o contraseña incorrectos')
+      setMessage('Correo o contrasena incorrectos')
       return false
     }
 
@@ -87,7 +92,7 @@ export default function LoginPage({ onLogin }) {
       return false
     }
 
-    onLogin(data.user)
+    await onLogin?.(data.user)
     return true
   }
 
@@ -100,6 +105,7 @@ export default function LoginPage({ onLogin }) {
           nombre: form.nombre,
           telefono: form.telefono,
           fecha_nacimiento: form.fecha_nacimiento,
+          fecha_ingreso: form.fecha_ingreso,
           categoria: form.categoria,
         },
       },
@@ -110,7 +116,9 @@ export default function LoginPage({ onLogin }) {
         const ok = await iniciarSesionConFicha()
 
         if (!ok) {
-          setMessage('Ese correo ya existe. Inicia sesión con tu contraseña o pide recuperar acceso.')
+          setMessage(
+            'Ese correo ya existe. Usa Recuperar o modificar contrasena para volver a entrar.'
+          )
         }
 
         return
@@ -131,16 +139,66 @@ export default function LoginPage({ onLogin }) {
 
     setMessage(
       data?.session
-        ? 'Cuenta creada. Ahora inicia sesión.'
-        : 'Cuenta creada. Si Supabase pide confirmación, revisa el correo antes de iniciar sesión.'
+        ? 'Cuenta creada. Ahora inicia sesion.'
+        : 'Cuenta creada. Si Supabase pide confirmacion, revisa el correo antes de iniciar sesion.'
     )
     setMode('login')
+  }
+
+  async function recuperarPassword() {
+    if (!form.email) {
+      setMessage('Ingresa tu correo para enviarte el enlace de recuperacion.')
+      return
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
+      redirectTo: window.location.origin,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setMessage('Te enviamos un correo para recuperar o modificar tu contrasena.')
+  }
+
+  async function actualizarPassword() {
+    if (!form.password || form.password.length < 6) {
+      setMessage('La nueva contrasena debe tener al menos 6 caracteres.')
+      return
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      password: form.password,
+    })
+
+    if (error) {
+      setMessage(error.message)
+      return
+    }
+
+    setMessage('Contrasena actualizada. Ya puedes ingresar a PowerFit.')
+    onPasswordUpdated?.()
+    await onLogin?.()
   }
 
   async function handleAuth(e) {
     e.preventDefault()
     setLoading(true)
     setMessage('')
+
+    if (mode === 'reset') {
+      await recuperarPassword()
+      setLoading(false)
+      return
+    }
+
+    if (mode === 'update_password') {
+      await actualizarPassword()
+      setLoading(false)
+      return
+    }
 
     if (mode === 'register') {
       await registrarCuenta()
@@ -165,19 +223,28 @@ export default function LoginPage({ onLogin }) {
         </h1>
 
         <form onSubmit={handleAuth} className="space-y-4 mt-6">
+          {mode === 'update_password' && (
+            <div className="bg-black/40 border border-yellow-500 rounded-2xl p-4 text-center">
+              <p className="font-black text-yellow-400">Nueva contrasena</p>
+              <p className="text-sm text-zinc-300 mt-1">
+                Escribe una nueva contrasena para recuperar el acceso.
+              </p>
+            </div>
+          )}
+
           {mode === 'register' && (
             <>
               <Input label="Nombre completo" value={form.nombre} onChange={(v) => update('nombre', v)} />
-              <Input label="Teléfono" value={form.telefono} onChange={(v) => update('telefono', v)} />
+              <Input label="Telefono" value={form.telefono} onChange={(v) => update('telefono', v)} />
               <Input type="date" label="Fecha de nacimiento" value={form.fecha_nacimiento} onChange={(v) => update('fecha_nacimiento', v)} />
               <Input type="date" label="Fecha ingreso" value={form.fecha_ingreso} onChange={(v) => update('fecha_ingreso', v)} />
-              <Input label="Categoría" value={form.categoria} onChange={(v) => update('categoria', v)} />
+              <Input label="Categoria" value={form.categoria} onChange={(v) => update('categoria', v)} />
               <Input type="number" label="Edad" value={form.edad} onChange={(v) => update('edad', v)} />
               <Input type="number" label="Peso kg" value={form.peso} onChange={(v) => update('peso', v)} />
               <Input type="number" label="Altura cm" value={form.altura} onChange={(v) => update('altura', v)} />
               <Input label="Contacto emergencia" value={form.contacto_emergencia} onChange={(v) => update('contacto_emergencia', v)} />
               <textarea
-                placeholder="Observaciones médicas / lesiones"
+                placeholder="Observaciones medicas / lesiones"
                 value={form.observaciones}
                 onChange={(e) => update('observaciones', e.target.value)}
                 className="w-full p-4 rounded-2xl bg-zinc-800"
@@ -185,22 +252,51 @@ export default function LoginPage({ onLogin }) {
             </>
           )}
 
-          <Input type="email" label="Correo" value={form.email} onChange={(v) => update('email', v)} />
-          <Input type="password" label="Contraseña" value={form.password} onChange={(v) => update('password', v)} />
+          {mode !== 'update_password' && (
+            <Input type="email" label="Correo" value={form.email} onChange={(v) => update('email', v)} />
+          )}
+
+          {mode !== 'reset' && (
+            <Input
+              type="password"
+              label={mode === 'update_password' ? 'Nueva contrasena' : 'Contrasena'}
+              value={form.password}
+              onChange={(v) => update('password', v)}
+            />
+          )}
 
           <button className="w-full bg-red-600 p-4 rounded-2xl font-black">
-            {loading ? 'Cargando...' : mode === 'login' ? 'Ingresar' : 'Crear cuenta'}
+            {loading
+              ? 'Cargando...'
+              : mode === 'login'
+                ? 'Ingresar'
+                : mode === 'register'
+                  ? 'Crear cuenta'
+                  : mode === 'reset'
+                    ? 'Enviar correo de recuperacion'
+                    : 'Guardar nueva contrasena'}
           </button>
         </form>
 
         {message && <p className="text-yellow-400 text-center mt-4">{message}</p>}
 
-        <button
-          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
-          className="w-full mt-6 text-red-400 underline"
-        >
-          {mode === 'login' ? 'Crear cuenta nueva' : 'Ya tengo cuenta'}
-        </button>
+        {mode !== 'update_password' && (
+          <div className="mt-6 grid gap-3">
+            <button
+              onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+              className="w-full text-red-400 underline"
+            >
+              {mode === 'login' ? 'Crear cuenta nueva' : 'Ya tengo cuenta'}
+            </button>
+
+            <button
+              onClick={() => setMode(mode === 'reset' ? 'login' : 'reset')}
+              className="w-full text-yellow-400 underline"
+            >
+              {mode === 'reset' ? 'Volver al ingreso' : 'Recuperar o modificar contrasena'}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -214,7 +310,12 @@ function Input({ label, value, onChange, type = 'text' }) {
       value={value}
       onChange={(e) => onChange(e.target.value)}
       className="w-full p-4 rounded-2xl bg-zinc-800"
-      required={label === 'Correo' || label === 'Contraseña' || label === 'Nombre completo'}
+      required={
+        label === 'Correo' ||
+        label === 'Contrasena' ||
+        label === 'Nueva contrasena' ||
+        label === 'Nombre completo'
+      }
     />
   )
 }

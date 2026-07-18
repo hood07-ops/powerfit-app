@@ -4,6 +4,9 @@
 alter table if exists public.alumnos
 add column if not exists fecha_nacimiento date;
 
+alter table if exists public.alumnos
+add column if not exists fecha_ingreso date;
+
 create or replace function public.powerfit_create_alumno_for_auth_user()
 returns trigger
 language plpgsql
@@ -17,6 +20,7 @@ begin
     nombre,
     telefono,
     fecha_nacimiento,
+    fecha_ingreso,
     categoria,
     plan,
     estado_pago,
@@ -31,6 +35,7 @@ begin
     coalesce(nullif(new.raw_user_meta_data->>'nombre', ''), split_part(new.email, '@', 1)),
     coalesce(new.raw_user_meta_data->>'telefono', ''),
     nullif(new.raw_user_meta_data->>'fecha_nacimiento', '')::date,
+    coalesce(nullif(new.raw_user_meta_data->>'fecha_ingreso', '')::date, current_date),
     coalesce(new.raw_user_meta_data->>'categoria', ''),
     'Básico',
     'Pendiente',
@@ -57,6 +62,7 @@ insert into public.alumnos (
   nombre,
   telefono,
   fecha_nacimiento,
+  fecha_ingreso,
   categoria,
   plan,
   estado_pago,
@@ -71,6 +77,7 @@ select
   coalesce(nullif(u.raw_user_meta_data->>'nombre', ''), split_part(u.email, '@', 1)),
   coalesce(u.raw_user_meta_data->>'telefono', ''),
   nullif(u.raw_user_meta_data->>'fecha_nacimiento', '')::date,
+  coalesce(nullif(u.raw_user_meta_data->>'fecha_ingreso', '')::date, current_date),
   coalesce(u.raw_user_meta_data->>'categoria', ''),
   'Básico',
   'Pendiente',
