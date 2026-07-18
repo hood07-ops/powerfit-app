@@ -2622,8 +2622,13 @@ export default function App() {
   if (!user) return <LoginPage onLogin={checkUser} />
 
   const isAdmin = student?.role?.toLowerCase() === 'admin'
+  const termsFeatureActive = Object.prototype.hasOwnProperty.call(
+    student || {},
+    'terminos_aceptados'
+  )
   const termsAccepted =
-    Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION
+    !termsFeatureActive ||
+    (Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION)
   const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
   const pagoAlDia = student?.estado_pago === 'Pagado'
   const bloqueado = !isAdmin && !pagoAlDia
