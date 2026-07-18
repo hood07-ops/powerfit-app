@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { supabase } from '../supabase'
 
+const POWERFIT_APP_URL =
+  import.meta.env.VITE_POWERFIT_APP_URL || 'https://powerfit-app-cv9o.vercel.app'
+
 export default function LoginPage({
   onLogin,
   initialMode = 'login',
@@ -168,7 +171,7 @@ export default function LoginPage({
     }
 
     const { error } = await supabase.auth.resetPasswordForEmail(form.email, {
-      redirectTo: window.location.origin,
+      redirectTo: POWERFIT_APP_URL,
     })
 
     if (error) {
