@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import { DEFAULT_BRANDING, POWERFIT_SIGNATURE, getAppEdition, loadBranding, saveBranding } from './appConfig'
 import { supabase } from './supabase'
 
 import CheckInPage from './pages/CheckInPage'
@@ -11,7 +12,9 @@ import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RutinasPage from './pages/RutinasPage'
 
-function Btn({ text, set, disabled, active }) {
+function Btn({ text, set, disabled, active, show = true }) {
+  if (!show) return null
+
   return (
     <button
       onClick={set}
@@ -77,6 +80,7 @@ const UI_TEXT = {
     evaluations: 'Evaluaciones',
     adminStudents: 'ADMIN ALUMNOS',
     purchaseLog: 'Registro compras',
+    brandSettings: 'Marca',
     language: 'Idioma',
     blockedTitle: 'SERVICIOS BLOQUEADOS',
     blockedCopy:
@@ -103,6 +107,7 @@ const UI_TEXT = {
     evaluations: 'Evaluations',
     adminStudents: 'STUDENTS ADMIN',
     purchaseLog: 'Purchase log',
+    brandSettings: 'Brand',
     language: 'Language',
     blockedTitle: 'SERVICES LOCKED',
     blockedCopy:
@@ -1224,6 +1229,130 @@ function AdminAlumnosPanel({
   )
 }
 
+function BrandSettingsPanel({ branding, setBranding, edition }) {
+  const [form, setForm] = useState(branding)
+  const gananciaPowerFit = Math.round((edition.commissionRate || 0) * 100)
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  function guardarMarca() {
+    const nextBranding = {
+      ...DEFAULT_BRANDING,
+      ...form,
+      appName: form.appName?.trim() || DEFAULT_BRANDING.appName,
+      logoUrl: form.logoUrl || DEFAULT_BRANDING.logoUrl,
+    }
+
+    setBranding(nextBranding)
+    saveBranding(nextBranding)
+  }
+
+  function restaurarMarca() {
+    setForm(DEFAULT_BRANDING)
+    setBranding(DEFAULT_BRANDING)
+    saveBranding(DEFAULT_BRANDING)
+  }
+
+  function cargarLogo(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = () => update('logoUrl', String(reader.result || DEFAULT_BRANDING.logoUrl))
+    reader.readAsDataURL(file)
+  }
+
+  return (
+    <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+      <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-5 mb-6">
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
+            Marca de escuela
+          </h2>
+          <p className="text-zinc-400 mt-2">
+            Personaliza el nombre y logo visible para tu gimnasio o escuela.
+          </p>
+        </div>
+
+        <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4">
+          <p className="text-sm text-zinc-400 font-black">Edicion</p>
+          <p className="text-xl font-black text-red-400">{edition.label}</p>
+          {gananciaPowerFit > 0 && (
+            <p className="text-zinc-300 mt-1">
+              Modelo comercial: {gananciaPowerFit}% PowerFit por alumno integrado.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-[1fr_280px] gap-5">
+        <div className="space-y-4">
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Nombre visible de la app
+            <input
+              value={form.appName || ''}
+              onChange={(event) => update('appName', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-2xl p-4 text-white"
+              placeholder="Nombre de tu escuela"
+            />
+          </label>
+
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Nombre interno / escuela
+            <input
+              value={form.schoolName || ''}
+              onChange={(event) => update('schoolName', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-2xl p-4 text-white"
+              placeholder="Ej: Academia Matatoa"
+            />
+          </label>
+
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Logo de la escuela
+            <input
+              type="file"
+              accept="image/*"
+              onChange={cargarLogo}
+              className="bg-black border border-zinc-700 rounded-2xl p-4 text-white"
+            />
+          </label>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={guardarMarca}
+              className="bg-green-600 hover:bg-green-700 px-5 py-4 rounded-2xl font-black"
+            >
+              Guardar marca
+            </button>
+            <button
+              onClick={restaurarMarca}
+              className="bg-zinc-700 hover:bg-zinc-600 px-5 py-4 rounded-2xl font-black"
+            >
+              Restaurar PowerFit
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-black border border-zinc-700 rounded-2xl p-5 text-center">
+          <img
+            src={form.logoUrl || DEFAULT_BRANDING.logoUrl}
+            alt={form.appName || DEFAULT_BRANDING.appName}
+            className="mx-auto h-32 w-32 rounded-full object-cover border border-red-600"
+          />
+          <h3 className="text-2xl font-black text-red-500 mt-4">
+            {form.appName || DEFAULT_BRANDING.appName}
+          </h3>
+          <p className="text-xs text-zinc-500 font-black mt-3">
+            Desarrollado con {POWERFIT_SIGNATURE}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function experienciaAlumno(alumno) {
   return Number(alumno?.experiencia || alumno?.xp || 0)
 }
@@ -1533,10 +1662,25 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [idioma, setIdioma] = useState(() => localStorage.getItem('powerfit_idioma') || 'es')
+  const [branding, setBranding] = useState(() => loadBranding())
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
+  const edition = getAppEdition()
   const t = UI_TEXT[idioma] || UI_TEXT.es
+
+  function editionAllows(sectionName) {
+    return edition.sections.includes(sectionName)
+  }
+
+  function canOpenSection(sectionName, adminStatus) {
+    if (!editionAllows(sectionName)) return false
+    if (['Admin', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
+      return adminStatus
+    }
+
+    return true
+  }
 
   function cambiarIdioma(nuevoIdioma) {
     setIdioma(nuevoIdioma)
@@ -1909,6 +2053,7 @@ export default function App() {
   if (!user) return <LoginPage onLogin={checkUser} />
 
   const isAdmin = student?.role?.toLowerCase() === 'admin'
+  const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
   const pagoAlDia = student?.estado_pago === 'Pagado'
   const bloqueado = !isAdmin && !pagoAlDia
   const diasParaVencer = diferenciaDias(student?.fecha_vencimiento)
@@ -1933,12 +2078,17 @@ export default function App() {
       <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div className="min-w-0 flex items-center gap-4">
           <img
-            src="/powerfit-logo.png"
-            alt="PowerFit 360"
+            src={branding.logoUrl || DEFAULT_BRANDING.logoUrl}
+            alt={branding.appName || DEFAULT_BRANDING.appName}
             className="h-20 w-20 sm:h-24 sm:w-24 rounded-full object-cover border border-red-600"
           />
           <div className="min-w-0">
-            <h1 className="text-3xl sm:text-4xl font-black text-red-500">POWERFIT 360</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-red-500">
+              {branding.appName || DEFAULT_BRANDING.appName}
+            </h1>
+            {branding.schoolName && (
+              <p className="text-zinc-400 truncate">{branding.schoolName}</p>
+            )}
             <p className="text-zinc-300 truncate">{student?.nombre || user.email}</p>
             <p className="text-yellow-400 font-black">
               {isAdmin ? t.admin : t.student}
@@ -1976,22 +2126,23 @@ export default function App() {
 
       <div className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
-          <Btn text={t.attendanceQr} active={section === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
-          <Btn text={t.xpRanks} active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
-          <Btn text={t.library} active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
-          <Btn text={t.aiGenerator} active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
-          <Btn text={t.workoutBuilder} active={section === 'Constructor'} disabled={bloqueado} set={() => setSection('Constructor')} />
-          <Btn text={t.routines} active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
-          <Btn text={t.premium} active={section === 'Premium'} set={() => setSection('Premium')} />
-          <Btn text={t.reports} active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
-          <Btn text={t.stats} active={section === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
-          <Btn text={t.notifications} active={section === 'Notificaciones'} set={() => setSection('Notificaciones')} />
+          <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
+          <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
+          <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
+          <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn show={editionAllows('Constructor')} text={t.workoutBuilder} active={visibleSection === 'Constructor'} disabled={bloqueado} set={() => setSection('Constructor')} />
+          <Btn show={editionAllows('Rutinas')} text={t.routines} active={visibleSection === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn show={editionAllows('Premium')} text={t.premium} active={visibleSection === 'Premium'} set={() => setSection('Premium')} />
+          <Btn show={editionAllows('Reportes')} text={t.reports} active={visibleSection === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
+          <Btn show={editionAllows('Estadísticas')} text={t.stats} active={visibleSection === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
+          <Btn show={editionAllows('Notificaciones')} text={t.notifications} active={visibleSection === 'Notificaciones'} set={() => setSection('Notificaciones')} />
 
-          <Btn text={t.profile} active={section === 'Ficha'} set={() => setSection('Ficha')} />
-          <Btn text={t.payment} active={section === 'Pago'} set={() => setSection('Pago')} />
-          <Btn text={t.evaluations} active={section === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
-          {isAdmin && <Btn text={t.adminStudents} active={section === 'Admin'} set={() => setSection('Admin')} />}
-          {isAdmin && <Btn text={t.purchaseLog} active={section === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
+          <Btn show={editionAllows('Ficha')} text={t.profile} active={visibleSection === 'Ficha'} set={() => setSection('Ficha')} />
+          <Btn show={editionAllows('Pago')} text={t.payment} active={visibleSection === 'Pago'} set={() => setSection('Pago')} />
+          <Btn show={editionAllows('Evaluaciones')} text={t.evaluations} active={visibleSection === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
+          {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
+          {isAdmin && <Btn show={editionAllows('RegistroCompras')} text={t.purchaseLog} active={visibleSection === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
+          {isAdmin && <Btn show={edition.allowBranding && editionAllows('Marca')} text={t.brandSettings} active={visibleSection === 'Marca'} set={() => setSection('Marca')} />}
         </div>
       </div>
 
@@ -2027,7 +2178,7 @@ export default function App() {
         </div>
       )}
 
-      {section === 'AsistenciaQR' && (
+      {editionAllows('AsistenciaQR') && visibleSection === 'AsistenciaQR' && (
         <AsistenciaQrPanel
           student={student}
           students={students}
@@ -2036,7 +2187,7 @@ export default function App() {
         />
       )}
 
-      {section === 'XPRangos' && !bloqueado && (
+      {editionAllows('XPRangos') && visibleSection === 'XPRangos' && !bloqueado && (
         <XpRangosPanel
           student={student}
           students={students}
@@ -2044,28 +2195,28 @@ export default function App() {
         />
       )}
 
-      {section === 'Metodos' && !bloqueado && <MetodosPage idioma={idioma} />}
+      {editionAllows('Metodos') && visibleSection === 'Metodos' && !bloqueado && <MetodosPage idioma={idioma} />}
 
-      {section === 'Generador' && !bloqueado && (
+      {editionAllows('Generador') && visibleSection === 'Generador' && !bloqueado && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
-      {section === 'Constructor' && !bloqueado && (
+      {editionAllows('Constructor') && visibleSection === 'Constructor' && !bloqueado && (
         <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
-      {section === 'Rutinas' && !bloqueado && (
+      {editionAllows('Rutinas') && visibleSection === 'Rutinas' && !bloqueado && (
         <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
       )}
 
-      {section === 'Premium' && (
+      {editionAllows('Premium') && visibleSection === 'Premium' && (
         <PremiumPanel
           student={student}
           abrirPagoMensualidad={abrirPagoMensualidad}
         />
       )}
 
-      {section === 'Reportes' && isAdmin && (
+      {editionAllows('Reportes') && visibleSection === 'Reportes' && isAdmin && (
         <ReportesPanel
           students={students}
           asistencias={asistencias}
@@ -2074,7 +2225,7 @@ export default function App() {
         />
       )}
 
-      {section === 'Estadísticas' && !bloqueado && (
+      {editionAllows('Estadísticas') && visibleSection === 'Estadísticas' && !bloqueado && (
         <EstadísticasPanel
           students={students}
           asistencias={asistencias}
@@ -2082,7 +2233,7 @@ export default function App() {
         />
       )}
 
-      {section === 'Notificaciones' && (
+      {editionAllows('Notificaciones') && visibleSection === 'Notificaciones' && (
         <NotificacionesPanel
           students={students}
           registroCompras={registroCompras}
@@ -2091,7 +2242,7 @@ export default function App() {
         />
       )}
 
-      {section === 'Ficha' && (
+      {editionAllows('Ficha') && visibleSection === 'Ficha' && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
           <h2 className="text-3xl sm:text-4xl font-black text-yellow-400 mb-6">Ficha personal</h2>
 
@@ -2122,7 +2273,7 @@ export default function App() {
         </div>
       )}
 
-      {section === 'Pago' && (
+      {editionAllows('Pago') && visibleSection === 'Pago' && (
         <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
           <h2 className="text-3xl sm:text-4xl font-black text-green-400 mb-6">Pago / deuda</h2>
           <div className="grid md:grid-cols-2 gap-4">
@@ -2144,7 +2295,7 @@ export default function App() {
         </div>
       )}
 
-      {section === 'Evaluaciones' && !bloqueado && (
+      {editionAllows('Evaluaciones') && visibleSection === 'Evaluaciones' && !bloqueado && (
         <EvaluacionesPage
           student={student}
           user={user}
@@ -2152,7 +2303,7 @@ export default function App() {
         />
       )}
 
-      {section === 'Admin' && isAdmin && (
+      {editionAllows('Admin') && visibleSection === 'Admin' && isAdmin && (
         <AdminAlumnosPanel
           students={students}
           asistencias={asistencias}
@@ -2164,11 +2315,19 @@ export default function App() {
         />
       )}
 
-      {section === 'RegistroCompras' && isAdmin && (
+      {editionAllows('RegistroCompras') && visibleSection === 'RegistroCompras' && isAdmin && (
         <RegistroComprasPage
           registroCompras={registroCompras}
           aprobarSolicitud={aprobarSolicitud}
           descargarCSV={descargarCSV}
+        />
+      )}
+
+      {edition.allowBranding && editionAllows('Marca') && visibleSection === 'Marca' && isAdmin && (
+        <BrandSettingsPanel
+          branding={branding}
+          setBranding={setBranding}
+          edition={edition}
         />
       )}
 
@@ -2182,6 +2341,9 @@ export default function App() {
         onEliminarGeneraciones={eliminarGeneraciones}
         onEliminarAlumno={eliminarAlumno}
       />
+      <div className="fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
+        {POWERFIT_SIGNATURE}
+      </div>
       </div>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DEFAULT_BRANDING, loadBranding } from '../appConfig'
 import { supabase } from '../supabase'
 
 const POWERFIT_APP_URL =
@@ -9,6 +10,7 @@ export default function LoginPage({
   initialMode = 'login',
   onPasswordUpdated,
 }) {
+  const [branding] = useState(() => loadBranding())
   const [mode, setMode] = useState(initialMode)
   const [form, setForm] = useState({
     nombre: '',
@@ -233,13 +235,16 @@ export default function LoginPage({
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-6">
       <div className="w-full max-w-2xl bg-zinc-900 border border-red-600 rounded-3xl p-6 sm:p-8">
         <img
-          src="/powerfit-logo.png"
-          alt="PowerFit 360"
+          src={branding.logoUrl || DEFAULT_BRANDING.logoUrl}
+          alt={branding.appName || DEFAULT_BRANDING.appName}
           className="mx-auto h-40 w-40 sm:h-48 sm:w-48 rounded-full object-cover border border-red-600"
         />
         <h1 className="text-4xl font-black text-red-500 text-center mt-5">
-          POWERFIT 360
+          {branding.appName || DEFAULT_BRANDING.appName}
         </h1>
+        <p className="text-center text-xs text-zinc-500 font-black mt-2">
+          Desarrollado con PowerFit 360
+        </p>
 
         <form onSubmit={handleAuth} className="space-y-4 mt-6">
           {mode === 'update_password' && (
