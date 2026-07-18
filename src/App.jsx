@@ -175,6 +175,32 @@ function diferenciaDias(fecha) {
   return Math.ceil((destino - hoy) / (1000 * 60 * 60 * 24))
 }
 
+function antiguedadTexto(fecha) {
+  if (!fecha) return '-'
+
+  const inicio = new Date(fecha)
+  const hoy = new Date(fechaHoy())
+
+  if (Number.isNaN(inicio.getTime()) || inicio > hoy) return '-'
+
+  let meses =
+    (hoy.getFullYear() - inicio.getFullYear()) * 12 +
+    hoy.getMonth() -
+    inicio.getMonth()
+
+  if (hoy.getDate() < inicio.getDate()) meses -= 1
+  if (meses < 1) return 'Menos de 1 mes'
+
+  const anios = Math.floor(meses / 12)
+  const restoMeses = meses % 12
+  const partes = []
+
+  if (anios) partes.push(`${anios} año${anios === 1 ? '' : 's'}`)
+  if (restoMeses) partes.push(`${restoMeses} mes${restoMeses === 1 ? '' : 'es'}`)
+
+  return partes.join(' y ')
+}
+
 function calcularEstadoPago(alumno) {
   const hoy = fechaHoy()
 
@@ -869,6 +895,7 @@ function AdminAlumnoModal({
         <div className="grid md:grid-cols-4 gap-4 mb-6">
           <Info label="Asistencias total" value={resumen.total} />
           <Info label="Asistencias este mes" value={resumen.mes} />
+          <Info label="Tiempo en PowerFit" value={antiguedadTexto(alumno.fecha_ingreso)} />
           <Info
             label="Última asistencia"
             value={resumen.ultima ? new Date(resumen.ultima).toLocaleDateString() : '-'}
@@ -899,6 +926,13 @@ function AdminAlumnoModal({
                 placeholder="Teléfono"
               />
               <input
+                type="date"
+                defaultValue={alumno.fecha_nacimiento || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'fecha_nacimiento', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+                title="Fecha de nacimiento"
+              />
+              <input
                 type="number"
                 defaultValue={alumno.peso || ''}
                 onBlur={(e) => onUpdate(alumno.id, 'peso', Number(e.target.value))}
@@ -916,18 +950,6 @@ function AdminAlumnoModal({
                 type="date"
                 defaultValue={alumno.fecha_ingreso || ''}
                 onBlur={(e) => onUpdate(alumno.id, 'fecha_ingreso', e.target.value)}
-                className="bg-black p-3 rounded-xl"
-              />
-              <input
-                type="date"
-                defaultValue={alumno.fecha_pago || ''}
-                onBlur={(e) => onUpdate(alumno.id, 'fecha_pago', e.target.value)}
-                className="bg-black p-3 rounded-xl"
-              />
-              <input
-                type="date"
-                defaultValue={alumno.fecha_vencimiento || ''}
-                onBlur={(e) => onUpdate(alumno.id, 'fecha_vencimiento', e.target.value)}
                 className="bg-black p-3 rounded-xl"
               />
               <input
@@ -974,6 +996,10 @@ function AdminAlumnoModal({
                 Cuando Mercado Pago confirme el pago, el webhook debe actualizar esta misma ficha:
                 fecha de pago hoy, vencimiento +1 mes, estado Pagado y generaciones disponibles.
               </p>
+              <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                <Info label="Fecha pago" value={alumno.fecha_pago} />
+                <Info label="Término de pago" value={alumno.fecha_vencimiento} />
+              </div>
             </div>
           </section>
 
@@ -1880,8 +1906,10 @@ export default function App() {
             <Info label="Nombre" value={student?.nombre} />
             <Info label="Correo" value={student?.email || user.email} />
             <Info label="Teléfono" value={student?.telefono} />
+            <Info label="Fecha nacimiento" value={student?.fecha_nacimiento} />
             <Info label="Peso" value={student?.peso} />
             <Info label="Fecha ingreso" value={student?.fecha_ingreso} />
+            <Info label="Tiempo en PowerFit" value={antiguedadTexto(student?.fecha_ingreso)} />
             <Info label="Fecha pago" value={student?.fecha_pago} />
             <Info label="Vencimiento" value={student?.fecha_vencimiento} />
             <Info label="Mensualidad" value={`$${student?.monto || 0}`} />

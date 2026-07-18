@@ -1,6 +1,9 @@
 -- PowerFit 360 - reparar y prevenir usuarios Auth sin ficha en public.alumnos.
 -- Ejecutar una vez en Supabase SQL Editor.
 
+alter table if exists public.alumnos
+add column if not exists fecha_nacimiento date;
+
 create or replace function public.powerfit_create_alumno_for_auth_user()
 returns trigger
 language plpgsql
@@ -13,6 +16,7 @@ begin
     email,
     nombre,
     telefono,
+    fecha_nacimiento,
     categoria,
     plan,
     estado_pago,
@@ -26,6 +30,7 @@ begin
     new.email,
     coalesce(nullif(new.raw_user_meta_data->>'nombre', ''), split_part(new.email, '@', 1)),
     coalesce(new.raw_user_meta_data->>'telefono', ''),
+    nullif(new.raw_user_meta_data->>'fecha_nacimiento', '')::date,
     coalesce(new.raw_user_meta_data->>'categoria', ''),
     'Básico',
     'Pendiente',
@@ -51,6 +56,7 @@ insert into public.alumnos (
   email,
   nombre,
   telefono,
+  fecha_nacimiento,
   categoria,
   plan,
   estado_pago,
@@ -64,6 +70,7 @@ select
   u.email,
   coalesce(nullif(u.raw_user_meta_data->>'nombre', ''), split_part(u.email, '@', 1)),
   coalesce(u.raw_user_meta_data->>'telefono', ''),
+  nullif(u.raw_user_meta_data->>'fecha_nacimiento', '')::date,
   coalesce(u.raw_user_meta_data->>'categoria', ''),
   'Básico',
   'Pendiente',

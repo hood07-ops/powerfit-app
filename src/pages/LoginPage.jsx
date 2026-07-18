@@ -8,6 +8,7 @@ export default function LoginPage({ onLogin }) {
     email: '',
     password: '',
     telefono: '',
+    fecha_nacimiento: '',
     fecha_ingreso: '',
     categoria: '',
     edad: '',
@@ -32,6 +33,7 @@ export default function LoginPage({ onLogin }) {
       email,
       user_id: user.id,
       telefono: values.telefono || '',
+      fecha_nacimiento: values.fecha_nacimiento || null,
       fecha_ingreso: values.fecha_ingreso || null,
       categoria: values.categoria || '',
       edad: values.edad ? Number(values.edad) : null,
@@ -97,6 +99,7 @@ export default function LoginPage({ onLogin }) {
         data: {
           nombre: form.nombre,
           telefono: form.telefono,
+          fecha_nacimiento: form.fecha_nacimiento,
           categoria: form.categoria,
         },
       },
@@ -166,6 +169,7 @@ export default function LoginPage({ onLogin }) {
             <>
               <Input label="Nombre completo" value={form.nombre} onChange={(v) => update('nombre', v)} />
               <Input label="Teléfono" value={form.telefono} onChange={(v) => update('telefono', v)} />
+              <Input type="date" label="Fecha de nacimiento" value={form.fecha_nacimiento} onChange={(v) => update('fecha_nacimiento', v)} />
               <Input type="date" label="Fecha ingreso" value={form.fecha_ingreso} onChange={(v) => update('fecha_ingreso', v)} />
               <Input label="Categoría" value={form.categoria} onChange={(v) => update('categoria', v)} />
               <Input type="number" label="Edad" value={form.edad} onChange={(v) => update('edad', v)} />
