@@ -680,6 +680,15 @@ ${p.contenido}
       duracion: '8 min',
       ejercicios: ['acondicionamiento de baja intensidad'],
     }
+    const explicarMetodo = (metodo) => {
+      const texto = String(metodo || '')
+
+      if (/^RAMP\b/i.test(texto) && !/subir temperatura/i.test(texto)) {
+        return `${texto} - subir temperatura, activar musculos clave, movilizar articulaciones y potenciar el gesto del entrenamiento`
+      }
+
+      return texto
+    }
 
     return `
 POWERFIT 360
@@ -709,25 +718,25 @@ Nota: si hay dolor, mareos o malestar importante, reducir intensidad y consultar
 ` : ''}
 
 ACTIVACIÓN
-Método: ${activacion.metodo}
+Método: ${explicarMetodo(activacion.metodo)}
 ${activacion.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 BLOQUE 1
-Método: ${bloque1.metodo}
+Método: ${explicarMetodo(bloque1.metodo)}
 Duración: ${bloque1.duracion}
 ${bloque1.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 2 - FUERZA / RM INTELIGENTE
-Método: ${bloque2.metodo}
+Método: ${explicarMetodo(bloque2.metodo)}
 Duración: ${bloque2.duracion}
 ${bloque2.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 3
-Método: ${bloque3.metodo}
+Método: ${explicarMetodo(bloque3.metodo)}
 Duración: ${bloque3.duracion}
 ${bloque3.ejercicios.map((e) => `- ${e}`).join('\n')}
 

@@ -897,15 +897,31 @@ export function generarEntrenamiento({
             ]
           : null,
 
-      activación: {
-        metodo: pick(['RAMP 8 MIN', 'RAMP 10 MIN', 'MOVILIDAD + PULSO 8 MIN']),
-        ejercicios: [
-          `2 min ${pick(pools.cardio)} suave`,
-          `10 ${pick(pools.movilidad)}`,
-          `10 ${pick(pools.pesoCorporal)} controlados`,
-          `30 sec ${pick(pools.core)}`,
-        ],
-      },
+      activación:
+        objetivo === 'casa_principiante'
+          ? {
+              metodo:
+                'RAMP PRINCIPIANTE: subir temperatura, activar, movilizar y preparar sin fatigar',
+              ejercicios: [
+                `2 min ${pick(pools.casaCardio)} suave`,
+                `30 sec ${pick(pools.casaMovilidad)}`,
+                `8 ${pick(['push up contra pared', 'plancha inclinada en pared o mesa firme', 'sentarse y pararse de una silla'])} controlado`,
+                `30 sec respiracion nasal + postura alta`,
+              ],
+            }
+          : {
+              metodo: pick([
+                'RAMP: subir temperatura, activar, movilizar y potenciar - 8 min',
+                'RAMP: subir temperatura, activar, movilizar y potenciar - 10 min',
+                'MOVILIDAD + PULSO 8 MIN',
+              ]),
+              ejercicios: [
+                `2 min ${pick(pools.cardio)} suave`,
+                `10 ${pick(pools.movilidad)}`,
+                `10 ${pick(pools.pesoCorporal)} controlados`,
+                `30 sec ${pick(pools.core)}`,
+              ],
+            },
 
       bloque1: {
         metodo: `${pick(faseCfg.principales)} - sistema ${faseCfg.sistema}`,

@@ -11,6 +11,16 @@ const metodos = [
       'Semana 1-2 acumulacion: 65% RM y volumen. Semana 3 transformacion: 75% RM y potencia. Semana 4 realizacion: 85% RM y test controlado.',
   },
   {
+    nombre: 'RAMP',
+    uso: 'Preparar al alumno antes del bloque principal sin fatigarlo.',
+    ejecucion:
+      'RAMP significa Raise, Activate, Mobilize, Potentiate: subir temperatura, activar musculos clave, movilizar articulaciones y potenciar el gesto que vendra despues.',
+    medir:
+      'Se controla por respiracion, temperatura, rango de movimiento, coordinacion y sensacion de estar listo para entrenar.',
+    ejemplo:
+      'Casa principiante: caminar suave 2 min, movilidad de tobillo en pared, push up contra pared y puente de gluteos. Boxeo: footwork suave, movilidad toracica, guardia activa y jab-cross tecnico.',
+  },
+  {
     nombre: 'AMRAP',
     uso: 'Aumentar densidad de trabajo en un tiempo fijo.',
     ejecucion:
@@ -836,10 +846,22 @@ const bibliotecaText = {
 
 export default function MetodosPage({ idioma = 'es' }) {
   const [vista, setVista] = useState('metodos')
-  const [búsqueda, setBusqueda] = useState('')
+  const [busqueda, setBusqueda] = useState('')
   const t = bibliotecaText[idioma] || bibliotecaText.es
 
-  const textoBusqueda = búsqueda.toLowerCase().trim()
+  const textoBusqueda = busqueda.toLowerCase().trim()
+  const metodosFiltrados = metodos.filter((metodo) =>
+    [
+      metodo.nombre,
+      metodo.uso,
+      metodo.ejecucion,
+      metodo.medir,
+      metodo.ejemplo,
+    ]
+      .join(' ')
+      .toLowerCase()
+      .includes(textoBusqueda)
+  )
   const ejerciciosFiltrados = ejercicios.filter((ejercicio) =>
     [
       ejercicio.nombre,
@@ -886,9 +908,23 @@ export default function MetodosPage({ idioma = 'es' }) {
         </div>
       </div>
 
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder={t.search}
+          className="w-full bg-black p-4 rounded-xl"
+        />
+        <p className="text-zinc-400 mt-3">
+          {vista === 'metodos'
+            ? `${t.showing} ${metodosFiltrados.length} ${t.of} ${metodos.length} ${t.methods.toLowerCase()}.`
+            : `${t.showing} ${ejerciciosFiltrados.length} ${t.of} ${ejercicios.length} ${t.usedByAi}`}
+        </p>
+      </div>
+
       {vista === 'metodos' && (
         <div className="grid md:grid-cols-2 gap-4">
-          {metodos.map((metodo) => (
+          {metodosFiltrados.map((metodo) => (
             <div key={metodo.nombre} className="bg-zinc-900 border border-zinc-700 p-5 rounded-2xl">
               <h3 className="text-2xl font-black text-red-400">{metodo.nombre}</h3>
               <p className="text-zinc-300 mt-3">{metodo.uso}</p>
@@ -911,18 +947,6 @@ export default function MetodosPage({ idioma = 'es' }) {
 
       {vista === 'ejercicios' && (
         <>
-          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
-            <input
-              value={búsqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar ejercicio, categoría o objetivo..."
-              className="w-full bg-black p-4 rounded-xl"
-            />
-            <p className="text-zinc-400 mt-3">
-              Mostrando {ejerciciosFiltrados.length} de {ejercicios.length} ejercicios usados por la IA.
-            </p>
-          </div>
-
           <div className="grid md:grid-cols-2 gap-4">
           {ejerciciosFiltrados.map((ejercicio) => (
             <div key={ejercicio.nombre} className="bg-zinc-900 border border-zinc-700 p-5 rounded-2xl">
