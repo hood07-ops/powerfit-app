@@ -109,6 +109,14 @@ supabase/profile_avatar.sql
 
 Si ya ejecutaste `supabase/multigym_tenants.sql`, esas columnas tambien quedan creadas.
 
+Para guardar fotos en Supabase Storage y dejar solicitudes de avatar IA pendientes:
+
+```sql
+supabase/avatar_storage_ai.sql
+```
+
+Esto crea los buckets `profile-photos` y `champion-avatars`, mas la tabla `avatar_ia_solicitudes`.
+
 Para revisar APK en GitHub Actions:
 
 ```powershell

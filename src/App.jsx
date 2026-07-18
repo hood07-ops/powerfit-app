@@ -1497,7 +1497,7 @@ function ChampionAvatar({ photoUrl, templateId, name }) {
   )
 }
 
-function ProfileAvatarPanel({ student, onSave }) {
+function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar }) {
   const [photoUrl, setPhotoUrl] = useState(student?.foto_url || '')
   const [templateId, setTemplateId] = useState(student?.avatar_template || 'champion_red')
   const [message, setMessage] = useState('')
@@ -1522,8 +1522,10 @@ function ProfileAvatarPanel({ student, onSave }) {
 
     try {
       const resized = await resizeProfilePhoto(file)
-      setPhotoUrl(resized)
-      await saveProfile(resized, templateId)
+      const uploadedUrl = await onUploadPhoto?.(file)
+      const nextPhoto = uploadedUrl || resized
+      setPhotoUrl(nextPhoto)
+      await saveProfile(nextPhoto, templateId)
     } catch (error) {
       setMessage(error.message)
     }
@@ -1582,6 +1584,27 @@ function ProfileAvatarPanel({ student, onSave }) {
           className="w-full rounded-2xl bg-green-600 p-4 font-black hover:bg-green-700 disabled:opacity-50"
         >
           {saving ? 'Guardando...' : 'Guardar avatar'}
+        </button>
+
+        <button
+          onClick={async () => {
+            setSaving(true)
+            setMessage('')
+            const result = await onRequestAiAvatar?.({
+              foto_url: photoUrl,
+              avatar_template: templateId,
+            })
+            setSaving(false)
+            setMessage(
+              result?.ok
+                ? 'Solicitud de avatar IA enviada. Quedara pendiente para generar la imagen final.'
+                : result?.message || 'No se pudo solicitar el avatar IA.'
+            )
+          }}
+          disabled={saving || !photoUrl}
+          className="w-full rounded-2xl bg-yellow-500 p-4 font-black text-black hover:bg-yellow-400 disabled:opacity-50"
+        >
+          Solicitar avatar IA campeon
         </button>
 
         {message && (
@@ -2186,6 +2209,61 @@ export default function App() {
     return { ok: true }
   }
 
+  async function subirFotoPerfil(file) {
+    if (!user?.id || !student?.id || !file) return null
+
+    const extension = file.name?.split('.').pop()?.toLowerCase() || 'jpg'
+    const path = `${user.id}/${student.id}-${Date.now()}.${extension}`
+    const { error } = await supabase.storage
+      .from('profile-photos')
+      .upload(path, file, {
+        cacheControl: '3600',
+        upsert: true,
+      })
+
+    if (error) {
+      console.warn('No se pudo subir foto a Storage, usando fallback local:', error.message)
+      return null
+    }
+
+    const { data } = supabase.storage.from('profile-photos').getPublicUrl(path)
+    return data?.publicUrl || null
+  }
+
+  async function solicitarAvatarIA(payload) {
+    if (!student?.id) {
+      return { ok: false, message: 'No se encontro la ficha del alumno.' }
+    }
+
+    if (!payload?.foto_url) {
+      return { ok: false, message: 'Primero sube una foto de rostro.' }
+    }
+
+    const { error } = await supabase.from('avatar_ia_solicitudes').insert([
+      {
+        alumno_id: student.id,
+        user_id: student.user_id || user.id,
+        gimnasio_id: student.gimnasio_id || null,
+        foto_url: payload.foto_url,
+        template: payload.avatar_template || 'champion_red',
+        prompt:
+          'Avatar campeon PowerFit: boxeador o boxeadora en posicion de combate, cinturon de campeon, una mano en alto, estilo deportivo premium.',
+        estado: 'Pendiente',
+        costo_creditos: 1,
+      },
+    ])
+
+    if (error) {
+      const schemaMessage = esErrorSchemaCache(error)
+        ? 'Ejecuta primero supabase/avatar_storage_ai.sql en Supabase y vuelve a intentar.'
+        : error.message
+
+      return { ok: false, message: schemaMessage }
+    }
+
+    return { ok: true }
+  }
+
   async function registrarPago(alumno) {
     await aplicarPagoConfirmado(alumno)
   }
@@ -2574,6 +2652,8 @@ export default function App() {
           <ProfileAvatarPanel
             student={student}
             onSave={guardarPerfilVisual}
+            onUploadPhoto={subirFotoPerfil}
+            onRequestAiAvatar={solicitarAvatarIA}
           />
 
           <div className="grid md:grid-cols-2 gap-4">
