@@ -99,6 +99,16 @@ Esto crea:
 
 Despues de activar el SQL, un admin/profesor puede ir a **Marca** y guardar nombre/logo de su escuela. Si todavia no tiene gimnasio propio, la app intentara crearlo con `powerfit_create_gimnasio_for_current_user`.
 
+## Foto y avatar de alumno
+
+Para permitir que cada alumno suba su foto y use avatar de campeon, ejecutar:
+
+```sql
+supabase/profile_avatar.sql
+```
+
+Si ya ejecutaste `supabase/multigym_tenants.sql`, esas columnas tambien quedan creadas.
+
 Para revisar APK en GitHub Actions:
 
 ```powershell

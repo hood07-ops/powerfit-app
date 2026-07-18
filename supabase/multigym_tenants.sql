@@ -32,6 +32,12 @@ create table if not exists public.gimnasio_profesores (
 alter table if exists public.alumnos
 add column if not exists gimnasio_id uuid references public.gimnasios(id) on delete set null;
 
+alter table if exists public.alumnos
+add column if not exists foto_url text;
+
+alter table if exists public.alumnos
+add column if not exists avatar_template text default 'champion_red';
+
 alter table if exists public.asistencias
 add column if not exists gimnasio_id uuid references public.gimnasios(id) on delete set null;
 

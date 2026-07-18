@@ -116,6 +116,77 @@ const UI_TEXT = {
   },
 }
 
+const AVATAR_TEMPLATES = [
+  {
+    id: 'champion_red',
+    label: 'Boxeador campeon rojo',
+    ring: 'from-red-700 via-zinc-950 to-black',
+    shorts: 'bg-red-700',
+    gloves: 'bg-red-600',
+    belt: 'bg-yellow-400',
+  },
+  {
+    id: 'champion_gold',
+    label: 'Boxeador campeon dorado',
+    ring: 'from-yellow-500 via-zinc-950 to-black',
+    shorts: 'bg-zinc-900',
+    gloves: 'bg-yellow-500',
+    belt: 'bg-red-600',
+  },
+  {
+    id: 'champion_blue',
+    label: 'Boxeador campeon azul',
+    ring: 'from-blue-800 via-zinc-950 to-black',
+    shorts: 'bg-blue-700',
+    gloves: 'bg-blue-600',
+    belt: 'bg-yellow-400',
+  },
+  {
+    id: 'champion_white',
+    label: 'Boxeador campeon blanco',
+    ring: 'from-zinc-200 via-zinc-950 to-black',
+    shorts: 'bg-zinc-100',
+    gloves: 'bg-red-600',
+    belt: 'bg-yellow-500',
+  },
+  {
+    id: 'boxeadora_red',
+    label: 'Boxeadora campeona roja',
+    ring: 'from-red-800 via-zinc-950 to-black',
+    shorts: 'bg-red-600',
+    gloves: 'bg-red-500',
+    belt: 'bg-yellow-400',
+  },
+  {
+    id: 'boxeadora_gold',
+    label: 'Boxeadora campeona dorada',
+    ring: 'from-yellow-600 via-red-950 to-black',
+    shorts: 'bg-yellow-500',
+    gloves: 'bg-zinc-900',
+    belt: 'bg-red-600',
+  },
+  {
+    id: 'boxeadora_blue',
+    label: 'Boxeadora campeona azul',
+    ring: 'from-blue-700 via-zinc-950 to-black',
+    shorts: 'bg-blue-600',
+    gloves: 'bg-zinc-100',
+    belt: 'bg-yellow-500',
+  },
+  {
+    id: 'boxeadora_black',
+    label: 'Boxeadora campeona negra',
+    ring: 'from-zinc-800 via-red-950 to-black',
+    shorts: 'bg-zinc-950',
+    gloves: 'bg-zinc-200',
+    belt: 'bg-yellow-500',
+  },
+]
+
+function avatarTemplateById(templateId) {
+  return AVATAR_TEMPLATES.find((template) => template.id === templateId) || AVATAR_TEMPLATES[0]
+}
+
 function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
     encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
@@ -1358,6 +1429,171 @@ function BrandSettingsPanel({ branding, setBranding, edition, gimnasio, onSaveRe
   )
 }
 
+function resizeProfilePhoto(file, maxSize = 420) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onerror = () => reject(new Error('No se pudo leer la foto.'))
+    reader.onload = () => {
+      const image = new Image()
+      image.onerror = () => reject(new Error('No se pudo procesar la foto.'))
+      image.onload = () => {
+        const scale = Math.min(1, maxSize / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+
+        const context = canvas.getContext('2d')
+        context.drawImage(image, 0, 0, canvas.width, canvas.height)
+        resolve(canvas.toDataURL('image/jpeg', 0.82))
+      }
+      image.src = String(reader.result || '')
+    }
+
+    reader.readAsDataURL(file)
+  })
+}
+
+function ChampionAvatar({ photoUrl, templateId, name }) {
+  const template = avatarTemplateById(templateId)
+  const initials = String(name || 'PF')
+    .split(' ')
+    .map((part) => part[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+  return (
+    <div className={`relative mx-auto aspect-[3/4] w-full max-w-[280px] overflow-hidden rounded-2xl border border-red-600 bg-gradient-to-b ${template.ring} shadow-2xl`}>
+      <div className="absolute inset-x-6 top-7 h-14 rounded-full bg-white/10 blur-md" />
+      <div className="absolute left-1/2 top-[19%] z-20 h-20 w-20 -translate-x-1/2 overflow-hidden rounded-full border-4 border-zinc-100 bg-zinc-800 shadow-xl">
+        {photoUrl ? (
+          <img src={photoUrl} alt={name || 'Alumno'} className="h-full w-full object-cover" />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-2xl font-black text-yellow-400">
+            {initials}
+          </div>
+        )}
+      </div>
+
+      <div className="absolute left-[19%] top-[18%] h-20 w-8 -rotate-[28deg] rounded-full bg-zinc-900 border border-zinc-600" />
+      <div className={`absolute left-[11%] top-[11%] h-14 w-14 rounded-full ${template.gloves} border-4 border-zinc-950 shadow-xl`} />
+      <div className="absolute right-[22%] top-[31%] h-28 w-8 rotate-[22deg] rounded-full bg-zinc-900 border border-zinc-600" />
+      <div className={`absolute right-[12%] top-[42%] h-14 w-14 rounded-full ${template.gloves} border-4 border-zinc-950 shadow-xl`} />
+
+      <div className="absolute left-1/2 top-[38%] h-36 w-36 -translate-x-1/2 rounded-t-[4rem] bg-zinc-900 border border-zinc-600 shadow-xl" />
+      <div className="absolute left-[30%] top-[43%] h-24 w-10 -rotate-12 rounded-full bg-zinc-800" />
+      <div className="absolute right-[30%] top-[43%] h-24 w-10 rotate-12 rounded-full bg-zinc-800" />
+      <div className={`absolute left-1/2 top-[63%] h-10 w-40 -translate-x-1/2 rounded-xl ${template.shorts} border border-zinc-700`} />
+      <div className={`absolute left-1/2 top-[58%] z-20 h-8 w-44 -translate-x-1/2 rounded-full ${template.belt} border-4 border-zinc-950 shadow-xl`}>
+        <div className="mx-auto mt-1 h-4 w-14 rounded-full bg-zinc-950" />
+      </div>
+
+      <div className="absolute bottom-5 left-5 right-5 rounded-xl bg-black/70 px-3 py-2 text-center">
+        <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Campeon PowerFit</p>
+        <p className="truncate text-lg font-black text-white">{name || 'Alumno'}</p>
+      </div>
+    </div>
+  )
+}
+
+function ProfileAvatarPanel({ student, onSave }) {
+  const [photoUrl, setPhotoUrl] = useState(student?.foto_url || '')
+  const [templateId, setTemplateId] = useState(student?.avatar_template || 'champion_red')
+  const [message, setMessage] = useState('')
+  const [saving, setSaving] = useState(false)
+
+  async function saveProfile(nextPhoto = photoUrl, nextTemplate = templateId) {
+    setSaving(true)
+    setMessage('')
+
+    const result = await onSave?.({
+      foto_url: nextPhoto,
+      avatar_template: nextTemplate,
+    })
+
+    setSaving(false)
+    setMessage(result?.ok ? 'Perfil visual guardado.' : result?.message || 'No se pudo guardar el perfil visual.')
+  }
+
+  async function handlePhoto(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const resized = await resizeProfilePhoto(file)
+      setPhotoUrl(resized)
+      await saveProfile(resized, templateId)
+    } catch (error) {
+      setMessage(error.message)
+    }
+  }
+
+  async function selectTemplate(nextTemplate) {
+    setTemplateId(nextTemplate)
+    await saveProfile(photoUrl, nextTemplate)
+  }
+
+  return (
+    <div className="mb-6 grid lg:grid-cols-[320px_1fr] gap-5 rounded-2xl border border-zinc-700 bg-black/30 p-4">
+      <ChampionAvatar
+        photoUrl={photoUrl}
+        templateId={templateId}
+        name={student?.nombre}
+      />
+
+      <div className="space-y-4">
+        <div>
+          <h3 className="text-2xl font-black text-red-400">Avatar campeon</h3>
+          <p className="text-zinc-400 mt-1">
+            Sube una foto de rostro y elige una pose de combate para tu ficha.
+          </p>
+        </div>
+
+        <label className="grid gap-2 font-black text-sm text-zinc-300">
+          Foto del alumno
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handlePhoto}
+            className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 p-4 text-white"
+          />
+        </label>
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          {AVATAR_TEMPLATES.map((template) => (
+            <button
+              key={template.id}
+              onClick={() => selectTemplate(template.id)}
+              className={`rounded-2xl border p-4 text-left font-black transition ${
+                templateId === template.id
+                  ? 'border-yellow-400 bg-yellow-500 text-black'
+                  : 'border-zinc-700 bg-zinc-900 hover:border-red-500'
+              }`}
+            >
+              {template.label}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={() => saveProfile()}
+          disabled={saving}
+          className="w-full rounded-2xl bg-green-600 p-4 font-black hover:bg-green-700 disabled:opacity-50"
+        >
+          {saving ? 'Guardando...' : 'Guardar avatar'}
+        </button>
+
+        {message && (
+          <p className="rounded-xl border border-zinc-700 bg-zinc-950 p-3 font-bold text-zinc-300">
+            {message}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function experienciaAlumno(alumno) {
   return Number(alumno?.experiencia || alumno?.xp || 0)
 }
@@ -1928,6 +2164,28 @@ export default function App() {
     await cargarUsuario()
   }
 
+  async function guardarPerfilVisual(payload) {
+    if (!student?.id) {
+      return { ok: false, message: 'No se encontro la ficha del alumno.' }
+    }
+
+    const { error } = await supabase
+      .from('alumnos')
+      .update(payload)
+      .eq('id', student.id)
+
+    if (error) {
+      const schemaMessage = esErrorSchemaCache(error)
+        ? 'Ejecuta primero supabase/profile_avatar.sql en Supabase y vuelve a intentar.'
+        : error.message
+
+      return { ok: false, message: schemaMessage }
+    }
+
+    await cargarUsuario()
+    return { ok: true }
+  }
+
   async function registrarPago(alumno) {
     await aplicarPagoConfirmado(alumno)
   }
@@ -2312,6 +2570,11 @@ export default function App() {
       {editionAllows('Ficha') && visibleSection === 'Ficha' && (
         <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
           <h2 className="text-3xl sm:text-4xl font-black text-yellow-400 mb-6">Ficha personal</h2>
+
+          <ProfileAvatarPanel
+            student={student}
+            onSave={guardarPerfilVisual}
+          />
 
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
