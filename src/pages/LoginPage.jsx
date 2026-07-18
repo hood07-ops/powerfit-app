@@ -55,6 +55,26 @@ export default function LoginPage({
     }
   }
 
+  function esErrorSchemaCache(error) {
+    return error?.message?.toLowerCase().includes('schema cache')
+  }
+
+  async function insertarAlumno(payload) {
+    const { error } = await supabase.from('alumnos').insert([payload])
+
+    if (!esErrorSchemaCache(error)) return error
+
+    const payloadCompatible = { ...payload }
+    delete payloadCompatible.fecha_nacimiento
+    delete payloadCompatible.fecha_ingreso
+
+    const { error: retryError } = await supabase
+      .from('alumnos')
+      .insert([payloadCompatible])
+
+    return retryError
+  }
+
   async function asegurarAlumno(user, values = form) {
     if (!user?.id) return null
 
@@ -67,11 +87,7 @@ export default function LoginPage({
     if (buscarError) return buscarError
     if (existente?.id) return null
 
-    const { error } = await supabase.from('alumnos').insert([
-      alumnoPayload(user, values),
-    ])
-
-    return error
+    return insertarAlumno(alumnoPayload(user, values))
   }
 
   async function iniciarSesionConFicha() {

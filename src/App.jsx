@@ -1501,6 +1501,32 @@ export default function App() {
     }
   }
 
+  function esErrorSchemaCache(error) {
+    return error?.message?.toLowerCase().includes('schema cache')
+  }
+
+  async function insertarFichaAlumno(payload) {
+    const { data, error } = await supabase
+      .from('alumnos')
+      .insert([payload])
+      .select('*')
+      .maybeSingle()
+
+    if (!esErrorSchemaCache(error)) return data || null
+
+    const payloadCompatible = { ...payload }
+    delete payloadCompatible.fecha_nacimiento
+    delete payloadCompatible.fecha_ingreso
+
+    const { data: retryData } = await supabase
+      .from('alumnos')
+      .insert([payloadCompatible])
+      .select('*')
+      .maybeSingle()
+
+    return retryData || null
+  }
+
   async function asegurarFichaAlumno(currentUser) {
     if (!currentUser?.id) return null
 
@@ -1512,13 +1538,7 @@ export default function App() {
 
     if (buscarError || existente) return existente
 
-    const { data: creado } = await supabase
-      .from('alumnos')
-      .insert([alumnoPayloadDesdeAuth(currentUser)])
-      .select('*')
-      .maybeSingle()
-
-    return creado || null
+    return insertarFichaAlumno(alumnoPayloadDesdeAuth(currentUser))
   }
 
   async function cargarUsuario(currentUser = user) {

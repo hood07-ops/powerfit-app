@@ -91,3 +91,5 @@ where not exists (
   from public.alumnos a
   where a.user_id = u.id
 );
+
+notify pgrst, 'reload schema';
