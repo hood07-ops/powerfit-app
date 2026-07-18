@@ -156,6 +156,60 @@ function crearEjercicio(nombre, categoría, objetivo, ejemplo) {
 
 const ejercicios = [
   {
+    nombre: 'Sentarse y pararse de silla',
+    categoría: 'Casa principiante',
+    objetivo: 'Crear fuerza basica de piernas y confianza para levantarse sin dolor.',
+    tecnica: [
+      'Sentarse en una silla firme con pies apoyados al ancho de cadera.',
+      'Inclinar levemente el tronco y empujar el suelo para ponerse de pie.',
+      'Bajar lento hasta tocar la silla sin dejarse caer.',
+      'Usar manos como ayuda si la persona esta comenzando.',
+    ],
+    errores: [
+      'Caer sobre la silla sin control.',
+      'Juntar rodillas hacia adentro.',
+      'Contener la respiracion durante todo el movimiento.',
+    ],
+    ejemplo: '2-3 series de 6-10 repeticiones, descanso 60-90 sec.',
+    youtube: 'https://www.youtube.com/results?search_query=sit+to+stand+exercise+beginner',
+  },
+  {
+    nombre: 'Push up contra pared',
+    categoría: 'Casa principiante',
+    objetivo: 'Fortalecer pecho, brazos y hombros con baja carga articular.',
+    tecnica: [
+      'Manos en pared a la altura del pecho.',
+      'Cuerpo en linea recta, abdomen activo.',
+      'Doblar codos acercando el pecho a la pared.',
+      'Empujar la pared y volver sin perder postura.',
+    ],
+    errores: [
+      'Encoger hombros hacia las orejas.',
+      'Que la cadera caiga hacia adelante.',
+      'Bajar demasiado rapido.',
+    ],
+    ejemplo: '2-3 series de 6-10 repeticiones, ritmo lento.',
+    youtube: 'https://www.youtube.com/results?search_query=wall+push+up+beginner+technique',
+  },
+  crearEjercicio(
+    'Puente de gluteos en el suelo',
+    'Casa principiante',
+    'Activar gluteos, columna y cadera sin material.',
+    '2-3 series de 8-12 reps, subir lento y bajar controlado.'
+  ),
+  crearEjercicio(
+    'Marcha en el lugar',
+    'Casa principiante',
+    'Subir pulso de forma segura y sin impacto.',
+    '30-90 sec suaves, respiracion controlada.'
+  ),
+  crearEjercicio(
+    'Dead bug basico',
+    'Casa principiante',
+    'Aprender control de abdomen y respiracion sin cargar la espalda.',
+    '6-8 reps por lado, lento y sin dolor lumbar.'
+  ),
+  {
     nombre: 'Deadlift',
     categoría: 'Fuerza',
     objetivo: 'Desarrollar cadena posterior: gluteos, isquios, espalda y agarre.',

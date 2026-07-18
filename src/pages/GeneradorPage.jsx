@@ -1154,6 +1154,7 @@ Vuelta a la calma: dirigida en clase.
           <option value="fuerza">Fuerza</option>
           <option value="perdida_grasa">Pérdida grasa</option>
           <option value="cardio">Cardio</option>
+          <option value="casa_principiante">Casa principiante / sin materiales</option>
         </select>
 
         <select

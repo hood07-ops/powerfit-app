@@ -21,6 +21,7 @@ function labelObjetivo(objetivo) {
     fuerza: 'Fuerza',
     perdida_grasa: 'Pérdida grasa',
     cardio: 'Cardio',
+    casa_principiante: 'Casa principiante sin materiales',
   }
 
   return labels[objetivo] || objetivo
@@ -80,6 +81,18 @@ function configFase(faseATR) {
   }
 
   return configs[faseATR] || configs.acumulacion
+}
+
+function configFaseObjetivo(faseATR, objetivo) {
+  if (objetivo !== 'casa_principiante') return configFase(faseATR)
+
+  return {
+    porcentajes: [0.5, 0.55, 0.6],
+    principales: ['CIRCUITO SUAVE 2-3 RONDAS', 'FOR QUALITY 10 MIN', 'INTERVALOS BAJO IMPACTO 30/30'],
+    finales: ['ZONA 2 EN CASA', 'MOVILIDAD + CAMINATA SUAVE', 'AMRAP TECNICO 6-8 MIN'],
+    foco: 'adherencia, movilidad, fuerza basica y bajo impacto',
+    sistema: 'oxidativo suave / base de salud',
+  }
 }
 
 function configCicloMenstrual(faseMenstrual) {
@@ -210,6 +223,12 @@ function crearBloqueObjetivo(objetivo, nivelCfg, pools, faseATR) {
       `${reps} ${pick(pools.pesoCorporal)}`,
       `30 sec ${pick(pools.core)}`,
     ],
+    casa_principiante: [
+      `6-8 ${pick(pools.casaPrincipiante)} con pausa`,
+      `30 sec ${pick(pools.casaCardio)} suave`,
+      `6 por lado ${pick(pools.casaPrincipiante)} controlado`,
+      `30 sec ${pick(pools.casaMovilidad)}`,
+    ],
   }
 
   return bloques[objetivo] || bloques.fighter
@@ -252,6 +271,12 @@ function crearBloqueFinal(objetivo, nivelCfg, pools, faseATR) {
       `${cardio} ${pick(pools.cardio)}`,
       `30 sec ${pick(pools.core)}`,
     ],
+    casa_principiante: [
+      `40 sec ${pick(pools.casaCardio)} suave`,
+      `8 ${pick(pools.casaPrincipiante)} sin dolor`,
+      `20 sec ${pick(pools.casaMovilidad)}`,
+      `6 respiraciones profundas + caminar suave`,
+    ],
   }
 
   return finales[objetivo] || finales.fighter
@@ -292,6 +317,14 @@ function focoDeportivo(objetivo) {
     ]
   }
 
+  if (objetivo === 'casa_principiante') {
+    return [
+      'Inicio en casa: sin materiales, bajo impacto y progresion por confianza.',
+      'Prioridad: respirar bien, moverse sin dolor, crear habito y mejorar movilidad.',
+      'Ejemplos: silla, pared, suelo, caminata en casa, core basico y pausas completas.',
+    ]
+  }
+
   return [
     'Base física: fuerza util, control técnico, capacidad metabólica y recuperación.',
     'Transferencia: estabilidad, movilidad, control de eje y progresión de cargas.',
@@ -299,6 +332,17 @@ function focoDeportivo(objetivo) {
 }
 
 function seleccionDeportivaMensual(objetivo, usarPliometría) {
+  if (objetivo === 'casa_principiante') {
+    return {
+      activación: 'respiracion nasal + movilidad suave de cuello, hombros, cadera y tobillos',
+      motor: 'sentarse y pararse de silla + marcha en el lugar + respiracion controlada',
+      transferencia: usarPliometría
+        ? 'step touch lateral rapido sin salto + sentadilla parcial a silla'
+        : 'paso lateral suave + equilibrio asistido + movilidad toracica',
+      final: 'caminata en casa + movilidad suave + registro de RPE',
+    }
+  }
+
   if (objetivo === 'fighter') {
     return {
       activación: 'footwork drill + movilidad toracica + guardia activa',
@@ -332,6 +376,20 @@ function seleccionDeportivaMensual(objetivo, usarPliometría) {
 }
 
 function fuerzaMensual({ objetivo, dia, porcentaje, rms, nivelCfg }) {
+  if (objetivo === 'casa_principiante') {
+    const ejerciciosCasa = {
+      1: ['sentarse y pararse de silla', 'puente de gluteos'],
+      2: ['push up contra pared', 'plancha inclinada en pared'],
+      3: ['bisagra de cadera sin peso', 'bird dog lento'],
+      4: ['sentadilla parcial a silla', 'dead bug basico'],
+    }
+
+    return (ejerciciosCasa[dia] || ejerciciosCasa[1]).map(
+      (ejercicio) =>
+        `${ejercicio} - 2-3 series de 6-10 reps - sin material - descanso ${pick(nivelCfg.descanso)} - RPE 4-6/10`
+    )
+  }
+
   const ejerciciosPorDia = {
     1: objetivo === 'cardio' ? ['Front Squat', 'Kettlebell Swing'] : ['Deadlift', 'Front Squat'],
     2: objetivo === 'fighter' || objetivo === 'tenis'
@@ -395,7 +453,16 @@ export function generarPlanMensual({
   rms = [],
   faseMenstrual = null,
 }) {
-  const nivelCfg = configNivel(nivel)
+  const nivelCfg =
+    objetivo === 'casa_principiante'
+      ? {
+          intensidad: 'baja / inicio seguro en casa',
+          reps: ['5-6', '6-8', '8'],
+          series: ['2', '3'],
+          descanso: ['60 sec', '75 sec', '90 sec'],
+          cardio: ['60 sec', '90 sec', '2 min'],
+        }
+      : configNivel(nivel)
   const cicloCfg = configCicloMenstrual(faseMenstrual)
   const ajusteCiclo = cicloCfg
     ? `Ajuste ciclo menstrual: ${cicloCfg.label} - ${cicloCfg.recomendacion}`
@@ -430,7 +497,7 @@ export function generarPlanMensual({
 
   const contenidoSemanas = semanas.map((semana) => {
     const usarPliometría = permitePliometría(semana.fase)
-    const faseCfg = configFase(semana.fase)
+    const faseCfg = configFaseObjetivo(semana.fase, objetivo)
     const porcentajeBase = pick(faseCfg.porcentajes)
     const porcentaje = ajustarPorcentajeCiclo(porcentajeBase, cicloCfg)
     const deportivo = seleccionDeportivaMensual(objetivo, usarPliometría)
@@ -553,6 +620,10 @@ export function generarPlanMensual({
 }
 
 function crearTrabajoFuerza(ejercicio, nivelCfg, porcentaje, rms, pools, objetivo) {
+  if (objetivo === 'casa_principiante') {
+    return `${ejercicio} - 2-3 rondas de 6-10 repeticiones - ritmo lento - descanso 60-90 sec - escala: usar silla, pared o apoyo firme`
+  }
+
   const usarPiramidal = Math.random() < 0.35
   const contraste =
     objetivo === 'fighter' || objetivo === 'tenis'
@@ -729,6 +800,35 @@ export function generarEntrenamiento({
       'Jumping Jack',
       'Bear Crawl',
     ],
+    casaPrincipiante: [
+      'sentarse y pararse de una silla',
+      'push up contra pared',
+      'puente de gluteos en el suelo',
+      'bird dog lento',
+      'dead bug basico',
+      'marcha en el lugar',
+      'step touch lateral sin salto',
+      'elevacion de talones apoyado',
+      'bisagra de cadera sin peso',
+      'sentadilla parcial a silla',
+      'plancha inclinada en pared o mesa firme',
+      'movilidad de hombros en pared',
+    ],
+    casaMovilidad: [
+      'respiracion nasal + movilidad cervical suave',
+      'circulos de hombros + apertura de pecho',
+      'movilidad de tobillo apoyado en pared',
+      'gato camello lento',
+      'rotacion toracica en cuadrupedia',
+      'balanceo de cadera suave',
+    ],
+    casaCardio: [
+      'marcha en el lugar',
+      'paso lateral suave',
+      'talones al gluteo sin impacto',
+      'subir rodillas bajo impacto',
+      'caminar por la casa',
+    ],
     movilidad: [
       'movilidad de cadera + hombros',
       'world greatest stretch',
@@ -737,8 +837,17 @@ export function generarEntrenamiento({
     ],
   }
 
-  const nivelCfg = configNivel(nivel)
-  const faseCfg = configFase(faseATR)
+  const nivelCfg =
+    objetivo === 'casa_principiante'
+      ? {
+          intensidad: 'baja / inicio seguro en casa',
+          reps: ['5-6', '6-8', '8'],
+          series: ['2', '3'],
+          descanso: ['60 sec', '75 sec', '90 sec'],
+          cardio: ['60 sec', '90 sec', '2 min'],
+        }
+      : configNivel(nivel)
+  const faseCfg = configFaseObjetivo(faseATR, objetivo)
   const cicloCfg = configCicloMenstrual(faseMenstrual)
   const variantes = ['A', 'B', 'C', 'D', 'E', 'F']
 
@@ -749,7 +858,9 @@ export function generarEntrenamiento({
     const porcentaje = ajustarPorcentajeCiclo(porcentajeBase, cicloCfg)
     const variante = pick(variantes)
     const fuerzaElegida =
-      objetivo === 'fuerza'
+      objetivo === 'casa_principiante'
+        ? uniquePick(pools.casaPrincipiante, 3)
+        : objetivo === 'fuerza'
         ? uniquePick(pools.fuerza, 3)
         : objetivo === 'fighter' || objetivo === 'tenis'
           ? uniquePick([...pools.haltero, ...pools.fuerza], 3)
@@ -803,10 +914,14 @@ export function generarEntrenamiento({
       },
 
       bloque2: {
-        metodo: cicloCfg
-          ? `FUERZA / %RM - foco ATR: ${faseCfg.foco} - ajuste ciclo: ${cicloCfg.foco}`
-          : `FUERZA / %RM - foco: ${faseCfg.foco}`,
-        duracion: pick(['12 min', '12-15 min', '15 min', '15-18 min']),
+        metodo: objetivo === 'casa_principiante'
+          ? `FUERZA FUNCIONAL SIN MATERIAL - foco: control, confianza y adherencia`
+          : cicloCfg
+            ? `FUERZA / %RM - foco ATR: ${faseCfg.foco} - ajuste ciclo: ${cicloCfg.foco}`
+            : `FUERZA / %RM - foco: ${faseCfg.foco}`,
+        duracion: objetivo === 'casa_principiante'
+          ? pick(['8-10 min', '10 min', '10-12 min'])
+          : pick(['12 min', '12-15 min', '15 min', '15-18 min']),
         ejercicios: fuerzaElegida.map((e) =>
           crearTrabajoFuerza(e, nivelCfg, porcentaje, rms, pools, objetivo)
         ),
