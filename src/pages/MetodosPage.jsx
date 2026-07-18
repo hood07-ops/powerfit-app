@@ -209,6 +209,102 @@ const ejercicios = [
     'Aprender control de abdomen y respiracion sin cargar la espalda.',
     '6-8 reps por lado, lento y sin dolor lumbar.'
   ),
+  crearEjercicio(
+    'Bird dog lento',
+    'Casa principiante',
+    'Mejorar estabilidad de columna, cadera y hombro en posicion segura.',
+    '6 reps por lado, extender brazo y pierna sin girar la cadera.'
+  ),
+  crearEjercicio(
+    'Step touch lateral sin salto',
+    'Casa principiante',
+    'Elevar pulso con bajo impacto y mejorar coordinacion lateral.',
+    '30-60 sec suaves, tocar lado a lado sin despegar ambos pies a la vez.'
+  ),
+  crearEjercicio(
+    'Elevacion de talones apoyado con pausa',
+    'Casa principiante',
+    'Fortalecer gemelos, tobillos y equilibrio usando pared o silla como apoyo.',
+    '2-3 series de 8-12 reps, subir talones, pausar 1 sec y bajar lento.'
+  ),
+  crearEjercicio(
+    'Bisagra de cadera sin peso',
+    'Casa principiante',
+    'Aprender a mover cadera protegiendo espalda antes de cargar peso.',
+    '2-3 series de 8 reps, manos en cadera, espalda neutra y rodillas suaves.'
+  ),
+  crearEjercicio(
+    'Sentadilla parcial a silla',
+    'Casa principiante',
+    'Construir fuerza inicial de piernas con rango controlado y seguro.',
+    '2-3 series de 6-10 reps, tocar la silla y subir sin caer.'
+  ),
+  crearEjercicio(
+    'Plancha inclinada en pared o mesa firme',
+    'Casa principiante',
+    'Activar abdomen y hombros con una carga menor que la plancha en el suelo.',
+    '15-30 sec, cuerpo en linea recta, respirar sin hundir la cadera.'
+  ),
+  crearEjercicio(
+    'Movilidad de hombros en pared',
+    'Casa principiante',
+    'Mejorar rango de hombros y postura toracica sin material.',
+    '6-10 repeticiones lentas, espalda cerca de la pared y sin dolor.'
+  ),
+  crearEjercicio(
+    'Respiracion nasal y movilidad cervical suave',
+    'Casa principiante',
+    'Bajar tension, mejorar control respiratorio e iniciar movimiento con calma.',
+    '60 sec respirando por nariz + movimientos suaves de cuello sin dolor.'
+  ),
+  crearEjercicio(
+    'Circulos de hombros y apertura de pecho',
+    'Casa principiante',
+    'Preparar hombros y torax para empujes, postura y movilidad diaria.',
+    '8 circulos por direccion + 8 aperturas de pecho lentas.'
+  ),
+  crearEjercicio(
+    'Movilidad de tobillo apoyado en pared',
+    'Casa principiante',
+    'Mejorar movilidad de tobillo para caminar, sentarse y hacer sentadillas seguras.',
+    '8-10 reps por lado, rodilla avanza hacia la pared sin levantar talon.'
+  ),
+  crearEjercicio(
+    'Gato camello lento',
+    'Casa principiante',
+    'Movilizar columna suavemente y reconocer control de espalda.',
+    '6-10 repeticiones lentas, sin forzar el rango.'
+  ),
+  crearEjercicio(
+    'Rotacion toracica en cuadrupedia',
+    'Casa principiante',
+    'Mejorar movilidad de columna toracica y respiracion.',
+    '6 reps por lado, abrir el pecho y volver lento.'
+  ),
+  crearEjercicio(
+    'Balanceo de cadera suave',
+    'Casa principiante',
+    'Preparar cadera y zona lumbar para moverse con menos rigidez.',
+    '30-45 sec suave, rango comodo y respiracion controlada.'
+  ),
+  crearEjercicio(
+    'Talones al gluteo sin impacto',
+    'Casa principiante',
+    'Elevar pulso sin saltos y movilizar rodillas/cadera de forma simple.',
+    '30-60 sec alternando piernas, postura alta y ritmo conversable.'
+  ),
+  crearEjercicio(
+    'Subir rodillas bajo impacto',
+    'Casa principiante',
+    'Mejorar coordinacion y resistencia inicial sin impacto alto.',
+    '30-60 sec, rodillas a altura comoda y apoyo estable.'
+  ),
+  crearEjercicio(
+    'Caminar por la casa suave',
+    'Casa principiante',
+    'Crear base aerobica y habito de movimiento seguro en casa.',
+    '2-5 min suaves, respirar por nariz o mantener ritmo conversable.'
+  ),
   {
     nombre: 'Deadlift',
     categoría: 'Fuerza',
