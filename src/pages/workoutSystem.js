@@ -1,3 +1,5 @@
+import { buildFundamentosPowerFit } from './trainingKnowledge'
+
 function pick(arr) {
   return arr[Math.floor(Math.random() * arr.length)]
 }
@@ -582,6 +584,10 @@ export function generarPlanMensual({
       `SEMANA ${semana.numero} - ATR ${semana.fase.toUpperCase()}`,
       `Foco: ${semana.foco}`,
       `Pliometría: ${semana.notaPliometria}`,
+      '',
+      'FUNDAMENTOS POWERFIT 2026',
+      ...buildFundamentosPowerFit({ objetivo, faseATR: semana.fase, nivel }).map((linea) => `- ${linea}`),
+      '',
       dias.join('\n\n'),
     ].join('\n\n')
   })
@@ -610,6 +616,8 @@ export function generarPlanMensual({
       '- Entrenamiento funcional antes que hipertrofia: fuerza útil, patrónes completos y transferencia deportiva.',
       '- Cada sesión mezcla activación, motor transversal, fuerza/RM, contraste funcional y sistema metabólico.',
       '- La carga se sube solo si la técnica se mantiene limpia y explosiva.',
+      '- FITT-VP guia la dosis: frecuencia, intensidad, tiempo, tipo, volumen y progresion.',
+      '- RPE/RIR ajustan la sesion segun sueno, dolor, fatiga, estres y recuperacion real.',
       '',
       contenidoSemanas.join('\n\n'),
       '',
@@ -888,6 +896,7 @@ export function generarEntrenamiento({
         ? `${nivelCfg.intensidad} / ciclo ${cicloCfg.intensidad}`
         : nivelCfg.intensidad,
       sistemaMetabolico: faseCfg.sistema,
+      fundamentos: buildFundamentosPowerFit({ objetivo, faseATR, nivel }),
       motorTransversal:
         objetivo === 'fighter' || objetivo === 'tenis'
           ? [

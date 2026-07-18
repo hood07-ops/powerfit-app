@@ -702,6 +702,10 @@ Fase ATR: ${p.faseATR}
 Intensidad: ${p.intensidad}
 Sistema metabólico: ${p.sistemaMetabolico || 'No especificado'}
 Variante: ${p.variante}
+${p.fundamentos?.length ? `
+FUNDAMENTOS POWERFIT 2026
+${p.fundamentos.map((e) => `- ${e}`).join('\n')}
+` : ''}
 ${p.motorTransversal ? `
 MOTOR TRANSVERSAL
 ${p.motorTransversal.map((e) => `- ${e}`).join('\n')}

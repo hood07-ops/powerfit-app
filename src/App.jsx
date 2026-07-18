@@ -1973,9 +1973,12 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
   )
 }
 
-function NotificacionesPanel({ students, registroCompras, student, isAdmin }) {
+function NotificacionesPanel({ students, registroCompras, avatarRequests, student, isAdmin }) {
   const comprasPendientes = registroCompras.filter(
     (compra) => (compra.estado || compra.estado_pago || 'Pendiente') !== 'Aprobado'
+  )
+  const avatarsPendientes = avatarRequests.filter(
+    (solicitud) => (solicitud.estado || 'Pendiente') === 'Pendiente'
   )
   const alumnosPorVencer = students.filter((alumno) => {
     const dias = diferenciaDias(alumno.fecha_vencimiento)
@@ -1995,8 +1998,9 @@ function NotificacionesPanel({ students, registroCompras, student, isAdmin }) {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-4 gap-4">
         <Info label="Compras pendientes" value={comprasPendientes.length} />
+        <Info label="Avatar IA" value={avatarsPendientes.length} />
         <Info label="Membresías por vencer" value={alumnosPorVencer.length} />
         <Info label="Morosos" value={morosos.length} />
       </div>
@@ -2009,11 +2013,18 @@ function NotificacionesPanel({ students, registroCompras, student, isAdmin }) {
 
       {isAdmin && (
         <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-3">
-          {[...comprasPendientes, ...alumnosPorVencer, ...morosos].slice(0, 16).map((item, index) => (
+          {[
+            ...avatarsPendientes.map((item) => ({ ...item, tipoAlerta: 'Avatar IA pendiente' })),
+            ...comprasPendientes,
+            ...alumnosPorVencer,
+            ...morosos,
+          ].slice(0, 16).map((item, index) => (
             <div key={item.id || index} className="bg-zinc-800 rounded-2xl p-4">
-              <p className="font-black">{item.nombre_alumno || item.nombre || 'Alumno'}</p>
+              <p className="font-black">{item.tipoAlerta || item.nombre_alumno || item.nombre || 'Alumno'}</p>
               <p className="text-zinc-400">
-                {item.monto
+                {item.tipoAlerta
+                  ? `Alumno #${item.alumno_id || '-'} - plantilla ${item.template || 'champion_red'}`
+                  : item.monto
                   ? `Solicitud pendiente por $${item.monto}`
                   : `Estado: ${item.estado_pago || 'Pendiente'} - vence ${item.fecha_vencimiento || '-'}`}
               </p>
@@ -2033,6 +2044,7 @@ export default function App() {
   const [recordsEntrenamiento, setRecordsEntrenamiento] = useState([])
   const [rmsAlumno, setRmsAlumno] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
+  const [avatarRequests, setAvatarRequests] = useState([])
   const [section, setSection] = useState('AsistenciaQR')
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
@@ -2233,6 +2245,13 @@ export default function App() {
       setRegistroCompras(ordenarCompras(comprasData || []))
     }
 
+    const { data: avatarData, error: avatarError } = await supabase
+      .from('avatar_ia_solicitudes')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    setAvatarRequests(avatarError ? [] : avatarData || [])
+
     const { data: alumnosData } = await supabase
       .from('alumnos')
       .select('*')
@@ -2381,6 +2400,36 @@ export default function App() {
     }
 
     return { ok: true }
+  }
+
+  async function actualizarSolicitudAvatarIA(solicitud, estado, resultadoUrl = '') {
+    const updateData = {
+      estado,
+      updated_at: new Date().toISOString(),
+    }
+
+    if (resultadoUrl) {
+      updateData.resultado_url = resultadoUrl
+    }
+
+    const { error } = await supabase
+      .from('avatar_ia_solicitudes')
+      .update(updateData)
+      .eq('id', solicitud.id)
+
+    if (error) {
+      window.alert(`No se pudo actualizar la solicitud: ${error.message}`)
+      return
+    }
+
+    if (estado === 'Completado' && resultadoUrl && solicitud.alumno_id) {
+      await supabase
+        .from('alumnos')
+        .update({ foto_url: resultadoUrl })
+        .eq('id', solicitud.alumno_id)
+    }
+
+    await cargarUsuario()
   }
 
   async function aceptarTerminos(payload) {
@@ -2824,6 +2873,7 @@ export default function App() {
         <NotificacionesPanel
           students={students}
           registroCompras={registroCompras}
+          avatarRequests={avatarRequests}
           student={student}
           isAdmin={isAdmin}
         />
@@ -2912,7 +2962,9 @@ export default function App() {
       {editionAllows('RegistroCompras') && visibleSection === 'RegistroCompras' && isAdmin && (
         <RegistroComprasPage
           registroCompras={registroCompras}
+          avatarRequests={avatarRequests}
           aprobarSolicitud={aprobarSolicitud}
+          actualizarSolicitudAvatarIA={actualizarSolicitudAvatarIA}
           descargarCSV={descargarCSV}
         />
       )}

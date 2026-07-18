@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { POWERFIT_FOUNDATION_METHODS } from './trainingKnowledge'
 
 const metodos = [
   {
@@ -135,6 +136,7 @@ const metodos = [
     medir: 'Altura/distancia, tiempo de contacto, control de aterrizaje, simetría y respuesta al siguiente gesto.',
     ejemplo: 'Tenis: split step rebound + salida lateral. Boxeo: pogo guard stance + slip reaction.',
   },
+  ...POWERFIT_FOUNDATION_METHODS,
 ]
 
 function youtubeSearch(nombre) {

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { supabase } from '../supabase'
+import { buildConstructorFundamentos } from './trainingKnowledge'
 
 const TEXT = {
   es: {
@@ -70,6 +71,9 @@ const MACROS = [
   { value: 'potencia_rotacional', label: 'Potencia rotacional' },
   { value: 'resistencia_metabolica', label: 'Resistencia metabolica' },
   { value: 'retorno_progresivo', label: 'Retorno progresivo' },
+  { value: 'evaluacion_inicial', label: 'Evaluacion inicial' },
+  { value: 'sobrecarga_controlada', label: 'Sobrecarga controlada' },
+  { value: 'salud_adherencia', label: 'Salud y adherencia' },
 ]
 
 const PHASES = [
@@ -287,6 +291,7 @@ function findLabel(list, value) {
 }
 
 function buildPlan({ student, sessionName, objective, macro, phase, level, blocks }) {
+  const fundamentos = buildConstructorFundamentos({ objective, macro, phase, level })
   const lines = [
     'POWERFIT 360 - PLANIFICACION MANUAL',
     `Alumno: ${student?.nombre || 'Alumno PowerFit'}`,
@@ -301,6 +306,9 @@ function buildPlan({ student, sessionName, objective, macro, phase, level, block
     '- Usar fuerza funcional, motor transversal y transferencia deportiva.',
     '- Desde transformacion se integran trabajos pliometricos y potencia.',
     '- Ajustar cargas por RM cuando corresponda y respetar descanso muscular.',
+    '',
+    'Fundamentos del Manual PowerFit 2026:',
+    ...fundamentos.map((fundamento) => `- ${fundamento}`),
     '',
   ]
 

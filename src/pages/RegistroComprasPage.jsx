@@ -96,13 +96,17 @@ function EstadoCompra({ estado }) {
 
 export default function RegistroComprasPage({
   registroCompras,
+  avatarRequests = [],
   aprobarSolicitud,
+  actualizarSolicitudAvatarIA,
   descargarCSV,
 }) {
   const [rangoInicialDesde, rangoInicialHasta] = calcularRango('mes')
   const [desde, setDesde] = useState(rangoInicialDesde)
   const [hasta, setHasta] = useState(rangoInicialHasta)
   const [periodoActivo, setPeriodoActivo] = useState('mes')
+  const [vista, setVista] = useState('compras')
+  const [avatarUrls, setAvatarUrls] = useState({})
 
   const comprasOrdenadas = [...registroCompras].sort((a, b) => {
     const estadoA = estadoCompra(a) === 'Pendiente' ? 0 : 1
@@ -165,6 +169,17 @@ export default function RegistroComprasPage({
     )
   }
 
+  const avatarOrdenados = [...avatarRequests].sort(
+    (a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0)
+  )
+  const avatarPendientes = avatarOrdenados.filter(
+    (item) => (item.estado || 'Pendiente') === 'Pendiente'
+  )
+
+  function setAvatarUrl(id, value) {
+    setAvatarUrls((current) => ({ ...current, [id]: value }))
+  }
+
   return (
     <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
@@ -181,6 +196,98 @@ export default function RegistroComprasPage({
           Total rango: ${totalAprobado}
         </div>
       </div>
+
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-3 mb-6">
+        <button
+          onClick={() => setVista('compras')}
+          className={`px-5 py-3 rounded-2xl font-black ${
+            vista === 'compras' ? 'bg-green-600' : 'bg-zinc-800'
+          }`}
+        >
+          Compras
+        </button>
+        <button
+          onClick={() => setVista('avatar')}
+          className={`px-5 py-3 rounded-2xl font-black ${
+            vista === 'avatar' ? 'bg-yellow-500 text-black' : 'bg-zinc-800'
+          }`}
+        >
+          Avatar IA ({avatarPendientes.length})
+        </button>
+      </div>
+
+      {vista === 'avatar' && (
+        <div className="space-y-3">
+          {avatarOrdenados.map((solicitud) => {
+            const estado = solicitud.estado || 'Pendiente'
+            const resultadoUrl = avatarUrls[solicitud.id] || solicitud.resultado_url || ''
+
+            return (
+              <div
+                key={solicitud.id}
+                className="grid xl:grid-cols-[90px_1fr_1fr_1fr_auto] gap-3 rounded-2xl bg-zinc-800 p-4 items-start xl:items-center"
+              >
+                <img
+                  src={solicitud.foto_url}
+                  alt={solicitud.nombre_alumno || 'Avatar'}
+                  className="h-20 w-20 rounded-2xl object-cover border border-zinc-700"
+                />
+                <div>
+                  <p className="font-black text-yellow-400">
+                    Alumno #{solicitud.alumno_id || '-'}
+                  </p>
+                  <p className="text-zinc-400 text-sm">
+                    Plantilla: {solicitud.template || 'champion_red'}
+                  </p>
+                  <p className="text-zinc-500 text-xs">
+                    {solicitud.created_at
+                      ? new Date(solicitud.created_at).toLocaleString()
+                      : '-'}
+                  </p>
+                </div>
+                <div>
+                  <EstadoCompra estado={estado === 'Completado' ? 'Aprobado' : estado} />
+                  <p className="text-zinc-400 text-sm mt-2">
+                    Creditos: {solicitud.costo_creditos || 1}
+                  </p>
+                </div>
+                <input
+                  value={resultadoUrl}
+                  onChange={(event) => setAvatarUrl(solicitud.id, event.target.value)}
+                  placeholder="URL final del avatar generado"
+                  className="w-full bg-black p-3 rounded-xl"
+                />
+                <div className="grid gap-2">
+                  <button
+                    onClick={() =>
+                      actualizarSolicitudAvatarIA?.(solicitud, 'Completado', resultadoUrl)
+                    }
+                    disabled={!resultadoUrl}
+                    className="bg-green-600 hover:bg-green-700 disabled:opacity-40 px-4 py-3 rounded-xl font-black"
+                  >
+                    Completar
+                  </button>
+                  <button
+                    onClick={() => actualizarSolicitudAvatarIA?.(solicitud, 'Rechazado')}
+                    className="bg-red-600 hover:bg-red-700 px-4 py-3 rounded-xl font-black"
+                  >
+                    Rechazar
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+
+          {avatarOrdenados.length === 0 && (
+            <p className="text-zinc-400">
+              No hay solicitudes de avatar IA registradas.
+            </p>
+          )}
+        </div>
+      )}
+
+      {vista === 'compras' && (
+        <>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4">
@@ -291,6 +398,8 @@ export default function RegistroComprasPage({
           </p>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
