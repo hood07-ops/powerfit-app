@@ -57,6 +57,9 @@ export default function LoginPage({
       xp: 0,
       bloques_premium: 0,
       generaciones_disponibles: 6,
+      terminos_aceptados: false,
+      terminos_version: null,
+      terminos_aceptados_at: null,
     }
   }
 
@@ -72,6 +75,9 @@ export default function LoginPage({
     const payloadCompatible = { ...payload }
     delete payloadCompatible.fecha_nacimiento
     delete payloadCompatible.fecha_ingreso
+    delete payloadCompatible.terminos_aceptados
+    delete payloadCompatible.terminos_version
+    delete payloadCompatible.terminos_aceptados_at
 
     const { error: retryError } = await supabase
       .from('alumnos')

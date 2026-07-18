@@ -187,6 +187,16 @@ function avatarTemplateById(templateId) {
   return AVATAR_TEMPLATES.find((template) => template.id === templateId) || AVATAR_TEMPLATES[0]
 }
 
+const TERMS_VERSION = '2026-07-18-v1'
+const TERMS_TEXT = [
+  'Declaro que los datos entregados son verdaderos y autorizo su uso para gestion de alumnos, asistencia, pagos, evaluaciones y planificaciones dentro de PowerFit 360.',
+  'Entiendo que las rutinas, evaluaciones y recomendaciones de entrenamiento son orientativas y no reemplazan una evaluacion medica profesional.',
+  'Me comprometo a informar lesiones, enfermedades, dolores, restricciones medicas o cualquier condicion que pueda afectar mi entrenamiento.',
+  'Acepto que el uso de imagen/foto de perfil y avatar campeon es voluntario, y autorizo su uso dentro de mi ficha y experiencia PowerFit.',
+  'Acepto las reglas de pago, vencimiento de mensualidad, bloqueo por deuda y registro de asistencia segun la administracion del gimnasio o escuela.',
+  'Entiendo que el profesor/gimnasio es responsable de administrar sus alumnos y que PowerFit 360 puede mantener registro tecnico y comercial del servicio.',
+]
+
 function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
     encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
@@ -1617,6 +1627,109 @@ function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar 
   )
 }
 
+function TermsGate({ student, user, branding, onAccept }) {
+  const [acceptTerms, setAcceptTerms] = useState(false)
+  const [acceptContract, setAcceptContract] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [message, setMessage] = useState('')
+  const canAccept = acceptTerms && acceptContract
+
+  async function handleAccept() {
+    if (!canAccept) return
+
+    setSaving(true)
+    setMessage('')
+    const result = await onAccept?.({
+      version: TERMS_VERSION,
+      acepto_terminos: acceptTerms,
+      acepto_contrato: acceptContract,
+      user_agent: navigator.userAgent,
+    })
+    setSaving(false)
+
+    if (!result?.ok) {
+      setMessage(result?.message || 'No se pudo registrar la aceptacion.')
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white px-4 py-6">
+      <div className="mx-auto max-w-4xl rounded-3xl border border-yellow-500 bg-zinc-900 p-5 sm:p-8">
+        <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center">
+          <img
+            src={branding.logoUrl || DEFAULT_BRANDING.logoUrl}
+            alt={branding.appName || DEFAULT_BRANDING.appName}
+            className="h-20 w-20 rounded-full border border-red-600 object-cover"
+          />
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-black text-yellow-400">
+              Terminos, condiciones y contrato
+            </h1>
+            <p className="text-zinc-400 mt-1">
+              {branding.appName || DEFAULT_BRANDING.appName} - version {TERMS_VERSION}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-700 bg-black/40 p-4">
+          <p className="font-black text-red-400">Aceptante</p>
+          <p className="text-zinc-300">{student?.nombre || user?.email}</p>
+          <p className="text-zinc-500 text-sm">{student?.email || user?.email}</p>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {TERMS_TEXT.map((item, index) => (
+            <div key={item} className="rounded-2xl border border-zinc-700 bg-zinc-950 p-4">
+              <p className="font-black text-yellow-400">Clausula {index + 1}</p>
+              <p className="text-zinc-300 mt-1">{item}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 space-y-3">
+          <label className="flex gap-3 rounded-2xl border border-zinc-700 bg-black/40 p-4 font-bold">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(event) => setAcceptTerms(event.target.checked)}
+              className="mt-1 h-5 w-5"
+            />
+            <span>Acepto los terminos y condiciones de uso de la aplicacion.</span>
+          </label>
+
+          <label className="flex gap-3 rounded-2xl border border-zinc-700 bg-black/40 p-4 font-bold">
+            <input
+              type="checkbox"
+              checked={acceptContract}
+              onChange={(event) => setAcceptContract(event.target.checked)}
+              className="mt-1 h-5 w-5"
+            />
+            <span>Acepto el contrato de uso, entrenamiento, registro de datos y politicas de pago.</span>
+          </label>
+        </div>
+
+        {message && (
+          <p className="mt-4 rounded-xl border border-red-700 bg-red-950 p-4 font-bold text-red-200">
+            {message}
+          </p>
+        )}
+
+        <button
+          onClick={handleAccept}
+          disabled={!canAccept || saving}
+          className="mt-6 w-full rounded-2xl bg-green-600 p-5 text-xl font-black hover:bg-green-700 disabled:opacity-40"
+        >
+          {saving ? 'Registrando...' : 'Acepto y quiero usar la app'}
+        </button>
+
+        <p className="mt-4 text-center text-xs font-black text-zinc-500">
+          Desarrollado con {POWERFIT_SIGNATURE}
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function experienciaAlumno(alumno) {
   return Number(alumno?.experiencia || alumno?.xp || 0)
 }
@@ -2030,6 +2143,9 @@ export default function App() {
       xp: 0,
       bloques_premium: 0,
       generaciones_disponibles: 6,
+      terminos_aceptados: false,
+      terminos_version: null,
+      terminos_aceptados_at: null,
     }
   }
 
@@ -2049,6 +2165,9 @@ export default function App() {
     const payloadCompatible = { ...payload }
     delete payloadCompatible.fecha_nacimiento
     delete payloadCompatible.fecha_ingreso
+    delete payloadCompatible.terminos_aceptados
+    delete payloadCompatible.terminos_version
+    delete payloadCompatible.terminos_aceptados_at
 
     const { data: retryData } = await supabase
       .from('alumnos')
@@ -2264,6 +2383,53 @@ export default function App() {
     return { ok: true }
   }
 
+  async function aceptarTerminos(payload) {
+    if (!student?.id) {
+      return { ok: false, message: 'No se encontro la ficha del alumno.' }
+    }
+
+    const acceptedAt = new Date().toISOString()
+    const updatePayload = {
+      terminos_aceptados: true,
+      terminos_version: payload.version,
+      terminos_aceptados_at: acceptedAt,
+    }
+
+    const { error: updateError } = await supabase
+      .from('alumnos')
+      .update(updatePayload)
+      .eq('id', student.id)
+
+    if (updateError) {
+      const schemaMessage = esErrorSchemaCache(updateError)
+        ? 'Ejecuta primero supabase/terms_acceptance.sql en Supabase y vuelve a intentar.'
+        : updateError.message
+
+      return { ok: false, message: schemaMessage }
+    }
+
+    const { error: insertError } = await supabase.from('terminos_aceptaciones').insert([
+      {
+        alumno_id: student.id,
+        user_id: student.user_id || user.id,
+        gimnasio_id: student.gimnasio_id || null,
+        version: payload.version,
+        acepto_terminos: payload.acepto_terminos,
+        acepto_contrato: payload.acepto_contrato,
+        nombre_aceptante: student.nombre,
+        email: student.email || user.email,
+        user_agent: payload.user_agent,
+      },
+    ])
+
+    if (insertError && !esErrorSchemaCache(insertError)) {
+      console.warn('No se pudo guardar historial de terminos:', insertError.message)
+    }
+
+    await cargarUsuario()
+    return { ok: true }
+  }
+
   async function registrarPago(alumno) {
     await aplicarPagoConfirmado(alumno)
   }
@@ -2456,6 +2622,8 @@ export default function App() {
   if (!user) return <LoginPage onLogin={checkUser} />
 
   const isAdmin = student?.role?.toLowerCase() === 'admin'
+  const termsAccepted =
+    Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION
   const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
   const pagoAlDia = student?.estado_pago === 'Pagado'
   const bloqueado = !isAdmin && !pagoAlDia
@@ -2474,6 +2642,17 @@ export default function App() {
       .toLowerCase()
       .includes(busquedaAdmin.toLowerCase().trim())
   )
+
+  if (!termsAccepted) {
+    return (
+      <TermsGate
+        student={student}
+        user={user}
+        branding={branding}
+        onAccept={aceptarTerminos}
+      />
+    )
+  }
 
   return (
     <div className="min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">

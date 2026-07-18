@@ -117,6 +117,21 @@ supabase/avatar_storage_ai.sql
 
 Esto crea los buckets `profile-photos` y `champion-avatars`, mas la tabla `avatar_ia_solicitudes`.
 
+## Terminos, condiciones y contrato
+
+Para obligar aceptacion antes de usar la app, ejecutar:
+
+```sql
+supabase/terms_acceptance.sql
+```
+
+La app bloquea el acceso despues del login hasta que el usuario marque:
+
+- acepta terminos y condiciones
+- acepta contrato de uso, entrenamiento, datos y pagos
+
+La aceptacion queda guardada con version, fecha, alumno, usuario y gimnasio.
+
 Para revisar APK en GitHub Actions:
 
 ```powershell
