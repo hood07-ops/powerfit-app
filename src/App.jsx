@@ -2051,7 +2051,7 @@ export default function App() {
       )}
 
       {section === 'Constructor' && !bloqueado && (
-        <ConstructorPage student={student} idioma={idioma} />
+        <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
       {section === 'Rutinas' && !bloqueado && (

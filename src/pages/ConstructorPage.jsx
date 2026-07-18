@@ -12,11 +12,14 @@ const TEXT = {
     level: 'Nivel',
     sessionName: 'Nombre de la sesion',
     addExercise: 'Agregar ejercicio',
-    save: 'Guardar en rutinas',
-    download: 'Descargar Word',
+    save: 'Crear y guardar en rutinas',
+    download: 'Crear y descargar Word',
     preview: 'Vista previa',
-    saved: 'Planificacion guardada en rutinas.',
-    saveError: 'No se pudo guardar, pero puedes descargar la planificacion.',
+    saved: 'Planificacion creada. Se desconto 1 generacion disponible.',
+    downloaded: 'Planificacion creada y descargada. Se desconto 1 generacion disponible.',
+    saveError: 'No se pudo crear la planificacion. Intenta nuevamente.',
+    noAvailable: 'No tienes generaciones disponibles para crear una planificacion.',
+    available: 'Generaciones disponibles',
     max: 'Max',
     method: 'Metodo',
     duration: 'Duracion',
@@ -35,11 +38,14 @@ const TEXT = {
     level: 'Level',
     sessionName: 'Session name',
     addExercise: 'Add exercise',
-    save: 'Save to routines',
-    download: 'Download Word',
+    save: 'Create and save to routines',
+    download: 'Create and download Word',
     preview: 'Preview',
-    saved: 'Plan saved to routines.',
-    saveError: 'Could not save, but you can download the plan.',
+    saved: 'Plan created. 1 available generation was used.',
+    downloaded: 'Plan created and downloaded. 1 available generation was used.',
+    saveError: 'Could not create the plan. Please try again.',
+    noAvailable: 'You do not have available generations to create a plan.',
+    available: 'Available generations',
     max: 'Max',
     method: 'Method',
     duration: 'Duration',
@@ -316,7 +322,7 @@ function buildPlan({ student, sessionName, objective, macro, phase, level, block
   return lines.join('\n')
 }
 
-export default function ConstructorPage({ student, idioma = 'es' }) {
+export default function ConstructorPage({ student, onUpdateStudent, idioma = 'es' }) {
   const t = TEXT[idioma] || TEXT.es
   const [objective, setObjective] = useState('boxeo')
   const [macro, setMacro] = useState('base_transversal')
@@ -376,23 +382,73 @@ export default function ConstructorPage({ student, idioma = 'es' }) {
     )
   }
 
-  async function savePlan() {
+  async function createPlan({ shouldDownload = false } = {}) {
     setSaving(true)
     setMessage('')
 
-    const { error } = await supabase.from('planificaciones_generadas').insert([
+    const alumnoId = student?.id || null
+    const userId = student?.user_id || null
+
+    if (!alumnoId) {
+      setSaving(false)
+      setMessage(t.saveError)
+      return
+    }
+
+    const { data: alumnoActual, error: alumnoError } = await supabase
+      .from('alumnos')
+      .select('generaciones_disponibles')
+      .eq('id', alumnoId)
+      .single()
+
+    const disponibles = Number(alumnoActual?.generaciones_disponibles || 0)
+
+    if (alumnoError || disponibles < 1) {
+      setSaving(false)
+      setMessage(t.noAvailable)
+      return
+    }
+
+    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
       {
-        user_id: student?.user_id || student?.id || null,
-        alumno_id: student?.id || null,
+        user_id: userId,
+        alumno_id: alumnoId,
         nombre_alumno: student?.nombre || 'Alumno PowerFit',
         objetivo: `manual_${objective}`,
         nivel: level,
         contenido: planText,
       },
-    ])
+    ]).select()
+
+    if (insertError) {
+      setSaving(false)
+      setMessage(t.saveError)
+      return
+    }
+
+    const { error: updateError } = await supabase
+      .from('alumnos')
+      .update({ generaciones_disponibles: Math.max(0, disponibles - 1) })
+      .eq('id', alumnoId)
+
+    if (updateError) {
+      const ids = (planes || []).map((plan) => plan.id).filter(Boolean)
+      if (ids.length > 0) {
+        await supabase.from('planificaciones_generadas').delete().in('id', ids)
+      }
+
+      setSaving(false)
+      setMessage(t.saveError)
+      return
+    }
+
+    if (shouldDownload) {
+      downloadWord(planText, student?.nombre)
+    }
 
     setSaving(false)
-    setMessage(error ? t.saveError : t.saved)
+    setMessage(shouldDownload ? t.downloaded : t.saved)
+    onUpdateStudent?.()
   }
 
   return (
@@ -582,17 +638,23 @@ export default function ConstructorPage({ student, idioma = 'es' }) {
 
       <section className="bg-zinc-900 border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h3 className="text-2xl font-black text-yellow-400">{t.preview}</h3>
+          <div>
+            <h3 className="text-2xl font-black text-yellow-400">{t.preview}</h3>
+            <p className="text-zinc-400 font-bold mt-1">
+              {t.available}: {student?.generaciones_disponibles || 0}
+            </p>
+          </div>
           <div className="flex flex-col sm:flex-row gap-3">
             <button
-              onClick={() => downloadWord(planText, student?.nombre)}
-              className="bg-zinc-700 hover:bg-zinc-600 px-5 py-3 rounded-xl font-black"
+              onClick={() => createPlan({ shouldDownload: true })}
+              disabled={saving || Number(student?.generaciones_disponibles || 0) < 1}
+              className="bg-zinc-700 hover:bg-zinc-600 disabled:opacity-50 px-5 py-3 rounded-xl font-black"
             >
               {t.download}
             </button>
             <button
-              onClick={savePlan}
-              disabled={saving}
+              onClick={() => createPlan()}
+              disabled={saving || Number(student?.generaciones_disponibles || 0) < 1}
               className="bg-green-600 hover:bg-green-700 disabled:opacity-50 px-5 py-3 rounded-xl font-black"
             >
               {saving ? 'Guardando...' : t.save}
