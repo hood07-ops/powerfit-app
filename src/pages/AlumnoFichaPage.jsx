@@ -34,6 +34,24 @@ export default function AlumnoFichaPage({
 
   const xpTotal = student.xp || 0
   const nivelMatatoa = student.nivel_matatoa || 'Iniciado'
+  const formatDate = (date) => {
+    if (!date) return '-'
+
+    const value = String(date).slice(0, 10)
+    const parts = value.split('-')
+
+    if (parts.length === 3) {
+      const [year, month, day] = parts
+      if (year.length === 4 && month.length === 2 && day.length === 2) {
+        return `${day}-${month}-${year}`
+      }
+    }
+
+    const parsed = new Date(date)
+    if (Number.isNaN(parsed.getTime())) return date
+
+    return parsed.toLocaleDateString('es-CL')
+  }
 
   return (
     <div className="space-y-8">
@@ -62,7 +80,18 @@ export default function AlumnoFichaPage({
         <Card title="Edad" value={student.edad || '-'} />
         <Card title="Peso" value={`${student.peso || '-'} kg`} />
         <Card title="Altura" value={`${student.altura || '-'} m`} />
-        <Card title="Ingreso" value={student.fecha_ingreso || '-'} small />
+        <Card title="Cumpleaños" value={formatDate(student.fecha_nacimiento)} small />
+      </section>
+
+      <section className="grid md:grid-cols-4 gap-5">
+        <Card title="Fecha de inicio" value={formatDate(student.fecha_ingreso)} small />
+        <Card
+          title="Fecha de salida / término"
+          value={formatDate(student.fecha_salida || student.fecha_vencimiento)}
+          small
+        />
+        <Card title="Fecha de pago" value={formatDate(student.fecha_pago)} small />
+        <Card title="Mensualidad" value={`$${student.monto || 0}`} small />
       </section>
 
       <section className="grid md:grid-cols-4 gap-5">
@@ -117,8 +146,8 @@ export default function AlumnoFichaPage({
         />
 
         <Card
-          title="Vencimiento"
-          value={student.fecha_vencimiento || '-'}
+          title="Fecha de salida / término"
+          value={formatDate(student.fecha_salida || student.fecha_vencimiento)}
           color="text-cyan-400"
           small
         />

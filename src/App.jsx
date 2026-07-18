@@ -74,6 +74,25 @@ function fechaHoy() {
   return new Date().toISOString().slice(0, 10)
 }
 
+function formatearFecha(fecha) {
+  if (!fecha) return '-'
+
+  const valor = String(fecha).slice(0, 10)
+  const partes = valor.split('-')
+
+  if (partes.length === 3) {
+    const [anio, mes, dia] = partes
+    if (anio.length === 4 && mes.length === 2 && dia.length === 2) {
+      return `${dia}-${mes}-${anio}`
+    }
+  }
+
+  const date = new Date(fecha)
+  if (Number.isNaN(date.getTime())) return fecha
+
+  return date.toLocaleDateString('es-CL')
+}
+
 const RM_EJERCICIOS = [
   'Back Squat',
   'Front Squat',
@@ -925,13 +944,16 @@ function AdminAlumnoModal({
                 className="bg-black p-3 rounded-xl"
                 placeholder="Teléfono"
               />
-              <input
-                type="date"
-                defaultValue={alumno.fecha_nacimiento || ''}
-                onBlur={(e) => onUpdate(alumno.id, 'fecha_nacimiento', e.target.value)}
-                className="bg-black p-3 rounded-xl"
-                title="Fecha de nacimiento"
-              />
+              <label className="space-y-2 text-sm font-black text-zinc-300">
+                <span>Fecha de cumpleaños</span>
+                <input
+                  type="date"
+                  defaultValue={alumno.fecha_nacimiento || ''}
+                  onBlur={(e) => onUpdate(alumno.id, 'fecha_nacimiento', e.target.value)}
+                  className="w-full bg-black p-3 rounded-xl text-white"
+                  title="Fecha de cumpleaños"
+                />
+              </label>
               <input
                 type="number"
                 defaultValue={alumno.peso || ''}
@@ -946,12 +968,15 @@ function AdminAlumnoModal({
                 className="bg-black p-3 rounded-xl"
                 placeholder="Mensualidad"
               />
-              <input
-                type="date"
-                defaultValue={alumno.fecha_ingreso || ''}
-                onBlur={(e) => onUpdate(alumno.id, 'fecha_ingreso', e.target.value)}
-                className="bg-black p-3 rounded-xl"
-              />
+              <label className="space-y-2 text-sm font-black text-zinc-300">
+                <span>Fecha de inicio en PowerFit</span>
+                <input
+                  type="date"
+                  defaultValue={alumno.fecha_ingreso || ''}
+                  onBlur={(e) => onUpdate(alumno.id, 'fecha_ingreso', e.target.value)}
+                  className="w-full bg-black p-3 rounded-xl text-white"
+                />
+              </label>
               <input
                 type="number"
                 defaultValue={alumno.generaciones_disponibles || 0}
@@ -997,8 +1022,11 @@ function AdminAlumnoModal({
                 fecha de pago hoy, vencimiento +1 mes, estado Pagado y generaciones disponibles.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                <Info label="Fecha pago" value={alumno.fecha_pago} />
-                <Info label="Término de pago" value={alumno.fecha_vencimiento} />
+                <Info label="Fecha de pago" value={formatearFecha(alumno.fecha_pago)} />
+                <Info
+                  label="Fecha de salida / término"
+                  value={formatearFecha(alumno.fecha_salida || alumno.fecha_vencimiento)}
+                />
               </div>
             </div>
           </section>
@@ -1906,12 +1934,15 @@ export default function App() {
             <Info label="Nombre" value={student?.nombre} />
             <Info label="Correo" value={student?.email || user.email} />
             <Info label="Teléfono" value={student?.telefono} />
-            <Info label="Fecha nacimiento" value={student?.fecha_nacimiento} />
+            <Info label="Fecha de cumpleaños" value={formatearFecha(student?.fecha_nacimiento)} />
             <Info label="Peso" value={student?.peso} />
-            <Info label="Fecha ingreso" value={student?.fecha_ingreso} />
+            <Info label="Fecha de inicio" value={formatearFecha(student?.fecha_ingreso)} />
             <Info label="Tiempo en PowerFit" value={antiguedadTexto(student?.fecha_ingreso)} />
-            <Info label="Fecha pago" value={student?.fecha_pago} />
-            <Info label="Vencimiento" value={student?.fecha_vencimiento} />
+            <Info label="Fecha de pago" value={formatearFecha(student?.fecha_pago)} />
+            <Info
+              label="Fecha de salida / término"
+              value={formatearFecha(student?.fecha_salida || student?.fecha_vencimiento)}
+            />
             <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
             <Info label="Estado pago" value={student?.estado_pago} />
             <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
@@ -1932,8 +1963,11 @@ export default function App() {
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Estado" value={student?.estado_pago} />
             <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
-            <Info label="Fecha pago" value={student?.fecha_pago} />
-            <Info label="Vencimiento" value={student?.fecha_vencimiento} />
+            <Info label="Fecha de pago" value={formatearFecha(student?.fecha_pago)} />
+            <Info
+              label="Fecha de salida / término"
+              value={formatearFecha(student?.fecha_salida || student?.fecha_vencimiento)}
+            />
           </div>
 
           <button
