@@ -512,7 +512,9 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
     0,
     planesMensualesComprados - planesMensualesUsados
   )
-  const generacionesDisponibles = Number(disponiblesLocal || 0)
+  const generacionesDisponibles = Number(
+    disponiblesLocal || student?.generaciones_disponibles || 0
+  )
 
   async function cargarRM() {
     if (!student?.id) {
@@ -776,7 +778,12 @@ Vuelta a la calma: dirigida en clase.
     setMensaje('')
 
     try {
-      const disponibles = await refrescarGeneraciones()
+      const disponiblesRefrescados = await refrescarGeneraciones()
+      const disponibles = Math.max(
+        Number(disponiblesRefrescados || 0),
+        Number(disponiblesLocal || 0),
+        Number(student?.generaciones_disponibles || 0)
+      )
       const cantidadFinal =
         tipoPlan === 'mensual'
           ? planesMensualesDisponibles > 0
@@ -822,10 +829,36 @@ Vuelta a la calma: dirigida en clase.
         contenido: contenidoGenerado,
       }
 
+      const planLocal = {
+        ...planPayload,
+        id: `local-${student.id}-${planificaciones.length + 1}`,
+        created_at: new Date().toISOString(),
+      }
+
+      if (tipoPlan === 'mensual') {
+        descargarExcelMensual(contenidoGenerado, student.nombre)
+      } else {
+        descargarWord(contenidoGenerado, student.nombre)
+      }
+
+      setPlanificaciones((actuales) => [planLocal, ...actuales])
+      setMensaje(
+        tipoPlan === 'mensual'
+          ? 'Plan mensual generado y descargado. Guardando historial...'
+          : '1 planificacion generada y descargada. Guardando historial...'
+      )
+
       const { data: nuevosPlanes, error: insertError } = await supabase
         .from('planificaciones_generadas')
         .insert([planPayload])
         .select()
+
+      if (nuevosPlanes?.[0]) {
+        setPlanificaciones((actuales) => [
+          nuevosPlanes[0],
+          ...actuales.filter((planItem) => planItem.id !== planLocal.id),
+        ])
+      }
 
       if (insertError && !contenidoGenerado) {
         setMensaje(`Error guardando planificación: ${insertError.message}`)
@@ -847,10 +880,10 @@ Vuelta a la calma: dirigida en clase.
           await borrarPlanesInsertados(nuevosPlanes || [])
           setMensaje(
             updateError
-              ? `Error descontando generaciones: ${updateError.message}`
-              : 'No se pudo descontar la generacion disponible. Intenta nuevamente.'
+              ? `Rutina generada. No se pudo descontar la generacion: ${updateError.message}`
+              : 'Rutina generada. No se pudo descontar la generacion disponible.'
           )
-          await refrescarGeneraciones()
+          onUpdateStudent?.()
           return
         }
 
@@ -860,20 +893,6 @@ Vuelta a la calma: dirigida en clase.
       }
 
       setDisponiblesLocal(disponiblesRestantes)
-      const planVisible = nuevosPlanes?.[0] || {
-        ...planPayload,
-        id: `local-${Date.now()}`,
-        created_at: new Date().toISOString(),
-      }
-      const contenidoDescarga = planVisible.contenido || contenidoGenerado
-
-      if (tipoPlan === 'mensual') {
-        descargarExcelMensual(contenidoDescarga, student.nombre)
-      } else {
-        descargarWord(contenidoDescarga, student.nombre)
-      }
-
-      setPlanificaciones((actuales) => [planVisible, ...actuales])
       setMensaje(
         tipoPlan === 'mensual'
           ? 'Plan mensual generado, guardado y descargado en Excel. Se usó 1 crédito mensual aprobado.'
@@ -886,6 +905,8 @@ Vuelta a la calma: dirigida en clase.
 
       if (!insertError) await cargarPlanificacionesMes()
       onUpdateStudent?.()
+    } catch (error) {
+      setMensaje(`Error inesperado generando rutina: ${error.message}`)
     } finally {
       setGenerando(false)
     }
