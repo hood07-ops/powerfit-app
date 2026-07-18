@@ -209,8 +209,8 @@ export default function RutinasPage({ student, onUpdateStudent }) {
         ? Number(valores.repeticiones || 0)
         : null,
 
-      tiempo_segúndos: bloque.record === 'tiempo'
-        ? Number(valores.tiempo_segúndos || 0)
+      tiempo_segundos: bloque.record === 'tiempo'
+        ? Number(valores.tiempo_segundos || 0)
         : null,
 
       peso_kg: bloque.record === 'peso'
@@ -399,12 +399,12 @@ export default function RutinasPage({ student, onUpdateStudent }) {
 
                 <input
                   type="number"
-                  placeholder="Tiempo en segúndos"
-                  value={valores.tiempo_segúndos || ''}
+                  placeholder="Tiempo en segundos"
+                  value={valores.tiempo_segundos || ''}
                   onChange={(e) =>
                     actualizarValor(
                       bloque.nombre,
-                      'tiempo_segúndos',
+                      'tiempo_segundos',
                       e.target.value
                     )
                   }
