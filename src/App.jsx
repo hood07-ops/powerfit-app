@@ -55,6 +55,59 @@ function StatusBadge({ estado }) {
   )
 }
 
+const UI_TEXT = {
+  es: {
+    admin: 'ADMINISTRADOR',
+    student: 'ALUMNO',
+    paymentStatus: 'Estado pago',
+    logout: 'Cerrar sesion',
+    attendanceQr: 'Asistencia QR',
+    xpRanks: 'XP y rangos',
+    library: 'Biblioteca',
+    aiGenerator: 'Generador IA',
+    routines: 'Rutinas',
+    premium: 'Premium',
+    reports: 'Reportes',
+    stats: 'Estadisticas',
+    notifications: 'Notificaciones',
+    profile: 'Ficha personal',
+    payment: 'Pago / deuda',
+    evaluations: 'Evaluaciones',
+    adminStudents: 'ADMIN ALUMNOS',
+    purchaseLog: 'Registro compras',
+    language: 'Idioma',
+    blockedTitle: 'SERVICIOS BLOQUEADOS',
+    blockedCopy:
+      'Tu cuenta esta pendiente o morosa. Regulariza el pago para desbloquear rutinas, generador IA y metodos.',
+    payMonthly: 'Pagar mensualidad',
+  },
+  en: {
+    admin: 'ADMIN',
+    student: 'STUDENT',
+    paymentStatus: 'Payment status',
+    logout: 'Log out',
+    attendanceQr: 'QR attendance',
+    xpRanks: 'XP and ranks',
+    library: 'Library',
+    aiGenerator: 'AI generator',
+    routines: 'Routines',
+    premium: 'Premium',
+    reports: 'Reports',
+    stats: 'Statistics',
+    notifications: 'Notifications',
+    profile: 'Personal profile',
+    payment: 'Payment / debt',
+    evaluations: 'Evaluations',
+    adminStudents: 'STUDENTS ADMIN',
+    purchaseLog: 'Purchase log',
+    language: 'Language',
+    blockedTitle: 'SERVICES LOCKED',
+    blockedCopy:
+      'Your account is pending or overdue. Update payment to unlock routines, AI generator and methods.',
+    payMonthly: 'Pay monthly fee',
+  },
+}
+
 function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
     encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
@@ -1476,9 +1529,16 @@ export default function App() {
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
   const [passwordRecovery, setPasswordRecovery] = useState(false)
+  const [idioma, setIdioma] = useState(() => localStorage.getItem('powerfit_idioma') || 'es')
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
+  const t = UI_TEXT[idioma] || UI_TEXT.es
+
+  function cambiarIdioma(nuevoIdioma) {
+    setIdioma(nuevoIdioma)
+    localStorage.setItem('powerfit_idioma', nuevoIdioma)
+  }
 
   function alumnoPayloadDesdeAuth(currentUser) {
     const email = currentUser?.email || ''
@@ -1878,45 +1938,62 @@ export default function App() {
             <h1 className="text-3xl sm:text-4xl font-black text-red-500">POWERFIT 360</h1>
             <p className="text-zinc-300 truncate">{student?.nombre || user.email}</p>
             <p className="text-yellow-400 font-black">
-              {isAdmin ? 'ADMINISTRADOR' : 'ALUMNO'}
+              {isAdmin ? t.admin : t.student}
             </p>
             <p className={pagoAlDia ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
-              Estado pago: {student?.estado_pago || 'Pendiente'}
+              {t.paymentStatus}: {student?.estado_pago || 'Pendiente'}
             </p>
           </div>
         </div>
 
+        <div className="grid sm:flex gap-3 w-full sm:w-auto">
+          <div className="bg-black/40 border border-zinc-700 rounded-2xl p-2 flex items-center justify-center gap-2">
+            <span className="text-xs font-black text-zinc-400">{t.language}</span>
+            <button
+              onClick={() => cambiarIdioma('es')}
+              className={`px-3 py-2 rounded-xl font-black ${idioma === 'es' ? 'bg-red-600' : 'bg-zinc-800'}`}
+            >
+              ES
+            </button>
+            <button
+              onClick={() => cambiarIdioma('en')}
+              className={`px-3 py-2 rounded-xl font-black ${idioma === 'en' ? 'bg-red-600' : 'bg-zinc-800'}`}
+            >
+              EN
+            </button>
+          </div>
         <button
           onClick={cerrarSesion}
           className="bg-red-600 px-5 py-3 rounded-2xl font-black w-full sm:w-auto"
         >
-          Cerrar sesión
+          {t.logout}
         </button>
+        </div>
       </div>
 
       <div className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
-          <Btn text="Asistencia QR" active={section === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
-          <Btn text="XP y rangos" active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
-          <Btn text="Biblioteca" active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
-          <Btn text="Generador IA" active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
-          <Btn text="Rutinas" active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
-          <Btn text="Premium" active={section === 'Premium'} set={() => setSection('Premium')} />
-          <Btn text="Reportes" active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
-          <Btn text="Estadísticas" active={section === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
-          <Btn text="Notificaciones" active={section === 'Notificaciones'} set={() => setSection('Notificaciones')} />
+          <Btn text={t.attendanceQr} active={section === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
+          <Btn text={t.xpRanks} active={section === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
+          <Btn text={t.library} active={section === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
+          <Btn text={t.aiGenerator} active={section === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
+          <Btn text={t.routines} active={section === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn text={t.premium} active={section === 'Premium'} set={() => setSection('Premium')} />
+          <Btn text={t.reports} active={section === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
+          <Btn text={t.stats} active={section === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
+          <Btn text={t.notifications} active={section === 'Notificaciones'} set={() => setSection('Notificaciones')} />
 
-          <Btn text="Ficha personal" active={section === 'Ficha'} set={() => setSection('Ficha')} />
-          <Btn text="Pago / deuda" active={section === 'Pago'} set={() => setSection('Pago')} />
-          <Btn text="Evaluaciones" active={section === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
-          {isAdmin && <Btn text="ADMIN ALUMNOS" active={section === 'Admin'} set={() => setSection('Admin')} />}
-          {isAdmin && <Btn text="Registro compras" active={section === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
+          <Btn text={t.profile} active={section === 'Ficha'} set={() => setSection('Ficha')} />
+          <Btn text={t.payment} active={section === 'Pago'} set={() => setSection('Pago')} />
+          <Btn text={t.evaluations} active={section === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
+          {isAdmin && <Btn text={t.adminStudents} active={section === 'Admin'} set={() => setSection('Admin')} />}
+          {isAdmin && <Btn text={t.purchaseLog} active={section === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
         </div>
       </div>
 
       {bloqueado && (
         <div className="bg-red-950 border border-red-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
-          <h2 className="text-2xl sm:text-3xl font-black text-red-400">SERVICIOS BLOQUEADOS</h2>
+          <h2 className="text-2xl sm:text-3xl font-black text-red-400">{t.blockedTitle}</h2>
           <p className="text-zinc-300 mt-2">
             Tu cuenta está pendiente o morosa. Regulariza el pago para desbloquear rutinas,
             generador IA y métodos.
@@ -1925,7 +2002,7 @@ export default function App() {
             onClick={abrirPagoMensualidad}
             className="mt-5 bg-green-600 hover:bg-green-700 px-6 py-4 rounded-2xl font-black"
           >
-            Pagar mensualidad
+            {t.payMonthly}
           </button>
         </div>
       )}
@@ -1963,10 +2040,10 @@ export default function App() {
         />
       )}
 
-      {section === 'Metodos' && !bloqueado && <MetodosPage />}
+      {section === 'Metodos' && !bloqueado && <MetodosPage idioma={idioma} />}
 
       {section === 'Generador' && !bloqueado && (
-        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} />
+        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
       {section === 'Rutinas' && !bloqueado && (

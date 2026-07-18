@@ -9,6 +9,36 @@ const TRAMOS_GENERACION = [
   { desde: 14, hasta: Infinity, precio: 7500, nombre: 'Continuo PowerFit', cupos: null },
 ]
 const PRECIO_PLAN_MENSUAL = 60000
+const GENERADOR_TEXT = {
+  es: {
+    title: 'GENERADOR POWERFIT IA',
+    available: 'Generaciones disponibles',
+    visibleThisMonth: 'Planificaciones visibles este mes',
+    pricesTitle: 'PRECIOS Y TIPO DE GENERACION',
+    session: 'Sesion IA - usa 1 generacion',
+    monthly: 'Plan mensual ATR - $60.000',
+    generateMonthly: 'GENERAR PLAN MENSUAL',
+    generateOne: 'GENERAR 1 PLANIFICACION',
+    generating: 'GENERANDO...',
+    noAvailable: 'SIN PLANIFICACIONES DISPONIBLES',
+    buyOne: 'COMPRAR 1 GENERACION',
+    requestMonthly: 'SOLICITAR PLAN MENSUAL',
+  },
+  en: {
+    title: 'POWERFIT AI GENERATOR',
+    available: 'Available generations',
+    visibleThisMonth: 'Plans visible this month',
+    pricesTitle: 'PRICES AND GENERATION TYPE',
+    session: 'AI session - uses 1 generation',
+    monthly: 'Monthly ATR plan - $60,000',
+    generateMonthly: 'GENERATE MONTHLY PLAN',
+    generateOne: 'GENERATE 1 PLAN',
+    generating: 'GENERATING...',
+    noAvailable: 'NO PLANS AVAILABLE',
+    buyOne: 'BUY 1 GENERATION',
+    requestMonthly: 'REQUEST MONTHLY PLAN',
+  },
+}
 
 const RM_EJERCICIOS = [
   'Back Squat',
@@ -37,12 +67,13 @@ function escapeHtml(value) {
 }
 
 function descargarWord(contenido, nombreAlumno) {
+  const contenidoCorregido = corregirNombresPowerFit(contenido)
   const html = `
       <html>
         <head><meta charset="utf-8" /></head>
         <body>
           <pre style="font-family: Arial; font-size: 14px; white-space: pre-wrap;">
-${escapeHtml(contenido)}
+${escapeHtml(contenidoCorregido)}
           </pre>
         </body>
       </html>
@@ -92,6 +123,12 @@ function nombreArchivoSeguro(value) {
     .trim()
     .replace(/[\\/:*?"<>|]+/g, '-')
     .replace(/\s+/g, '-')
+}
+
+function corregirNombresPowerFit(texto) {
+  return String(texto || '')
+    .replace(/\bARMP\b/gi, 'AMRAP')
+    .replace(/\bARMAP\b/gi, 'AMRAP')
 }
 
 function parsearPlanMensualExcel(contenido, nombreAlumno) {
@@ -213,7 +250,7 @@ function parsearPlanMensualExcel(contenido, nombreAlumno) {
 }
 
 function descargarExcelMensual(contenido, nombreAlumno) {
-  const filas = parsearPlanMensualExcel(contenido, nombreAlumno)
+  const filas = parsearPlanMensualExcel(corregirNombresPowerFit(contenido), nombreAlumno)
   const columnas = [
     'Alumno',
     'Semana',
@@ -437,7 +474,7 @@ function VistaPlanMensual({ plan, nombreAlumno }) {
   )
 }
 
-export default function GeneradorPage({ student, onUpdateStudent }) {
+export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' }) {
   const [tipoPlan, setTipoPlan] = useState('sesion')
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
@@ -457,6 +494,7 @@ export default function GeneradorPage({ student, onUpdateStudent }) {
   const [planesMensualesComprados, setPlanesMensualesComprados] = useState(0)
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
+  const t = GENERADOR_TEXT[idioma] || GENERADOR_TEXT.es
 
   const tramoActual =
     TRAMOS_GENERACION.find(
@@ -774,7 +812,7 @@ Vuelta a la calma: dirigida en clase.
               historial: planificaciones.map((p) => p.contenido),
             })
 
-      const contenidoGenerado = textoPlan(plan, planificaciones.length + 1)
+      const contenidoGenerado = corregirNombresPowerFit(textoPlan(plan, planificaciones.length + 1))
       const planPayload = {
         user_id: student.user_id,
         alumno_id: student.id,
@@ -901,22 +939,22 @@ Vuelta a la calma: dirigida en clase.
     <div className="space-y-6 sm:space-y-8">
       <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <h1 className="text-3xl sm:text-4xl font-black text-red-500">
-          GENERADOR POWERFIT IA
+          {t.title}
         </h1>
 
         <p className="text-yellow-400 mt-3 font-black text-xl">
-          Generaciones disponibles: {generacionesDisponibles}
+          {t.available}: {generacionesDisponibles}
         </p>
 
         <p className="text-zinc-400 mt-2">
-          Planificaciones visibles este mes: {planificaciones.length}
+          {t.visibleThisMonth}: {planificaciones.length}
         </p>
       </div>
 
       <div className="bg-zinc-900 border border-green-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
         <div>
           <h2 className="text-2xl font-black text-green-400">
-            PRECIOS Y TIPO DE GENERACIÓN
+            {t.pricesTitle}
           </h2>
           <p className="text-zinc-400 mt-2">
             Precio por generación: las primeras 4 cuestan $2.500 cada una, las siguientes 10 cuestan $5.000 cada una y después cuestan $7.500 cada una. Plan mensual completo: $60.000.
@@ -967,7 +1005,7 @@ Vuelta a la calma: dirigida en clase.
               tipoPlan === 'sesion' ? 'bg-red-600' : 'bg-zinc-800'
             }`}
           >
-            Sesión IA - usa 1 generación
+            {t.session}
           </button>
 
           <button
@@ -976,7 +1014,7 @@ Vuelta a la calma: dirigida en clase.
               tipoPlan === 'mensual' ? 'bg-blue-600' : 'bg-zinc-800'
             }`}
           >
-            Plan mensual ATR - $60.000
+            {t.monthly}
           </button>
         </div>
       </div>
@@ -1136,12 +1174,12 @@ Vuelta a la calma: dirigida en clase.
         }`}
       >
         {generando
-          ? 'GENERANDO...'
+          ? t.generating
           : generacionBloqueada
-            ? 'SIN PLANIFICACIONES DISPONIBLES'
+            ? t.noAvailable
             : tipoPlan === 'mensual'
-              ? 'GENERAR PLAN MENSUAL'
-              : 'GENERAR 1 PLANIFICACIÓN'}
+              ? t.generateMonthly
+              : t.generateOne}
       </button>
 
       <button
@@ -1149,8 +1187,8 @@ Vuelta a la calma: dirigida en clase.
         className="w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-lg sm:text-xl"
       >
         {tipoPlan === 'mensual'
-          ? `SOLICITAR PLAN MENSUAL - $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}`
-          : `COMPRAR 1 GENERACIÓN - $${tramoActual.precio.toLocaleString('es-CL')}`}
+          ? `${t.requestMonthly} - $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}`
+          : `${t.buyOne} - $${tramoActual.precio.toLocaleString('es-CL')}`}
       </button>
 
       {mensaje && (
@@ -1233,7 +1271,7 @@ Vuelta a la calma: dirigida en clase.
               <VistaPlanMensual plan={planAbierto} nombreAlumno={student?.nombre} />
             ) : (
               <pre className="whitespace-pre-wrap text-sm">
-                {planAbierto.contenido}
+                {corregirNombresPowerFit(planAbierto.contenido)}
               </pre>
             )}
           </div>

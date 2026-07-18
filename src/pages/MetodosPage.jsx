@@ -645,9 +645,49 @@ const ejercicios = [
   ),
 ]
 
-export default function MétodosPage() {
+const bibliotecaText = {
+  es: {
+    title: 'Biblioteca',
+    subtitle: 'Metodos PowerFit, ejercicios, ejemplos y material tecnico de apoyo.',
+    methods: 'Metodos',
+    exercises: 'Ejercicios',
+    how: 'Como se ejecuta:',
+    measure: 'Como se mide:',
+    example: 'Ejemplo',
+    search: 'Buscar ejercicio, categoria u objetivo...',
+    showing: 'Mostrando',
+    of: 'de',
+    usedByAi: 'ejercicios usados por la IA.',
+    technicalPoints: 'Puntos tecnicos',
+    commonErrors: 'Errores comunes',
+    classUse: 'Uso en clase',
+    videos: 'Ver videos tecnicos',
+    empty: 'No encontramos ejercicios con esa busqueda.',
+  },
+  en: {
+    title: 'Library',
+    subtitle: 'PowerFit methods, exercises, examples and technical support material.',
+    methods: 'Methods',
+    exercises: 'Exercises',
+    how: 'How to perform:',
+    measure: 'How to score:',
+    example: 'Example',
+    search: 'Search exercise, category or goal...',
+    showing: 'Showing',
+    of: 'of',
+    usedByAi: 'exercises used by the AI.',
+    technicalPoints: 'Technical points',
+    commonErrors: 'Common errors',
+    classUse: 'Class use',
+    videos: 'Watch technical videos',
+    empty: 'No exercises found for that search.',
+  },
+}
+
+export default function MetodosPage({ idioma = 'es' }) {
   const [vista, setVista] = useState('metodos')
   const [búsqueda, setBusqueda] = useState('')
+  const t = bibliotecaText[idioma] || bibliotecaText.es
 
   const textoBusqueda = búsqueda.toLowerCase().trim()
   const ejerciciosFiltrados = ejercicios.filter((ejercicio) =>
@@ -668,7 +708,7 @@ export default function MétodosPage() {
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
-              Biblioteca
+              {t.title}
             </h2>
             <p className="text-zinc-400 mt-2">
               Métodos PowerFit, ejercicios, ejemplos y material técnico de apoyo.
@@ -682,7 +722,7 @@ export default function MétodosPage() {
                 vista === 'metodos' ? 'bg-red-600' : 'bg-zinc-800'
               }`}
             >
-              Métodos
+              {t.methods}
             </button>
             <button
               onClick={() => setVista('ejercicios')}
@@ -690,7 +730,7 @@ export default function MétodosPage() {
                 vista === 'ejercicios' ? 'bg-red-600' : 'bg-zinc-800'
               }`}
             >
-              Ejercicios
+              {t.exercises}
             </button>
           </div>
         </div>
@@ -711,7 +751,7 @@ export default function MétodosPage() {
                 {metodo.medir}
               </p>
               <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4 mt-4">
-                <p className="text-sm text-zinc-500 font-black">Ejemplo</p>
+                <p className="text-sm text-zinc-500 font-black">{t.example}</p>
                 <p className="text-zinc-200 mt-1">{metodo.ejemplo}</p>
               </div>
             </div>
