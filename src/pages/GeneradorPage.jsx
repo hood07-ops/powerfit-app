@@ -774,21 +774,22 @@ Vuelta a la calma: dirigida en clase.
               historial: planificaciones.map((p) => p.contenido),
             })
 
+      const contenidoGenerado = textoPlan(plan, planificaciones.length + 1)
+      const planPayload = {
+        user_id: student.user_id,
+        alumno_id: student.id,
+        nombre_alumno: student.nombre,
+        objetivo: tipoPlan === 'mensual' ? `Plan mensual ${objetivo}` : objetivo,
+        nivel,
+        contenido: contenidoGenerado,
+      }
+
       const { data: nuevosPlanes, error: insertError } = await supabase
         .from('planificaciones_generadas')
-        .insert([
-          {
-            user_id: student.user_id,
-            alumno_id: student.id,
-            nombre_alumno: student.nombre,
-            objetivo: tipoPlan === 'mensual' ? `Plan mensual ${objetivo}` : objetivo,
-            nivel,
-            contenido: textoPlan(plan, planificaciones.length + 1),
-          },
-        ])
+        .insert([planPayload])
         .select()
 
-      if (insertError) {
+      if (insertError && !contenidoGenerado) {
         setMensaje(`Error guardando planificación: ${insertError.message}`)
         return
       }
@@ -821,9 +822,12 @@ Vuelta a la calma: dirigida en clase.
       }
 
       setDisponiblesLocal(disponiblesRestantes)
-      const contenidoDescarga = (nuevosPlanes || [])
-        .map((p) => p.contenido)
-        .join('\n\n')
+      const planVisible = nuevosPlanes?.[0] || {
+        ...planPayload,
+        id: `local-${Date.now()}`,
+        created_at: new Date().toISOString(),
+      }
+      const contenidoDescarga = planVisible.contenido || contenidoGenerado
 
       if (tipoPlan === 'mensual') {
         descargarExcelMensual(contenidoDescarga, student.nombre)
@@ -831,13 +835,18 @@ Vuelta a la calma: dirigida en clase.
         descargarWord(contenidoDescarga, student.nombre)
       }
 
+      setPlanificaciones((actuales) => [planVisible, ...actuales])
       setMensaje(
         tipoPlan === 'mensual'
           ? 'Plan mensual generado, guardado y descargado en Excel. Se usó 1 crédito mensual aprobado.'
           : '1 planificación generada, guardada y descargada.'
       )
 
-      await cargarPlanificacionesMes()
+      if (insertError) {
+        setMensaje(`Rutina generada y descargada. No se pudo guardar en historial: ${insertError.message}`)
+      }
+
+      if (!insertError) await cargarPlanificacionesMes()
       onUpdateStudent?.()
     } finally {
       setGenerando(false)
