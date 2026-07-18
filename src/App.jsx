@@ -1229,15 +1229,16 @@ function AdminAlumnosPanel({
   )
 }
 
-function BrandSettingsPanel({ branding, setBranding, edition }) {
+function BrandSettingsPanel({ branding, setBranding, edition, gimnasio, onSaveRemote }) {
   const [form, setForm] = useState(branding)
-  const gananciaPowerFit = Math.round((edition.commissionRate || 0) * 100)
+  const comision = Number(gimnasio?.comision_powerfit ?? edition.commissionRate ?? 0)
+  const gananciaPowerFit = Math.round(comision * 100)
 
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
-  function guardarMarca() {
+  async function guardarMarca() {
     const nextBranding = {
       ...DEFAULT_BRANDING,
       ...form,
@@ -1247,6 +1248,7 @@ function BrandSettingsPanel({ branding, setBranding, edition }) {
 
     setBranding(nextBranding)
     saveBranding(nextBranding)
+    await onSaveRemote?.(nextBranding)
   }
 
   function restaurarMarca() {
@@ -1279,6 +1281,9 @@ function BrandSettingsPanel({ branding, setBranding, edition }) {
         <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4">
           <p className="text-sm text-zinc-400 font-black">Edicion</p>
           <p className="text-xl font-black text-red-400">{edition.label}</p>
+          {gimnasio?.nombre && (
+            <p className="text-zinc-300 mt-1">Gimnasio: {gimnasio.nombre}</p>
+          )}
           {gananciaPowerFit > 0 && (
             <p className="text-zinc-300 mt-1">
               Modelo comercial: {gananciaPowerFit}% PowerFit por alumno integrado.
@@ -1663,6 +1668,7 @@ export default function App() {
   const [passwordRecovery, setPasswordRecovery] = useState(false)
   const [idioma, setIdioma] = useState(() => localStorage.getItem('powerfit_idioma') || 'es')
   const [branding, setBranding] = useState(() => loadBranding())
+  const [gimnasio, setGimnasio] = useState(null)
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
@@ -1685,6 +1691,66 @@ export default function App() {
   function cambiarIdioma(nuevoIdioma) {
     setIdioma(nuevoIdioma)
     localStorage.setItem('powerfit_idioma', nuevoIdioma)
+  }
+
+  async function cargarMarcaGimnasio(alumno) {
+    if (!alumno?.gimnasio_id) {
+      setGimnasio(null)
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('gimnasios')
+      .select('id,nombre,logo_url,comision_powerfit')
+      .eq('id', alumno.gimnasio_id)
+      .maybeSingle()
+
+    if (error || !data) {
+      return
+    }
+
+    setGimnasio(data)
+
+    const nextBranding = {
+      ...DEFAULT_BRANDING,
+      appName: data.nombre || DEFAULT_BRANDING.appName,
+      schoolName: data.nombre || '',
+      logoUrl: data.logo_url || DEFAULT_BRANDING.logoUrl,
+    }
+
+    setBranding(nextBranding)
+    saveBranding(nextBranding)
+  }
+
+  async function guardarMarcaGimnasio(nextBranding) {
+    if (!gimnasio?.id) {
+      const { data, error } = await supabase.rpc('powerfit_create_gimnasio_for_current_user', {
+        p_nombre: nextBranding.appName,
+        p_logo_url: nextBranding.logoUrl,
+      })
+
+      if (!error && data) {
+        setGimnasio(data)
+        await cargarUsuario()
+      }
+
+      return
+    }
+
+    const { data, error } = await supabase
+      .from('gimnasios')
+      .update({
+        nombre: nextBranding.appName,
+        logo_url: nextBranding.logoUrl,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', gimnasio.id)
+      .select('id,nombre,logo_url,comision_powerfit')
+      .maybeSingle()
+
+    if (!error && data) {
+      setGimnasio(data)
+    }
   }
 
   function alumnoPayloadDesdeAuth(currentUser) {
@@ -1755,6 +1821,7 @@ export default function App() {
 
     const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
     setStudent(alumnoActual)
+    await cargarMarcaGimnasio(alumnoActual)
 
     if (alumnoActual?.id) {
       const { data: recordsData, error: recordsError } = await supabase
@@ -2328,6 +2395,8 @@ export default function App() {
           branding={branding}
           setBranding={setBranding}
           edition={edition}
+          gimnasio={gimnasio}
+          onSaveRemote={guardarMarcaGimnasio}
         />
       )}
 

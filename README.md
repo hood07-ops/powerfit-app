@@ -53,8 +53,51 @@ SUPABASE_SERVICE_ROLE_KEY=xxx
 
 ```powershell
 npm run build
+npm run build:management
+npm run build:student
+npm run build:professor
 npx cap sync android
 ```
+
+## Ediciones de la app
+
+PowerFit puede compilarse en tres modos:
+
+- `management`: gestion de asistencia, alumnos, pagos, reportes y administracion de gimnasio. No muestra Generador IA, Constructor, Biblioteca ni Rutinas.
+- `student`: experiencia de alumno.
+- `professor_full`: app completa para profesores, con marca personalizable.
+
+Cada modo usa su archivo:
+
+```env
+.env.management
+.env.student
+.env.professor_full
+```
+
+La variable que controla la edicion es:
+
+```env
+VITE_POWERFIT_EDITION=professor_full
+```
+
+## Multigimnasio
+
+Para activar bases separadas por profesor/gimnasio, ejecutar en Supabase SQL Editor:
+
+```sql
+supabase/multigym_tenants.sql
+```
+
+Esto crea:
+
+- `gimnasios`
+- `gimnasio_profesores`
+- `gimnasio_id` en alumnos, asistencias, RM, records, planificaciones y compras
+- politicas RLS por gimnasio
+- vista `powerfit_comisiones_profesor` para estimar el 10% PowerFit por alumno/mensualidad
+
+Despues de activar el SQL, un admin/profesor puede ir a **Marca** y guardar nombre/logo de su escuela. Si todavia no tiene gimnasio propio, la app intentara crearlo con `powerfit_create_gimnasio_for_current_user`.
 
 Para revisar APK en GitHub Actions:
 
