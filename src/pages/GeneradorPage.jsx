@@ -661,6 +661,26 @@ ${p.contenido}
 `
     }
 
+    const activacion = p.activacion || p['activación'] || {
+      metodo: 'MOVILIDAD + PULSO SUAVE',
+      ejercicios: ['movilidad general 5 min', 'respiracion controlada', 'marcha suave'],
+    }
+    const bloque1 = p.bloque1 || {
+      metodo: 'CIRCUITO TECNICO',
+      duracion: '10 min',
+      ejercicios: ['trabajo tecnico controlado'],
+    }
+    const bloque2 = p.bloque2 || {
+      metodo: 'FUERZA FUNCIONAL',
+      duracion: '10 min',
+      ejercicios: ['fuerza funcional adaptada'],
+    }
+    const bloque3 = p.bloque3 || {
+      metodo: 'SISTEMA METABOLICO SUAVE',
+      duracion: '8 min',
+      ejercicios: ['acondicionamiento de baja intensidad'],
+    }
+
     return `
 POWERFIT 360
 PLANIFICACIÓN ${numero}
@@ -689,27 +709,27 @@ Nota: si hay dolor, mareos o malestar importante, reducir intensidad y consultar
 ` : ''}
 
 ACTIVACIÓN
-Método: ${p.activacion.metodo}
-${p.activacion.ejercicios.map((e) => `- ${e}`).join('\n')}
+Método: ${activacion.metodo}
+${activacion.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 BLOQUE 1
-Método: ${p.bloque1.metodo}
-Duración: ${p.bloque1.duracion}
-${p.bloque1.ejercicios.map((e) => `- ${e}`).join('\n')}
+Método: ${bloque1.metodo}
+Duración: ${bloque1.duracion}
+${bloque1.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 2 - FUERZA / RM INTELIGENTE
-Método: ${p.bloque2.metodo}
-Duración: ${p.bloque2.duracion}
-${p.bloque2.ejercicios.map((e) => `- ${e}`).join('\n')}
+Método: ${bloque2.metodo}
+Duración: ${bloque2.duracion}
+${bloque2.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 DESCANSO: 2 MIN
 
 BLOQUE 3
-Método: ${p.bloque3.metodo}
-Duración: ${p.bloque3.duracion}
-${p.bloque3.ejercicios.map((e) => `- ${e}`).join('\n')}
+Método: ${bloque3.metodo}
+Duración: ${bloque3.duracion}
+${bloque3.ejercicios.map((e) => `- ${e}`).join('\n')}
 
 Vuelta a la calma: dirigida en clase.
 `
