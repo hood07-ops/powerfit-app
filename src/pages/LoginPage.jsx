@@ -9,7 +9,7 @@ export default function LoginPage({ onLogin }) {
     password: '',
     telefono: '',
     fecha_ingreso: '',
-    categoría: '',
+    categoria: '',
     edad: '',
     peso: '',
     altura: '',
@@ -23,59 +23,51 @@ export default function LoginPage({ onLogin }) {
     setForm({ ...form, [field]: value })
   }
 
-  async function handleAuth(e) {
-    e.preventDefault()
-    setLoading(true)
-    setMessage('')
+  function alumnoPayload(user, values = form) {
+    const email = values.email || user?.email || ''
+    const nombreBase = email ? email.split('@')[0] : 'Alumno'
 
-    if (mode === 'register') {
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email,
-        password: form.password,
-      })
-
-      if (error) {
-        setMessage(error.message)
-        setLoading(false)
-        return
-      }
-
-      if (data?.user) {
-        const { error: alumnoError } = await supabase.from('alumnos').insert([
-          {
-            nombre: form.nombre,
-            email: form.email,
-            user_id: data.user.id,
-            telefono: form.telefono,
-            fecha_ingreso: form.fecha_ingreso || null,
-            categoría: form.categoría,
-            edad: form.edad ? Number(form.edad) : null,
-            peso: form.peso ? Number(form.peso) : null,
-            altura: form.altura ? Number(form.altura) : null,
-            contacto_emergencia: form.contacto_emergencia,
-            observaciones: form.observaciones,
-            plan: 'Básico',
-            estado_pago: 'Pendiente',
-            monto: 0,
-            xp: 0,
-            bloques_premium: 0,
-            generaciones_disponibles: 6,
-          },
-        ])
-
-        if (alumnoError) {
-          setMessage(alumnoError.message)
-          setLoading(false)
-          return
-        }
-      }
-
-      setMessage('Cuenta creada. Ahora inicia sesión.')
-      setMode('login')
-      setLoading(false)
-      return
+    return {
+      nombre: values.nombre || nombreBase,
+      email,
+      user_id: user.id,
+      telefono: values.telefono || '',
+      fecha_ingreso: values.fecha_ingreso || null,
+      categoria: values.categoria || '',
+      edad: values.edad ? Number(values.edad) : null,
+      peso: values.peso ? Number(values.peso) : null,
+      altura: values.altura ? Number(values.altura) : null,
+      contacto_emergencia: values.contacto_emergencia || '',
+      observaciones: values.observaciones || '',
+      plan: 'Básico',
+      estado_pago: 'Pendiente',
+      monto: 0,
+      xp: 0,
+      bloques_premium: 0,
+      generaciones_disponibles: 6,
     }
+  }
 
+  async function asegurarAlumno(user, values = form) {
+    if (!user?.id) return null
+
+    const { data: existente, error: buscarError } = await supabase
+      .from('alumnos')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+
+    if (buscarError) return buscarError
+    if (existente?.id) return null
+
+    const { error } = await supabase.from('alumnos').insert([
+      alumnoPayload(user, values),
+    ])
+
+    return error
+  }
+
+  async function iniciarSesionConFicha() {
     const { data, error } = await supabase.auth.signInWithPassword({
       email: form.email,
       password: form.password,
@@ -83,11 +75,77 @@ export default function LoginPage({ onLogin }) {
 
     if (error) {
       setMessage('Correo o contraseña incorrectos')
+      return false
+    }
+
+    const alumnoError = await asegurarAlumno(data.user)
+
+    if (alumnoError) {
+      setMessage(`Ingresaste, pero no se pudo crear la ficha de alumno: ${alumnoError.message}`)
+      return false
+    }
+
+    onLogin(data.user)
+    return true
+  }
+
+  async function registrarCuenta() {
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: {
+          nombre: form.nombre,
+          telefono: form.telefono,
+          categoria: form.categoria,
+        },
+      },
+    })
+
+    if (error) {
+      if (error.message.toLowerCase().includes('already registered')) {
+        const ok = await iniciarSesionConFicha()
+
+        if (!ok) {
+          setMessage('Ese correo ya existe. Inicia sesión con tu contraseña o pide recuperar acceso.')
+        }
+
+        return
+      }
+
+      setMessage(error.message)
+      return
+    }
+
+    if (data?.user && data?.session) {
+      const alumnoError = await asegurarAlumno(data.user)
+
+      if (alumnoError) {
+        setMessage(`Cuenta creada, pero no se pudo crear la ficha: ${alumnoError.message}`)
+        return
+      }
+    }
+
+    setMessage(
+      data?.session
+        ? 'Cuenta creada. Ahora inicia sesión.'
+        : 'Cuenta creada. Si Supabase pide confirmación, revisa el correo antes de iniciar sesión.'
+    )
+    setMode('login')
+  }
+
+  async function handleAuth(e) {
+    e.preventDefault()
+    setLoading(true)
+    setMessage('')
+
+    if (mode === 'register') {
+      await registrarCuenta()
       setLoading(false)
       return
     }
 
-    onLogin(data.user)
+    await iniciarSesionConFicha()
     setLoading(false)
   }
 
@@ -109,7 +167,7 @@ export default function LoginPage({ onLogin }) {
               <Input label="Nombre completo" value={form.nombre} onChange={(v) => update('nombre', v)} />
               <Input label="Teléfono" value={form.telefono} onChange={(v) => update('telefono', v)} />
               <Input type="date" label="Fecha ingreso" value={form.fecha_ingreso} onChange={(v) => update('fecha_ingreso', v)} />
-              <Input label="Categoría" value={form.categoría} onChange={(v) => update('categoría', v)} />
+              <Input label="Categoría" value={form.categoria} onChange={(v) => update('categoria', v)} />
               <Input type="number" label="Edad" value={form.edad} onChange={(v) => update('edad', v)} />
               <Input type="number" label="Peso kg" value={form.peso} onChange={(v) => update('peso', v)} />
               <Input type="number" label="Altura cm" value={form.altura} onChange={(v) => update('altura', v)} />
