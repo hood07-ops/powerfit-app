@@ -8,6 +8,8 @@
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#09090b",
+  "categories": ["fitness", "sports", "productivity", "education"],
+  "lang": "es-CL",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -26,6 +28,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Asistencia QR",
+      "short_name": "QR",
+      "description": "Abrir control de asistencia PowerFit.",
+      "url": "/?section=AsistenciaQR",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Generador IA",
+      "short_name": "IA",
+      "description": "Abrir generador de planificaciones PowerFit.",
+      "url": "/?section=Generador",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Admin alumnos",
+      "short_name": "Admin",
+      "description": "Abrir administracion de alumnos.",
+      "url": "/?section=Admin",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

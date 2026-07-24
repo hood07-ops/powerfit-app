@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import { DEFAULT_BRANDING, POWERFIT_SIGNATURE, getAppEdition, loadBranding, saveBranding } from './appConfig'
+import { applyPowerFitUpdate, listenForPowerFitUpdate } from './pwa'
 import { supabase } from './supabase'
 
 import CheckInPage from './pages/CheckInPage'
@@ -2194,7 +2195,10 @@ export default function App() {
   const [rmsAlumno, setRmsAlumno] = useState([])
   const [registroCompras, setRegistroCompras] = useState([])
   const [avatarRequests, setAvatarRequests] = useState([])
-  const [section, setSection] = useState('AsistenciaQR')
+  const [section, setSection] = useState(() => {
+    const requestedSection = new URLSearchParams(window.location.search).get('section')
+    return requestedSection || 'AsistenciaQR'
+  })
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -2202,11 +2206,14 @@ export default function App() {
   const [idioma, setIdioma] = useState(() => localStorage.getItem('powerfit_idioma') || 'es')
   const [branding, setBranding] = useState(() => loadBranding())
   const [gimnasio, setGimnasio] = useState(null)
+  const [pwaUpdate, setPwaUpdate] = useState(null)
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
   const edition = getAppEdition()
   const t = UI_TEXT[idioma] || UI_TEXT.es
+
+  useEffect(() => listenForPowerFitUpdate(setPwaUpdate), [])
 
   function editionAllows(sectionName) {
     return edition.sections.includes(sectionName)
@@ -2860,6 +2867,21 @@ export default function App() {
   return (
     <div className="min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto">
+      {pwaUpdate && (
+        <div className="mb-3 sm:mb-4 bg-green-600 text-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-black">Nueva versión disponible</p>
+            <p className="text-sm text-green-50">Actualiza PowerFit 360 para usar los últimos cambios.</p>
+          </div>
+          <button
+            onClick={() => applyPowerFitUpdate(pwaUpdate)}
+            className="bg-black/30 hover:bg-black/50 px-4 py-3 rounded-xl font-black"
+          >
+            Actualizar app
+          </button>
+        </div>
+      )}
+
       <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div className="min-w-0 flex items-center gap-4">
           <img
