@@ -197,9 +197,14 @@ const TERMS_TEXT = [
   'Entiendo que el profesor/gimnasio es responsable de administrar sus alumnos y que PowerFit 360 puede mantener registro tecnico y comercial del servicio.',
 ]
 
+function csvCell(value) {
+  const text = String(value ?? '')
+  return `"${text.replaceAll('"', '""')}"`
+}
+
 function descargarCSV(nombreArchivo, encabezado, filas, totalLabel, total) {
   const contenido =
-    encabezado + '\n' + filas.join('\n') + '\n\n' + `${totalLabel},${total}`
+    '\ufeff' + encabezado + '\n' + filas.join('\n') + '\n\n' + `${csvCell(totalLabel)},${csvCell(total)}`
 
   const blob = new Blob([contenido], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
@@ -1874,27 +1879,80 @@ function PremiumPanel({ student, abrirPagoMensualidad }) {
   )
 }
 
-function ReportesPanel({ students, asistencias, registroCompras, descargarCSV }) {
+function ReportesPanel({ students, asistencias, registroCompras, recordsEntrenamiento, descargarCSV }) {
   const comprasAprobadas = registroCompras.filter(
     (compra) => (compra.estado || compra.estado_pago) === 'Aprobado'
   )
+  const inicioDia = new Date()
+  inicioDia.setHours(0, 0, 0, 0)
+  const inicioSemana = new Date(inicioDia)
+  inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay())
+  const inicioMes = new Date(inicioDia.getFullYear(), inicioDia.getMonth(), 1)
+  const inicioAnio = new Date(inicioDia.getFullYear(), 0, 1)
+  const fechaCompra = (compra) => new Date(compra.fecha_pago || compra.updated_at || compra.created_at)
+  const totalDesde = (desde) =>
+    comprasAprobadas
+      .filter((compra) => fechaCompra(compra) >= desde)
+      .reduce((sum, compra) => sum + Number(compra.monto || 0), 0)
   const totalCompras = comprasAprobadas.reduce(
     (sum, compra) => sum + Number(compra.monto || 0),
     0
   )
+  const pagados = students.filter((alumno) => alumno.estado_pago === 'Pagado')
+  const pendientes = students.filter((alumno) => alumno.estado_pago === 'Pendiente')
   const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso')
+  const ranking = students
+    .map((alumno) => ({
+      alumno,
+      asistencias: asistencias.filter((item) => String(item.alumno_id) === String(alumno.id)).length,
+      evaluaciones: recordsEntrenamiento.filter((item) => String(item.alumno_id) === String(alumno.id)).length,
+    }))
+    .sort((a, b) => b.asistencias + b.evaluaciones - (a.asistencias + a.evaluaciones))
+  const totalDia = totalDesde(inicioDia)
+  const totalSemana = totalDesde(inicioSemana)
+  const totalMes = totalDesde(inicioMes)
+  const totalAnio = totalDesde(inicioAnio)
 
   function descargarReporte() {
+    const filasResumen = [
+      ['SECCION', 'METRICA', 'VALOR'],
+      ['Resumen', 'Alumnos', students.length],
+      ['Resumen', 'Pagados', pagados.length],
+      ['Resumen', 'Pendientes', pendientes.length],
+      ['Resumen', 'Morosos', morosos.length],
+      ['Resumen', 'Asistencias', asistencias.length],
+      ['Resumen', 'Evaluaciones', recordsEntrenamiento.length],
+      ['Finanzas', 'Compras aprobadas', comprasAprobadas.length],
+      ['Finanzas', 'Total dia', totalDia],
+      ['Finanzas', 'Total semana', totalSemana],
+      ['Finanzas', 'Total mes', totalMes],
+      ['Finanzas', 'Total anio', totalAnio],
+      ['Finanzas', 'Total historico compras', totalCompras],
+      [],
+      ['ALUMNO', 'ESTADO_PAGO', 'VENCE', 'MONTO', 'ASISTENCIAS', 'EVALUACIONES'],
+      ...ranking.map(({ alumno, asistencias: total, evaluaciones }) => [
+        alumno.nombre || '-',
+        alumno.estado_pago || 'Pendiente',
+        alumno.fecha_vencimiento || '-',
+        alumno.monto || 0,
+        total,
+        evaluaciones,
+      ]),
+      [],
+      ['COMPRAS_APROBADAS', 'ALUMNO', 'TIPO', 'MONTO', 'FECHA'],
+      ...comprasAprobadas.map((compra) => [
+        compra.id || '-',
+        compra.nombre_alumno || compra.alumno_nombre || '-',
+        compra.tipo || compra.descripcion || 'Compra PowerFit',
+        compra.monto || 0,
+        fechaCompra(compra).toLocaleString(),
+      ]),
+    ]
+
     descargarCSV(
       'reporte_powerfit_360.csv',
-      'Metrica,Valor',
-      [
-        `Alumnos,${students.length}`,
-        `Asistencias,${asistencias.length}`,
-        `Morosos,${morosos.length}`,
-        `Compras aprobadas,${comprasAprobadas.length}`,
-        `Total compras,${totalCompras}`,
-      ],
+      '',
+      filasResumen.map((fila) => fila.map(csvCell).join(',')),
       'Total financiero',
       totalCompras
     )
@@ -1913,7 +1971,49 @@ function ReportesPanel({ students, asistencias, registroCompras, descargarCSV })
         <Info label="Alumnos" value={students.length} />
         <Info label="Asistencias" value={asistencias.length} />
         <Info label="Morosos" value={morosos.length} />
-        <Info label="Ingresos compras" value={`$${totalCompras}`} />
+        <Info label="Ingresos compras" value={`$${totalCompras.toLocaleString('es-CL')}`} />
+      </div>
+
+      <div className="grid md:grid-cols-4 gap-4">
+        <Info label="Hoy" value={`$${totalDia.toLocaleString('es-CL')}`} />
+        <Info label="Semana" value={`$${totalSemana.toLocaleString('es-CL')}`} />
+        <Info label="Mes" value={`$${totalMes.toLocaleString('es-CL')}`} />
+        <Info label="Año" value={`$${totalAnio.toLocaleString('es-CL')}`} />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h3 className="text-2xl font-black text-blue-300 mb-4">Ranking operativo</h3>
+          <div className="space-y-3">
+            {ranking.slice(0, 8).map(({ alumno, asistencias: total, evaluaciones }) => (
+              <div key={alumno.id} className="grid sm:grid-cols-4 gap-3 bg-zinc-800 rounded-2xl p-4">
+                <p className="font-black">{alumno.nombre || '-'}</p>
+                <p>{total} asistencias</p>
+                <p>{evaluaciones} evaluaciones</p>
+                <StatusBadge estado={alumno.estado_pago} />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h3 className="text-2xl font-black text-blue-300 mb-4">Últimas compras aprobadas</h3>
+          <div className="space-y-3">
+            {comprasAprobadas.slice(0, 8).map((compra) => (
+              <div key={compra.id} className="bg-zinc-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:justify-between gap-2">
+                <div>
+                  <p className="font-black">{compra.nombre_alumno || compra.alumno_nombre || 'Alumno PowerFit'}</p>
+                  <p className="text-zinc-400 text-sm">{fechaCompra(compra).toLocaleDateString()}</p>
+                </div>
+                <p className="text-green-400 font-black">${Number(compra.monto || 0).toLocaleString('es-CL')}</p>
+              </div>
+            ))}
+
+            {comprasAprobadas.length === 0 && (
+              <p className="text-zinc-400">Aún no hay compras aprobadas.</p>
+            )}
+          </div>
+        </div>
       </div>
 
       <button
@@ -2906,6 +3006,7 @@ export default function App() {
           students={students}
           asistencias={asistencias}
           registroCompras={registroCompras}
+          recordsEntrenamiento={recordsEntrenamiento}
           descargarCSV={descargarCSV}
         />
       )}
