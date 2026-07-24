@@ -9,8 +9,10 @@ export const POWERFIT_SIGNATURE = 'PowerFit 360'
 const EDITIONS = {
   management: {
     id: 'management',
-    label: 'Gestion asistencia',
-    description: 'Asistencia, alumnos, pagos, reportes y administracion de gimnasio.',
+    appName: 'PowerFit Admin',
+    label: 'PowerFit Admin',
+    audience: 'Administrador',
+    description: 'App para duenos o administradores: asistencia, alumnos, pagos, reportes y administracion de gimnasio.',
     allowBranding: true,
     commissionRate: 0.1,
     sections: [
@@ -27,8 +29,10 @@ const EDITIONS = {
   },
   student: {
     id: 'student',
-    label: 'Alumno',
-    description: 'Acceso de alumno con asistencia, ficha, pago, rutinas y progreso.',
+    appName: 'PowerFit Alumno',
+    label: 'PowerFit Alumno',
+    audience: 'Alumno',
+    description: 'App del alumno: asistencia QR, ficha personal, pagos, rutinas, progreso, XP y evaluaciones.',
     allowBranding: false,
     commissionRate: 0,
     sections: [
@@ -44,8 +48,10 @@ const EDITIONS = {
   },
   professor_full: {
     id: 'professor_full',
-    label: 'Profesor completo',
-    description: 'PowerFit completo para profesores, con alumnos propios y marca personalizable.',
+    appName: 'PowerFit Coach',
+    label: 'PowerFit Coach',
+    audience: 'Entrenador',
+    description: 'App completa para entrenadores: alumnos propios, generador IA, constructor, biblioteca, reportes y marca personalizable.',
     allowBranding: true,
     commissionRate: 0.1,
     sections: [
@@ -71,15 +77,33 @@ const EDITIONS = {
 
 export function getAppEdition() {
   const configured = import.meta.env.VITE_POWERFIT_EDITION || 'professor_full'
-  return EDITIONS[configured] || EDITIONS.professor_full
+  const edition = EDITIONS[configured] || EDITIONS.professor_full
+  return {
+    ...edition,
+    appName: import.meta.env.VITE_POWERFIT_APP_NAME || edition.appName,
+  }
+}
+
+export function getEditionBranding(edition = getAppEdition()) {
+  return {
+    ...DEFAULT_BRANDING,
+    appName: edition.appName || DEFAULT_BRANDING.appName,
+  }
 }
 
 export function loadBranding() {
+  const defaults = getEditionBranding()
+
   try {
     const stored = JSON.parse(localStorage.getItem('powerfit_branding') || '{}')
-    return { ...DEFAULT_BRANDING, ...stored }
+    return {
+      ...defaults,
+      ...stored,
+      appName: stored.appName || defaults.appName,
+      logoUrl: stored.logoUrl || defaults.logoUrl,
+    }
   } catch {
-    return DEFAULT_BRANDING
+    return defaults
   }
 }
 

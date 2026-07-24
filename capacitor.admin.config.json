@@ -1,0 +1,10 @@
+{
+  "appId": "cl.powerfit.admin",
+  "appName": "PowerFit Admin",
+  "webDir": "dist",
+  "server": {
+    "url": "https://powerfit-app-cv9o.vercel.app",
+    "cleartext": false,
+    "androidScheme": "https"
+  }
+}

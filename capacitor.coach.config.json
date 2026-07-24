@@ -1,0 +1,10 @@
+{
+  "appId": "cl.powerfit.coach",
+  "appName": "PowerFit Coach",
+  "webDir": "dist",
+  "server": {
+    "url": "https://powerfit-app-cv9o.vercel.app",
+    "cleartext": false,
+    "androidScheme": "https"
+  }
+}

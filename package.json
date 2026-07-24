@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:admin": "vite build --mode management",
+    "build:coach": "vite build --mode professor_full",
+    "build:alumno": "vite build --mode student",
     "build:management": "vite build --mode management",
     "build:student": "vite build --mode student",
     "build:professor": "vite build --mode professor_full",

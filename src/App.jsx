@@ -2215,6 +2215,10 @@ export default function App() {
 
   useEffect(() => listenForPowerFitUpdate(setPwaUpdate), [])
 
+  useEffect(() => {
+    document.title = `${edition.appName || 'PowerFit 360'}`
+  }, [edition.appName])
+
   function editionAllows(sectionName) {
     return edition.sections.includes(sectionName)
   }
@@ -2899,6 +2903,9 @@ export default function App() {
             <p className="text-zinc-300 truncate">{student?.nombre || user.email}</p>
             <p className="text-yellow-400 font-black">
               {isAdmin ? t.admin : t.student}
+            </p>
+            <p className="text-xs sm:text-sm text-blue-300 font-black uppercase">
+              {edition.label} · {edition.audience}
             </p>
             <p className={pagoAlDia ? 'text-green-400 font-black' : 'text-red-400 font-black'}>
               {t.paymentStatus}: {student?.estado_pago || 'Pendiente'}
