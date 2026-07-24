@@ -1930,6 +1930,26 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
   const pagados = students.filter((alumno) => alumno.estado_pago === 'Pagado').length
   const pendientes = students.filter((alumno) => alumno.estado_pago === 'Pendiente').length
   const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso').length
+  const hoy = new Date()
+  const esEsteMes = (fecha) => {
+    const parsed = new Date(fecha)
+    return parsed.getMonth() === hoy.getMonth() && parsed.getFullYear() === hoy.getFullYear()
+  }
+  const asistenciasMes = asistencias.filter((item) => esEsteMes(item.fecha || item.created_at))
+  const evaluacionesMes = recordsEntrenamiento.filter((item) => esEsteMes(fechaRecord(item)))
+  const mejorRm = mejorRecord(recordsEntrenamiento, (record) => Number(record.peso_kg))
+  const mejorTiempo = mejorRecord(recordsEntrenamiento, (record) => Number(record.tiempo_segundos), true)
+  const mejorSalto = mejorRecord(recordsEntrenamiento, (record) =>
+    String(record.rutina_nombre || '').toLowerCase().includes('salto')
+  )
+  const mejorVueltas = mejorRecord(recordsEntrenamiento, (record) => Number(record.vueltas))
+  const ranking = students
+    .map((alumno) => ({
+      alumno,
+      asistencias: asistencias.filter((item) => String(item.alumno_id) === String(alumno.id)).length,
+      evaluaciones: recordsEntrenamiento.filter((item) => String(item.alumno_id) === String(alumno.id)).length,
+    }))
+    .sort((a, b) => b.asistencias + b.evaluaciones - (a.asistencias + a.evaluaciones))
 
   return (
     <div className="space-y-6">
@@ -1938,7 +1958,7 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
           Estadísticas
         </h2>
         <p className="text-zinc-400 mt-2">
-          Lectura rápida de alumnos, pagos, asistencias y evaluaciones registradas.
+          Lectura mensual de asistencia, pagos, evaluaciones, records y crecimiento PowerFit.
         </p>
       </div>
 
@@ -1949,24 +1969,53 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
         <Info label="Evaluaciones" value={recordsEntrenamiento.length} />
       </div>
 
-      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
-        <h3 className="text-2xl font-black text-green-300 mb-4">
-          Asistencia por alumno
-        </h3>
-        <div className="space-y-3">
-          {students.slice(0, 12).map((alumno) => {
-            const total = asistencias.filter(
-              (item) => String(item.alumno_id) === String(alumno.id)
-            ).length
+      <div className="grid md:grid-cols-4 gap-4">
+        <Info label="Asistencias mes" value={asistenciasMes.length} />
+        <Info label="Evaluaciones mes" value={evaluacionesMes.length} />
+        <Info label="Alumnos activos" value={students.length} />
+        <Info label="Adherencia prom." value={`${students.length ? Math.round((asistenciasMes.length / students.length) * 10) / 10 : 0} asist.`} />
+      </div>
 
-            return (
-              <div key={alumno.id} className="grid sm:grid-cols-3 gap-3 bg-zinc-800 rounded-2xl p-4">
-                <p className="font-black">{alumno.nombre}</p>
+      <div className="grid lg:grid-cols-2 gap-6">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h3 className="text-2xl font-black text-green-300 mb-4">
+            Ranking asistencia + evaluaciones
+          </h3>
+          <div className="space-y-3">
+            {ranking.slice(0, 12).map(({ alumno, asistencias: total, evaluaciones }) => (
+              <div key={alumno.id} className="grid sm:grid-cols-4 gap-3 bg-zinc-800 rounded-2xl p-4">
+                <p className="font-black">{alumno.nombre || '-'}</p>
                 <p>{total} asistencias</p>
+                <p>{evaluaciones} evaluaciones</p>
                 <StatusBadge estado={alumno.estado_pago} />
               </div>
-            )
-          })}
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+          <h3 className="text-2xl font-black text-green-300 mb-4">
+            Mejores marcas PowerFit
+          </h3>
+          <div className="space-y-3">
+            {[mejorRm, mejorTiempo, mejorSalto, mejorVueltas].filter(Boolean).map((record) => (
+              <div key={record.id} className="bg-zinc-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="font-black">{record.rutina_nombre || 'Record PowerFit'}</p>
+                  <p className="text-zinc-400 text-sm">
+                    {new Date(fechaRecord(record)).toLocaleDateString()} - ATR {faseAtrRecord(record)}
+                  </p>
+                </div>
+                <p className="text-red-400 font-black">
+                  {valorRecord(record)} {unidadRecord(record)}
+                </p>
+              </div>
+            ))}
+
+            {!mejorRm && !mejorTiempo && !mejorSalto && !mejorVueltas && (
+              <p className="text-zinc-400">Aún no hay records suficientes para comparar.</p>
+            )}
+          </div>
         </div>
       </div>
     </div>
