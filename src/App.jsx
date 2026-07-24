@@ -79,6 +79,7 @@ const UI_TEXT = {
     profile: 'Ficha personal',
     payment: 'Pago / deuda',
     evaluations: 'Evaluaciones',
+    customTrainings: 'Entrenos alumnos',
     adminStudents: 'ADMIN ALUMNOS',
     purchaseLog: 'Registro compras',
     brandSettings: 'Marca',
@@ -106,6 +107,7 @@ const UI_TEXT = {
     profile: 'Personal profile',
     payment: 'Payment / debt',
     evaluations: 'Evaluations',
+    customTrainings: 'Student plans',
     adminStudents: 'STUDENTS ADMIN',
     purchaseLog: 'Purchase log',
     brandSettings: 'Brand',
@@ -115,6 +117,26 @@ const UI_TEXT = {
       'Your account is pending or overdue. Update payment to unlock routines, AI generator and methods.',
     payMonthly: 'Pay monthly fee',
   },
+}
+
+const NAV_ITEMS = {
+  Admin: { label: 'adminStudents', adminOnly: true },
+  Entrenamientos: { label: 'customTrainings', adminOnly: true },
+  AsistenciaQR: { label: 'attendanceQr' },
+  XPRangos: { label: 'xpRanks', lockable: true },
+  Metodos: { label: 'library', lockable: true },
+  Generador: { label: 'aiGenerator', lockable: true },
+  Constructor: { label: 'workoutBuilder', lockable: true },
+  Rutinas: { label: 'routines', lockable: true },
+  Premium: { label: 'premium' },
+  Reportes: { label: 'reports', adminOnly: true },
+  Estadísticas: { label: 'stats', lockable: true },
+  Notificaciones: { label: 'notifications' },
+  Ficha: { label: 'profile' },
+  Pago: { label: 'payment' },
+  Evaluaciones: { label: 'evaluations', lockable: true },
+  RegistroCompras: { label: 'purchaseLog', adminOnly: true },
+  Marca: { label: 'brandSettings', adminOnly: true, brandingOnly: true },
 }
 
 const AVATAR_TEMPLATES = [
@@ -1316,6 +1338,165 @@ function AdminAlumnosPanel({
   )
 }
 
+function EntrenamientosCoachPanel({ students, user, onSaved }) {
+  const alumnos = students.filter((alumno) => alumno.role !== 'admin')
+  const [form, setForm] = useState({
+    alumnoId: alumnos[0]?.id ? String(alumnos[0].id) : '',
+    titulo: 'Entrenamiento personalizado PowerFit',
+    objetivo: 'Fuerza funcional + motor transversal',
+    nivel: 'intermedio',
+    contenido:
+      'ACTIVACION\n- RAMP 8 min\n\nBLOQUE 1 - MOTOR TRANSVERSAL\n- 3 rondas tecnicas\n\nBLOQUE 2 - FUERZA FUNCIONAL\n- 4 series principales\n\nBLOQUE 3 - SISTEMA METABOLICO\n- 8-12 min calidad\n\nNOTAS\n- Registrar RPE, dolor y observaciones.',
+  })
+  const [mensaje, setMensaje] = useState('')
+  const [guardando, setGuardando] = useState(false)
+
+  const alumno = alumnos.find((item) => String(item.id) === String(form.alumnoId))
+
+  useEffect(() => {
+    if (!form.alumnoId && alumnos[0]?.id) {
+      update('alumnoId', String(alumnos[0].id))
+    }
+  }, [alumnos, form.alumnoId])
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }))
+  }
+
+  async function guardarEntrenamiento() {
+    if (!alumno?.id || guardando) return
+    if (!form.titulo.trim() || !form.contenido.trim()) {
+      setMensaje('Completa titulo y contenido del entrenamiento.')
+      return
+    }
+
+    setGuardando(true)
+    setMensaje('')
+
+    const contenido = [
+      'POWERFIT 360 - ENTRENAMIENTO ASIGNADO POR COACH',
+      `Alumno: ${alumno.nombre || '-'}`,
+      `Coach: ${user?.email || '-'}`,
+      `Fecha: ${new Date().toLocaleString('es-CL')}`,
+      `Titulo: ${form.titulo}`,
+      `Objetivo: ${form.objetivo}`,
+      `Nivel: ${form.nivel}`,
+      '',
+      form.contenido,
+    ].join('\n')
+
+    const { error } = await supabase.from('planificaciones_generadas').insert([
+      {
+        user_id: alumno.user_id || user?.id,
+        alumno_id: alumno.id,
+        nombre_alumno: alumno.nombre || 'Alumno PowerFit',
+        objetivo: `coach_personalizado_${form.objetivo}`,
+        nivel: form.nivel,
+        contenido,
+      },
+    ])
+
+    if (error) {
+      setMensaje(`No se pudo asignar el entrenamiento: ${error.message}`)
+      setGuardando(false)
+      return
+    }
+
+    setMensaje(`Entrenamiento asignado a ${alumno.nombre}.`)
+    setGuardando(false)
+    onSaved?.()
+  }
+
+  return (
+    <div className="space-y-6">
+      <section className="bg-zinc-900 border border-blue-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <h2 className="text-3xl sm:text-4xl font-black text-blue-300">
+          Entrenos alumnos
+        </h2>
+        <p className="text-zinc-400 mt-2">
+          Carga entrenamientos personalizados desde Coach y dejalos disponibles en la app del alumno.
+        </p>
+      </section>
+
+      {mensaje && (
+        <div className="bg-yellow-500 text-black rounded-2xl p-4 font-black">
+          {mensaje}
+        </div>
+      )}
+
+      <section className="grid lg:grid-cols-2 gap-5">
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Alumno
+            <select
+              value={form.alumnoId}
+              onChange={(event) => update('alumnoId', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-xl p-3"
+            >
+              {alumnos.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nombre || item.email || item.id}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Titulo
+            <input
+              value={form.titulo}
+              onChange={(event) => update('titulo', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-xl p-3"
+            />
+          </label>
+
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Objetivo
+            <input
+              value={form.objetivo}
+              onChange={(event) => update('objetivo', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-xl p-3"
+            />
+          </label>
+
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Nivel
+            <select
+              value={form.nivel}
+              onChange={(event) => update('nivel', event.target.value)}
+              className="bg-black border border-zinc-700 rounded-xl p-3"
+            >
+              <option value="basico">Basico</option>
+              <option value="intermedio">Intermedio</option>
+              <option value="avanzado">Avanzado</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
+          <label className="grid gap-2 font-black text-sm text-zinc-300">
+            Entrenamiento
+            <textarea
+              value={form.contenido}
+              onChange={(event) => update('contenido', event.target.value)}
+              rows={16}
+              className="bg-black border border-zinc-700 rounded-xl p-3 font-mono text-sm"
+            />
+          </label>
+
+          <button
+            onClick={guardarEntrenamiento}
+            disabled={guardando || alumnos.length === 0}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-2xl p-5 font-black"
+          >
+            {guardando ? 'Asignando...' : 'Asignar entrenamiento al alumno'}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
 function BrandSettingsPanel({ branding, setBranding, edition, gimnasio, onSaveRemote }) {
   const [form, setForm] = useState(branding)
   const comision = Number(gimnasio?.comision_powerfit ?? edition.commissionRate ?? 0)
@@ -2197,7 +2378,7 @@ export default function App() {
   const [avatarRequests, setAvatarRequests] = useState([])
   const [section, setSection] = useState(() => {
     const requestedSection = new URLSearchParams(window.location.search).get('section')
-    return requestedSection || 'AsistenciaQR'
+    return requestedSection || getAppEdition().sections[0] || 'AsistenciaQR'
   })
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
@@ -2225,7 +2406,7 @@ export default function App() {
 
   function canOpenSection(sectionName, adminStatus) {
     if (!editionAllows(sectionName)) return false
-    if (['Admin', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
+    if (['Admin', 'Entrenamientos', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
       return adminStatus
     }
 
@@ -2938,8 +3119,10 @@ export default function App() {
         </div>
       </div>
 
-      <div className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
+      <div data-nav-items={Object.keys(NAV_ITEMS).length} className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
+          {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
+          {isAdmin && <Btn show={editionAllows('Entrenamientos')} text={t.customTrainings} active={visibleSection === 'Entrenamientos'} set={() => setSection('Entrenamientos')} />}
           <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
           <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
           <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
@@ -2954,7 +3137,6 @@ export default function App() {
           <Btn show={editionAllows('Ficha')} text={t.profile} active={visibleSection === 'Ficha'} set={() => setSection('Ficha')} />
           <Btn show={editionAllows('Pago')} text={t.payment} active={visibleSection === 'Pago'} set={() => setSection('Pago')} />
           <Btn show={editionAllows('Evaluaciones')} text={t.evaluations} active={visibleSection === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
-          {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
           {isAdmin && <Btn show={editionAllows('RegistroCompras')} text={t.purchaseLog} active={visibleSection === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
           {isAdmin && <Btn show={edition.allowBranding && editionAllows('Marca')} text={t.brandSettings} active={visibleSection === 'Marca'} set={() => setSection('Marca')} />}
         </div>
@@ -3017,6 +3199,14 @@ export default function App() {
 
       {editionAllows('Constructor') && visibleSection === 'Constructor' && !bloqueado && (
         <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+      )}
+
+      {editionAllows('Entrenamientos') && visibleSection === 'Entrenamientos' && isAdmin && (
+        <EntrenamientosCoachPanel
+          students={students}
+          user={user}
+          onSaved={() => cargarUsuario()}
+        />
       )}
 
       {editionAllows('Rutinas') && visibleSection === 'Rutinas' && !bloqueado && (

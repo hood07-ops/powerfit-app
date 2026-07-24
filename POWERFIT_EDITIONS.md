@@ -28,6 +28,7 @@ No incluye:
 - Generador IA
 - Constructor de entrenamientos
 - Biblioteca completa de metodos
+- Rutinas, ficha personal y XP como ventanas propias
 
 ## 2. PowerFit Coach
 
@@ -42,13 +43,20 @@ npm run build:coach
 Incluye:
 
 - Todo lo administrativo
+- Carga de entrenamientos personalizados por alumno
 - Generador IA
 - Constructor PowerFit
 - Biblioteca
-- Rutinas
-- Evaluaciones
-- XP y rangos
 - Marca personalizable
+
+No incluye como ventana principal:
+
+- Ficha personal del coach
+- Pago/deuda del coach
+- Rutinas del coach
+- XP y rangos del coach
+
+Esas vistas quedan principalmente en PowerFit Alumno.
 
 Modelo comercial:
 

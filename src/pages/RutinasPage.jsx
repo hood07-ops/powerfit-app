@@ -6,6 +6,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
   const [user, setUser] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [formValues, setFormValues] = useState({})
+  const [entrenosAsignados, setEntrenosAsignados] = useState([])
 
   const bloques = [
 
@@ -156,7 +157,9 @@ export default function RutinasPage({ student, onUpdateStudent }) {
 
   useEffect(() => {
     cargar()
-  }, [])
+    cargarEntrenosAsignados()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id])
 
   async function cargar() {
 
@@ -167,6 +170,21 @@ export default function RutinasPage({ student, onUpdateStudent }) {
 
     setUser(currentUser)
 
+  }
+
+  async function cargarEntrenosAsignados() {
+    if (!student?.id) return
+
+    const { data, error } = await supabase
+      .from('planificaciones_generadas')
+      .select('*')
+      .eq('alumno_id', student.id)
+      .like('objetivo', 'coach_personalizado%')
+      .order('created_at', { ascending: false })
+
+    if (!error) {
+      setEntrenosAsignados(data || [])
+    }
   }
 
   const pagoActivo = student?.estado_pago === 'Pagado'
@@ -283,6 +301,30 @@ export default function RutinasPage({ student, onUpdateStudent }) {
           {mensaje}
         </div>
 
+      )}
+
+      {entrenosAsignados.length > 0 && (
+        <section className="bg-zinc-900 border border-blue-500 rounded-3xl p-6 mb-8">
+          <h2 className="text-3xl font-black text-blue-300 mb-3">
+            Entrenamientos asignados por tu coach
+          </h2>
+          <p className="text-zinc-400 mb-5">
+            Estos planes fueron cargados directamente para ti desde la plataforma Coach.
+          </p>
+
+          <div className="space-y-4">
+            {entrenosAsignados.map((plan) => (
+              <details key={plan.id} className="bg-zinc-950 border border-zinc-700 rounded-2xl p-4">
+                <summary className="cursor-pointer font-black text-yellow-400">
+                  {plan.objetivo?.replace('coach_personalizado_', '') || 'Entrenamiento personalizado'} - {new Date(plan.created_at).toLocaleDateString('es-CL')}
+                </summary>
+                <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
+                  {plan.contenido}
+                </pre>
+              </details>
+            ))}
+          </div>
+        </section>
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
