@@ -2851,18 +2851,32 @@ export default function App() {
   }
 
   async function aplicarPagoConfirmado(alumno) {
-    const hoy = new Date()
-    const vencimiento = new Date()
-    vencimiento.setMonth(vencimiento.getMonth() + 1)
+    if (!alumno?.id) return
 
-    const updateData = {
-      estado_pago: 'Pagado',
-      fecha_pago: hoy.toISOString().slice(0, 10),
-      fecha_vencimiento: vencimiento.toISOString().slice(0, 10),
-      generaciones_disponibles: 6,
+    const requestId = `payment-${alumno.id}-${Date.now()}`
+
+    const { error } = await supabase.rpc(
+      'register_powerfit_payment_with_generation_reset_secure',
+      {
+        p_client_request_id: requestId,
+        p_alumno_id: alumno.id,
+        p_payment_method: 'manual',
+        p_period_start: null,
+        p_months: 1,
+        p_amount: Number.isFinite(Number(alumno.monto))
+          ? Number(alumno.monto)
+          : null,
+        p_notes: 'Pago registrado desde panel PowerFit 360',
+        p_paid_on: new Date().toISOString().slice(0, 10),
+        p_generation_balance: 6,
+      },
+    )
+
+    if (error) {
+      window.alert(`No se pudo registrar el pago: ${error.message}`)
+      return
     }
 
-    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
     await cargarUsuario()
   }
 
