@@ -1,0 +1,26 @@
+﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
+Generated: 2026-09-04 11:33:26
+Commit base: 6750fc2d5d3b5496d37287c99ffff9527d0c82d0
+Remaining direct supabase.from calls: 19
+
+TARGET: 0 before legacy lockdown.
+
+src/App.jsx:816:      ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
+src/App.jsx:817:      : await supabase.from('rm_alumnos').insert([payload])
+src/App.jsx:863:      const { error } = await supabase.from('records_entrenamiento').insert([payload])
+src/App.jsx:1388:    const { error } = await supabase.from('planificaciones_generadas').insert([
+src/App.jsx:2665:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
+src/App.jsx:2721:    const { error } = await supabase.from('avatar_ia_solicitudes').insert([
+src/App.jsx:2801:    const { error: insertError } = await supabase.from('terminos_aceptaciones').insert([
+src/App.jsx:2839:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
+src/App.jsx:2894:      supabase.from('asistencias').delete().eq('alumno_id', alumno.id),
+src/App.jsx:2895:      supabase.from('rm_alumnos').delete().eq('alumno_id', alumno.id),
+src/App.jsx:2896:      supabase.from('planificaciones_generadas').delete().eq('alumno_id', alumno.id),
+src/App.jsx:2897:      supabase.from('solicitudes_compra').delete().eq('alumno_id', alumno.id),
+src/App.jsx:2900:    const { error } = await supabase.from('alumnos').delete().eq('id', alumno.id)
+src/pages/CheckInPage.jsx:142:    const { error: asistenciaError } = await supabase.from('asistencias').insert([
+src/pages/ConstructorPage.jsx:420:    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
+src/pages/ConstructorPage.jsx:445:        await supabase.from('planificaciones_generadas').delete().in('id', ids)
+src/pages/GeneradorPage.jsx:755:    await supabase.from('planificaciones_generadas').delete().in('id', ids)
+src/pages/GeneradorPage.jsx:791:        ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
+src/pages/GeneradorPage.jsx:792:        : await supabase.from('rm_alumnos').insert([payload])
