@@ -1,7 +1,7 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 13:35:00
-Commit base: cec1c9b5730a34d682144cf9b8be5f51ea54fa08
-Remaining lines containing .from(: 34
+Generated: 2026-09-04 14:04:53
+Commit base: bfda837c4b953607fefb25f0b8eaea905525ebc8
+Remaining lines containing .from(: 30
 
 NOTE: broad count includes Supabase Storage .from calls.
 TARGET: 0 direct database-table access before legacy lockdown.
@@ -24,10 +24,6 @@ src/App.jsx:2794:    await supabase.from('alumnos').update(updateData).eq('id', 
 src/App.jsx:2805:        .from('alumnos')
 src/App.jsx:2820:      .from('alumnos')
 src/App.jsx:2825:      .from('solicitudes_compra')
-src/pages/ConstructorPage.jsx:407:      .from('alumnos')
-src/pages/ConstructorPage.jsx:420:    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
-src/pages/ConstructorPage.jsx:438:      .from('alumnos')
-src/pages/ConstructorPage.jsx:445:        await supabase.from('planificaciones_generadas').delete().in('id', ids)
 src/pages/GeneradorPage.jsx:526:      .from('rm_alumnos')
 src/pages/GeneradorPage.jsx:552:      .from('planificaciones_generadas')
 src/pages/GeneradorPage.jsx:576:      .from('solicitudes_compra')

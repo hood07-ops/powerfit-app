@@ -395,7 +395,6 @@ export default function ConstructorPage({ student, onUpdateStudent, idioma = 'es
     setMessage('')
 
     const alumnoId = student?.id || null
-    const userId = student?.user_id || null
 
     if (!alumnoId) {
       setSaving(false)
@@ -403,50 +402,21 @@ export default function ConstructorPage({ student, onUpdateStudent, idioma = 'es
       return
     }
 
-    const { data: alumnoActual, error: alumnoError } = await supabase
-      .from('alumnos')
-      .select('generaciones_disponibles')
-      .eq('id', alumnoId)
-      .single()
-
-    const disponibles = Number(alumnoActual?.generaciones_disponibles || 0)
-
-    if (alumnoError || disponibles < 1) {
-      setSaving(false)
-      setMessage(t.noAvailable)
-      return
-    }
-
-    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
+    const { error } = await supabase.rpc(
+      'save_powerfit_manual_plan_with_generation_secure',
       {
-        user_id: userId,
-        alumno_id: alumnoId,
-        nombre_alumno: student?.nombre || 'Alumno PowerFit',
-        objetivo: `manual_${objective}`,
-        nivel: level,
-        contenido: planText,
+        p_alumno_id: alumnoId,
+        p_objetivo: `manual_${objective}`,
+        p_nivel: level,
+        p_contenido: planText,
+        p_source_ref: 'constructor',
       },
-    ]).select()
+    )
 
-    if (insertError) {
+    if (error) {
+      const noDisponible = String(error.message || '').includes('NO_GENERATIONS_AVAILABLE')
       setSaving(false)
-      setMessage(t.saveError)
-      return
-    }
-
-    const { error: updateError } = await supabase
-      .from('alumnos')
-      .update({ generaciones_disponibles: Math.max(0, disponibles - 1) })
-      .eq('id', alumnoId)
-
-    if (updateError) {
-      const ids = (planes || []).map((plan) => plan.id).filter(Boolean)
-      if (ids.length > 0) {
-        await supabase.from('planificaciones_generadas').delete().in('id', ids)
-      }
-
-      setSaving(false)
-      setMessage(t.saveError)
+      setMessage(noDisponible ? t.noAvailable : t.saveError)
       return
     }
 
