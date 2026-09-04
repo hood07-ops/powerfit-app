@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'powerfit-360-v2026-07-24-01'
+﻿const CACHE_VERSION = 'powerfit-360-v2026-09-04-hotfix-02'
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
@@ -9,12 +9,7 @@ const APP_SHELL = [
 ]
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE_VERSION)
-      .then((cache) => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-  )
+  event.waitUntil(caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL)))
 })
 
 self.addEventListener('activate', (event) => {

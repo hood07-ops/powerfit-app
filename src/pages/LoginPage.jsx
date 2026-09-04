@@ -1,4 +1,4 @@
-import { useState } from 'react'
+﻿import { useState } from 'react'
 import { DEFAULT_BRANDING, loadBranding } from '../appConfig'
 import { supabase } from '../supabase'
 
@@ -33,72 +33,23 @@ export default function LoginPage({
     setForm({ ...form, [field]: value })
   }
 
-  function alumnoPayload(user, values = form) {
-    const email = values.email || user?.email || ''
-    const nombreBase = email ? email.split('@')[0] : 'Alumno'
+  async function asegurarIdentidad(values = form) {
+    const { data, error } = await supabase.rpc('ensure_powerfit_self_profile', {
+      p_nombre: values.nombre || null,
+      p_telefono: values.telefono || null,
+      p_fecha_nacimiento: values.fecha_nacimiento || null,
+      p_contacto_emergencia: values.contacto_emergencia || null,
+      p_categoria: values.categoria || null,
+    })
 
-    return {
-      nombre: values.nombre || user?.user_metadata?.nombre || nombreBase,
-      email,
-      user_id: user.id,
-      telefono: values.telefono || user?.user_metadata?.telefono || '',
-      fecha_nacimiento:
-        values.fecha_nacimiento || user?.user_metadata?.fecha_nacimiento || null,
-      fecha_ingreso: values.fecha_ingreso || null,
-      categoria: values.categoria || user?.user_metadata?.categoria || '',
-      edad: values.edad ? Number(values.edad) : null,
-      peso: values.peso ? Number(values.peso) : null,
-      altura: values.altura ? Number(values.altura) : null,
-      contacto_emergencia: values.contacto_emergencia || '',
-      observaciones: values.observaciones || '',
-      plan: 'Basico',
-      estado_pago: 'Pendiente',
-      monto: 0,
-      xp: 0,
-      bloques_premium: 0,
-      generaciones_disponibles: 6,
-      terminos_aceptados: false,
-      terminos_version: null,
-      terminos_aceptados_at: null,
-    }
-  }
+    if (error) return { error, shell: null }
+    if (data?.shell) return { error: null, shell: data.shell }
 
-  function esErrorSchemaCache(error) {
-    return error?.message?.toLowerCase().includes('schema cache')
-  }
+    const { data: shellData, error: shellError } = await supabase.rpc(
+      'get_powerfit_user_shell'
+    )
 
-  async function insertarAlumno(payload) {
-    const { error } = await supabase.from('alumnos').insert([payload])
-
-    if (!esErrorSchemaCache(error)) return error
-
-    const payloadCompatible = { ...payload }
-    delete payloadCompatible.fecha_nacimiento
-    delete payloadCompatible.fecha_ingreso
-    delete payloadCompatible.terminos_aceptados
-    delete payloadCompatible.terminos_version
-    delete payloadCompatible.terminos_aceptados_at
-
-    const { error: retryError } = await supabase
-      .from('alumnos')
-      .insert([payloadCompatible])
-
-    return retryError
-  }
-
-  async function asegurarAlumno(user, values = form) {
-    if (!user?.id) return null
-
-    const { data: existente, error: buscarError } = await supabase
-      .from('alumnos')
-      .select('id')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (buscarError) return buscarError
-    if (existente?.id) return null
-
-    return insertarAlumno(alumnoPayload(user, values))
+    return { error: shellError, shell: shellData || null }
   }
 
   async function iniciarSesionConFicha() {
@@ -112,14 +63,15 @@ export default function LoginPage({
       return false
     }
 
-    const alumnoError = await asegurarAlumno(data.user)
+    const identidad = await asegurarIdentidad()
 
-    if (alumnoError) {
-      setMessage(`Ingresaste, pero no se pudo crear la ficha de alumno: ${alumnoError.message}`)
+    if (identidad.error) {
+      await supabase.auth.signOut()
+      setMessage(`No se pudo iniciar PowerFit de forma segura: ${identidad.error.message}`)
       return false
     }
 
-    await onLogin?.(data.user)
+    await onLogin?.(data.user, identidad.shell)
     return true
   }
 
@@ -141,13 +93,11 @@ export default function LoginPage({
     if (error) {
       if (error.message.toLowerCase().includes('already registered')) {
         const ok = await iniciarSesionConFicha()
-
         if (!ok) {
           setMessage(
             'Ese correo ya existe. Usa Recuperar o modificar contrasena para volver a entrar.'
           )
         }
-
         return
       }
 
@@ -156,10 +106,9 @@ export default function LoginPage({
     }
 
     if (data?.user && data?.session) {
-      const alumnoError = await asegurarAlumno(data.user)
-
-      if (alumnoError) {
-        setMessage(`Cuenta creada, pero no se pudo crear la ficha: ${alumnoError.message}`)
+      const identidad = await asegurarIdentidad()
+      if (identidad.error) {
+        setMessage(`Cuenta creada, pero no se pudo iniciar la ficha segura: ${identidad.error.message}`)
         return
       }
     }
@@ -205,9 +154,16 @@ export default function LoginPage({
       return
     }
 
+    const identidad = await asegurarIdentidad()
+
+    if (identidad.error) {
+      setMessage(`Contrasena actualizada, pero PowerFit no pudo iniciar la ficha segura: ${identidad.error.message}`)
+      return
+    }
+
     setMessage('Contrasena actualizada. Ya puedes ingresar a PowerFit.')
     onPasswordUpdated?.()
-    await onLogin?.()
+    await onLogin?.(undefined, identidad.shell)
   }
 
   async function handleAuth(e) {
@@ -295,7 +251,7 @@ export default function LoginPage({
             />
           )}
 
-          <button className="w-full bg-red-600 p-4 rounded-2xl font-black">
+          <button disabled={loading} className="w-full bg-red-600 p-4 rounded-2xl font-black disabled:opacity-50">
             {loading
               ? 'Cargando...'
               : mode === 'login'
