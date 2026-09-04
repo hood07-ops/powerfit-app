@@ -2597,12 +2597,13 @@ export default function App() {
 
     setAvatarRequests(avatarError ? [] : avatarNormalizados)
 
-    const { data: alumnosData } = await supabase
-      .from('alumnos')
-      .select('*')
-      .order('id', { ascending: false })
+    const { data: directoryData, error: directoryError } = await supabase.rpc(
+      'get_powerfit_student_directory_full_secure',
+    )
 
-    const alumnosNormalizados = (alumnosData || []).map(alumnoConEstadoAutomatico)
+    const alumnosData = directoryError ? [] : directoryData?.students || []
+    const alumnosNormalizados = alumnosData.map(alumnoConEstadoAutomatico)
+
     setStudents(alumnosNormalizados)
     setAlumnoDetalle((actual) => {
       if (!actual) return null
@@ -2613,25 +2614,19 @@ export default function App() {
       )
     })
 
-    const alumnosDesactualizados = alumnosNormalizados.filter((a) => {
-      const original = (alumnosData || []).find((item) => item.id === a.id)
-      return original?.estado_pago !== a.estado_pago
-    })
-
-    await Promise.all(
-      alumnosDesactualizados.map((a) =>
-        supabase
-          .from('alumnos')
-          .update({ estado_pago: a.estado_pago })
-          .eq('id', a.id)
-      )
+    const { data: attendanceOverview, error: attendanceError } = await supabase.rpc(
+      'get_powerfit_attendance_overview_secure',
+      {
+        p_limit: 1000,
+      },
     )
 
-    const { data: asistenciasData } = await supabase
-      .from('asistencias')
-      .select('*')
-
-    setAsistencias(asistenciasData || [])
+    if (attendanceError) {
+      console.error('Error cargando asistencia segura:', attendanceError)
+      setAsistencias([])
+    } else {
+      setAsistencias(attendanceOverview?.items || [])
+    }
   }
 
   async function checkUser() {
