@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 import { DEFAULT_BRANDING, POWERFIT_SIGNATURE, getAppEdition, loadBranding, saveBranding } from './appConfig'
 import { applyPowerFitUpdate, listenForPowerFitUpdate } from './pwa'
@@ -796,25 +796,13 @@ function EvaluacionesPage({ student, user, onSaved }) {
   }
 
   async function guardarRM(rmKg) {
-    const { data: existente, error: buscarError } = await supabase
-      .from('rm_alumnos')
-      .select('id')
-      .eq('alumno_id', student.id)
-      .eq('ejercicio', form.ejercicio)
-      .maybeSingle()
-
-    if (buscarError) return buscarError
-
-    const payload = {
-      user_id: student.user_id || user.id,
-      alumno_id: student.id,
-      ejercicio: form.ejercicio,
-      rm_kg: rmKg,
-    }
-
-    const { error } = existente?.id
-      ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
-      : await supabase.from('rm_alumnos').insert([payload])
+    const { error } = await supabase.rpc('save_powerfit_rm_secure', {
+      p_alumno_id: student.id,
+      p_ejercicio: form.ejercicio,
+      p_rm_kg: rmKg,
+      p_fecha: form.fecha || null,
+      p_reason: 'evaluacion_powerfit',
+    })
 
     return error
   }
@@ -860,7 +848,19 @@ function EvaluacionesPage({ student, user, onSaved }) {
         porcentaje_rm: evaluacion.tipo === 'peso' ? 100 : null,
       }
 
-      const { error } = await supabase.from('records_entrenamiento').insert([payload])
+      const { error } = await supabase.rpc('save_powerfit_training_record_secure', {
+        p_alumno_id: payload.alumno_id,
+        p_rutina_nombre: payload.rutina_nombre,
+        p_metodo: payload.metodo,
+        p_tipo_record: payload.tipo_record,
+        p_vueltas: payload.vueltas,
+        p_repeticiones: payload.repeticiones,
+        p_tiempo_segundos: payload.tiempo_segundos,
+        p_peso_kg: payload.peso_kg,
+        p_porcentaje_rm: payload.porcentaje_rm,
+        p_observacion: form.observacion || null,
+        p_reason: 'evaluacion_powerfit',
+      })
 
       if (error) {
         setMensaje(`Error guardando evaluación: ${error.message}`)

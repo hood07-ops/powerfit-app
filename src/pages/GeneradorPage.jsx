@@ -768,28 +768,13 @@ Vuelta a la calma: dirigida en clase.
     setMensaje('')
 
     try {
-      const { data: existente, error: buscarError } = await supabase
-        .from('rm_alumnos')
-        .select('id')
-        .eq('alumno_id', student.id)
-        .eq('ejercicio', rmForm.ejercicio)
-        .maybeSingle()
-
-      if (buscarError) {
-        setMensaje(`Error buscando RM: ${buscarError.message}`)
-        return
-      }
-
-      const payload = {
-        user_id: student.user_id,
-        alumno_id: student.id,
-        ejercicio: rmForm.ejercicio,
-        rm_kg: rmKg,
-      }
-
-      const { error } = existente?.id
-        ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
-        : await supabase.from('rm_alumnos').insert([payload])
+      const { error } = await supabase.rpc('save_powerfit_rm_secure', {
+        p_alumno_id: student.id,
+        p_ejercicio: rmForm.ejercicio,
+        p_rm_kg: rmKg,
+        p_fecha: new Date().toISOString().slice(0, 10),
+        p_reason: 'generador_powerfit',
+      })
 
       if (error) {
         setMensaje(`Error guardando RM: ${error.message}`)

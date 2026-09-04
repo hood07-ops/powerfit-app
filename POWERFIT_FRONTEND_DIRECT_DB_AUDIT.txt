@@ -1,26 +1,56 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 11:33:26
-Commit base: 6750fc2d5d3b5496d37287c99ffff9527d0c82d0
-Remaining direct supabase.from calls: 19
+Generated: 2026-09-04 13:10:58
+Commit base: c61ac9c769d8e898937890bb422e373aa9fd5b8f
+Remaining lines containing .from(: 48
 
-TARGET: 0 before legacy lockdown.
+NOTE: broad count includes Supabase Storage .from calls.
+TARGET: 0 direct database-table access before legacy lockdown.
 
-src/App.jsx:816:      ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
-src/App.jsx:817:      : await supabase.from('rm_alumnos').insert([payload])
-src/App.jsx:863:      const { error } = await supabase.from('records_entrenamiento').insert([payload])
 src/App.jsx:1388:    const { error } = await supabase.from('planificaciones_generadas').insert([
+src/App.jsx:2428:      .from('gimnasios')
+src/App.jsx:2466:      .from('gimnasios')
+src/App.jsx:2511:      .from('alumnos')
+src/App.jsx:2526:      .from('alumnos')
+src/App.jsx:2538:      .from('alumnos')
+src/App.jsx:2559:        .from('records_entrenamiento')
+src/App.jsx:2567:        .from('rm_alumnos')
+src/App.jsx:2579:      .from('solicitudes_compra')
+src/App.jsx:2590:      .from('avatar_ia_solicitudes')
+src/App.jsx:2597:      .from('alumnos')
+src/App.jsx:2620:          .from('alumnos')
+src/App.jsx:2627:      .from('asistencias')
 src/App.jsx:2665:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
+src/App.jsx:2675:      .from('alumnos')
+src/App.jsx:2697:      .from('profile-photos')
+src/App.jsx:2708:    const { data } = supabase.storage.from('profile-photos').getPublicUrl(path)
 src/App.jsx:2721:    const { error } = await supabase.from('avatar_ia_solicitudes').insert([
+src/App.jsx:2757:      .from('avatar_ia_solicitudes')
+src/App.jsx:2768:        .from('alumnos')
+src/App.jsx:2789:      .from('alumnos')
 src/App.jsx:2801:    const { error: insertError } = await supabase.from('terminos_aceptaciones').insert([
 src/App.jsx:2839:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
+src/App.jsx:2850:        .from('alumnos')
+src/App.jsx:2865:      .from('alumnos')
+src/App.jsx:2870:      .from('solicitudes_compra')
+src/App.jsx:2879:      .from('alumnos')
 src/App.jsx:2894:      supabase.from('asistencias').delete().eq('alumno_id', alumno.id),
 src/App.jsx:2895:      supabase.from('rm_alumnos').delete().eq('alumno_id', alumno.id),
 src/App.jsx:2896:      supabase.from('planificaciones_generadas').delete().eq('alumno_id', alumno.id),
 src/App.jsx:2897:      supabase.from('solicitudes_compra').delete().eq('alumno_id', alumno.id),
 src/App.jsx:2900:    const { error } = await supabase.from('alumnos').delete().eq('id', alumno.id)
-src/pages/CheckInPage.jsx:142:    const { error: asistenciaError } = await supabase.from('asistencias').insert([
+src/pages/ConstructorPage.jsx:407:      .from('alumnos')
 src/pages/ConstructorPage.jsx:420:    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
+src/pages/ConstructorPage.jsx:438:      .from('alumnos')
 src/pages/ConstructorPage.jsx:445:        await supabase.from('planificaciones_generadas').delete().in('id', ids)
+src/pages/GeneradorPage.jsx:526:      .from('rm_alumnos')
+src/pages/GeneradorPage.jsx:552:      .from('planificaciones_generadas')
+src/pages/GeneradorPage.jsx:576:      .from('solicitudes_compra')
+src/pages/GeneradorPage.jsx:605:      .from('planificaciones_generadas')
+src/pages/GeneradorPage.jsx:616:      .from('alumnos')
 src/pages/GeneradorPage.jsx:755:    await supabase.from('planificaciones_generadas').delete().in('id', ids)
-src/pages/GeneradorPage.jsx:791:        ? await supabase.from('rm_alumnos').update(payload).eq('id', existente.id)
-src/pages/GeneradorPage.jsx:792:        : await supabase.from('rm_alumnos').insert([payload])
+src/pages/GeneradorPage.jsx:870:        .from('planificaciones_generadas')
+src/pages/GeneradorPage.jsx:890:          .from('alumnos')
+src/pages/GeneradorPage.jsx:941:      .from('solicitudes_compra')
+src/pages/RutinasPage.jsx:179:      .from('planificaciones_generadas')
+src/pages/RutinasPage.jsx:244:      .from('records_entrenamiento')
+src/pages/RutinasPage.jsx:255:      .from('alumnos')
