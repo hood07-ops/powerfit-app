@@ -1385,16 +1385,14 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       form.contenido,
     ].join('\n')
 
-    const { error } = await supabase.from('planificaciones_generadas').insert([
-      {
-        user_id: alumno.user_id || user?.id,
-        alumno_id: alumno.id,
-        nombre_alumno: alumno.nombre || 'Alumno PowerFit',
-        objetivo: `coach_personalizado_${form.objetivo}`,
-        nivel: form.nivel,
-        contenido,
-      },
-    ])
+    const { error } = await supabase.rpc('save_powerfit_plan_secure', {
+      p_alumno_id: alumno.id,
+      p_objetivo: `coach_personalizado_${form.objetivo}`,
+      p_nivel: form.nivel,
+      p_contenido: contenido,
+      p_source: 'manual',
+      p_source_ref: 'coach_assignment',
+    })
 
     if (error) {
       setMensaje(`No se pudo asignar el entrenamiento: ${error.message}`)
@@ -2418,28 +2416,27 @@ export default function App() {
     localStorage.setItem('powerfit_idioma', nuevoIdioma)
   }
 
-  async function cargarMarcaGimnasio(alumno) {
-    if (!alumno?.gimnasio_id) {
+  async function cargarMarcaGimnasio() {
+    const { data, error } = await supabase.rpc('get_powerfit_brand_settings')
+
+    if (error || !data) {
       setGimnasio(null)
       return
     }
 
-    const { data, error } = await supabase
-      .from('gimnasios')
-      .select('id,nombre,logo_url,comision_powerfit')
-      .eq('id', alumno.gimnasio_id)
-      .maybeSingle()
-
-    if (error || !data) {
-      return
+    const brandState = {
+      id: 1,
+      nombre: data.organization_name || data.app_name || DEFAULT_BRANDING.appName,
+      logo_url: data.logo_url || DEFAULT_BRANDING.logoUrl,
+      comision_powerfit: 0,
     }
 
-    setGimnasio(data)
+    setGimnasio(brandState)
 
     const nextBranding = {
       ...DEFAULT_BRANDING,
-      appName: data.nombre || DEFAULT_BRANDING.appName,
-      schoolName: data.nombre || '',
+      appName: data.app_name || DEFAULT_BRANDING.appName,
+      schoolName: data.organization_name || '',
       logoUrl: data.logo_url || DEFAULT_BRANDING.logoUrl,
     }
 
@@ -2448,34 +2445,38 @@ export default function App() {
   }
 
   async function guardarMarcaGimnasio(nextBranding) {
-    if (!gimnasio?.id) {
-      const { data, error } = await supabase.rpc('powerfit_create_gimnasio_for_current_user', {
-        p_nombre: nextBranding.appName,
-        p_logo_url: nextBranding.logoUrl,
-      })
+    const { data, error } = await supabase.rpc('save_powerfit_brand_settings', {
+      p_organization_name:
+        nextBranding.schoolName || nextBranding.appName || DEFAULT_BRANDING.appName,
+      p_app_name: nextBranding.appName || DEFAULT_BRANDING.appName,
+      p_logo_url: nextBranding.logoUrl || DEFAULT_BRANDING.logoUrl,
+      p_support_contact: null,
+      p_reason: 'Actualizacion de marca desde PowerFit 360',
+    })
 
-      if (!error && data) {
-        setGimnasio(data)
-        await cargarUsuario()
-      }
-
+    if (error || !data) {
+      window.alert(`No se pudo guardar la marca: ${error?.message || 'sin respuesta'}`)
       return
     }
 
-    const { data, error } = await supabase
-      .from('gimnasios')
-      .update({
-        nombre: nextBranding.appName,
-        logo_url: nextBranding.logoUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', gimnasio.id)
-      .select('id,nombre,logo_url,comision_powerfit')
-      .maybeSingle()
-
-    if (!error && data) {
-      setGimnasio(data)
+    const brandState = {
+      id: 1,
+      nombre: data.organization_name || data.app_name,
+      logo_url: data.logo_url,
+      comision_powerfit: 0,
     }
+
+    setGimnasio(brandState)
+
+    const persisted = {
+      ...DEFAULT_BRANDING,
+      appName: data.app_name || nextBranding.appName,
+      schoolName: data.organization_name || nextBranding.schoolName || '',
+      logoUrl: data.logo_url || nextBranding.logoUrl,
+    }
+
+    setBranding(persisted)
+    saveBranding(persisted)
   }
 
   function alumnoPayloadDesdeAuth(currentUser) {
@@ -2829,10 +2830,16 @@ export default function App() {
   }
 
   async function eliminarGeneraciones(alumno) {
-    await supabase
-      .from('alumnos')
-      .update({ generaciones_disponibles: 0 })
-      .eq('id', alumno.id)
+    const { error } = await supabase.rpc('adjust_powerfit_generation_balance', {
+      p_alumno_id: alumno.id,
+      p_target_balance: 0,
+      p_reason: 'Reinicio manual de generaciones desde panel administrativo',
+    })
+
+    if (error) {
+      window.alert(`No se pudieron reiniciar las generaciones: ${error.message}`)
+      return
+    }
 
     await cargarUsuario()
   }
