@@ -2479,71 +2479,37 @@ export default function App() {
     saveBranding(persisted)
   }
 
-  function alumnoPayloadDesdeAuth(currentUser) {
-    const email = currentUser?.email || ''
-    const metadata = currentUser?.user_metadata || {}
-
-    return {
-      nombre: metadata.nombre || (email ? email.split('@')[0] : 'Alumno'),
-      email,
-      user_id: currentUser.id,
-      telefono: metadata.telefono || '',
-      fecha_nacimiento: metadata.fecha_nacimiento || null,
-      fecha_ingreso: fechaHoy(),
-      categoria: metadata.categoria || '',
-      plan: 'Basico',
-      estado_pago: 'Pendiente',
-      monto: 0,
-      xp: 0,
-      bloques_premium: 0,
-      generaciones_disponibles: 6,
-      terminos_aceptados: false,
-      terminos_version: null,
-      terminos_aceptados_at: null,
-    }
-  }
-
   function esErrorSchemaCache(error) {
     return error?.message?.toLowerCase().includes('schema cache')
-  }
-
-  async function insertarFichaAlumno(payload) {
-    const { data, error } = await supabase
-      .from('alumnos')
-      .insert([payload])
-      .select('*')
-      .maybeSingle()
-
-    if (!esErrorSchemaCache(error)) return data || null
-
-    const payloadCompatible = { ...payload }
-    delete payloadCompatible.fecha_nacimiento
-    delete payloadCompatible.fecha_ingreso
-    delete payloadCompatible.terminos_aceptados
-    delete payloadCompatible.terminos_version
-    delete payloadCompatible.terminos_aceptados_at
-
-    const { data: retryData } = await supabase
-      .from('alumnos')
-      .insert([payloadCompatible])
-      .select('*')
-      .maybeSingle()
-
-    return retryData || null
   }
 
   async function asegurarFichaAlumno(currentUser) {
     if (!currentUser?.id) return null
 
-    const { data: existente, error: buscarError } = await supabase
-      .from('alumnos')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .maybeSingle()
+    const metadata = currentUser.user_metadata || {}
+    const { error: bootstrapError } = await supabase.rpc('ensure_powerfit_self_profile', {
+      p_nombre:
+        metadata.nombre ||
+        (currentUser.email ? currentUser.email.split('@')[0] : 'Alumno'),
+      p_telefono: metadata.telefono || '',
+      p_fecha_nacimiento: metadata.fecha_nacimiento || null,
+      p_contacto_emergencia: metadata.contacto_emergencia || '',
+      p_categoria: metadata.categoria || '',
+    })
 
-    if (buscarError || existente) return existente
+    if (bootstrapError) {
+      console.error('No se pudo asegurar la ficha PowerFit:', bootstrapError)
+      return null
+    }
 
-    return insertarFichaAlumno(alumnoPayloadDesdeAuth(currentUser))
+    const { data, error } = await supabase.rpc('get_powerfit_self_profile_secure')
+
+    if (error) {
+      console.error('No se pudo cargar el perfil seguro:', error)
+      return null
+    }
+
+    return data?.profile || null
   }
 
   async function cargarUsuario(currentUser = user) {
@@ -2556,43 +2522,80 @@ export default function App() {
     await cargarMarcaGimnasio(alumnoActual)
 
     if (alumnoActual?.id) {
-      const { data: recordsData, error: recordsError } = await supabase
-        .from('records_entrenamiento')
-        .select('*')
-        .eq('alumno_id', alumnoActual.id)
-        .order('created_at', { ascending: false })
+      const { data: historyData, error: historyError } = await supabase.rpc(
+        'get_powerfit_training_history_secure',
+        {
+          p_alumno_id: alumnoActual.id,
+          p_limit: 100,
+        },
+      )
 
-      setRecordsEntrenamiento(recordsError ? [] : recordsData || [])
-
-      const { data: rmsData, error: rmsError } = await supabase
-        .from('rm_alumnos')
-        .select('*')
-        .eq('alumno_id', alumnoActual.id)
-        .order('rm_kg', { ascending: false })
-
-      setRmsAlumno(rmsError ? [] : rmsData || [])
+      setRecordsEntrenamiento(historyError ? [] : historyData?.records || [])
+      setRmsAlumno(historyError ? [] : historyData?.rm || [])
     } else {
       setRecordsEntrenamiento([])
       setRmsAlumno([])
     }
 
-    const { data: comprasData, error: comprasError } = await supabase
-      .from('solicitudes_compra')
-      .select('*')
+    const { data: purchaseCenter, error: comprasError } = await supabase.rpc(
+      'get_powerfit_purchase_center',
+    )
 
     if (comprasError) {
       console.error('Error cargando solicitudes de compra:', comprasError)
       setRegistroCompras([])
     } else {
-      setRegistroCompras(ordenarCompras(comprasData || []))
+      const comprasNormalizadas = (purchaseCenter?.requests || []).map((item) => ({
+        id: item.id,
+        alumno_id: item.alumno_id,
+        nombre_alumno: item.nombre,
+        monto: item.amount,
+        generaciones: item.generations,
+        estado:
+          item.legacy_status ||
+          (item.status === 'approved'
+            ? 'Aprobado'
+            : item.status === 'rejected'
+              ? 'Rechazado'
+              : item.status === 'cancelled'
+                ? 'Cancelado'
+                : 'Pendiente'),
+        created_at: item.created_at,
+        origin: item.origin,
+        status: item.status,
+        credit_status: item.credit_status,
+        package_id: item.package_id,
+        decision_note: item.decision_note,
+        decided_at: item.decided_at,
+      }))
+
+      setRegistroCompras(ordenarCompras(comprasNormalizadas))
     }
 
-    const { data: avatarData, error: avatarError } = await supabase
-      .from('avatar_ia_solicitudes')
-      .select('*')
-      .order('created_at', { ascending: false })
+    const { data: avatarQueue, error: avatarError } = await supabase.rpc(
+      'get_powerfit_avatar_ai_queue',
+    )
 
-    setAvatarRequests(avatarError ? [] : avatarData || [])
+    const avatarNormalizados = (avatarQueue?.items || []).map((item) => ({
+      id: item.request_id,
+      alumno_id: item.alumno_id,
+      nombre: item.nombre,
+      nombre_alumno: item.nombre,
+      template: item.template,
+      estado: item.status,
+      credit_status: item.credit_status,
+      costo_creditos: item.cost_credits,
+      foto_storage_path: item.source_photo?.storage_path || null,
+      foto_url: item.source_photo?.reference || null,
+      resultado_storage_path: item.result?.storage_path || null,
+      resultado_url: item.result?.reference || null,
+      created_at: item.created_at,
+      completed_at: item.completed_at,
+      rejected_at: item.rejected_at,
+      decision_note: item.decision_note,
+    }))
+
+    setAvatarRequests(avatarError ? [] : avatarNormalizados)
 
     const { data: alumnosData } = await supabase
       .from('alumnos')
