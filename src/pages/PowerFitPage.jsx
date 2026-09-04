@@ -21,18 +21,7 @@ const guardarTiempo = async (bloque, segundos, userId) => {
 export default function PowerFitPage() {
   const [students, setStudents] = useState([]);
   const [attendance, setAttendance] = useState([]);
-
-  const getStudents = async () => {
-    const { data, error } = await supabase
-      .from("alumnos")
-      .select("*");
-
-    if (!error) {
-      setStudents(data);
-    }
-  };
-
-  const fetchAttendance = async () => {
+const fetchAttendance = async () => {
     const { data, error } = await supabase
       .from("asistencias")
       .select("*");
@@ -57,8 +46,30 @@ export default function PowerFitPage() {
   };
 
   useEffect(() => {
-    getStudents();
-    fetchAttendance();
+    let cancelled = false;
+
+    async function loadInitialData() {
+      const [studentsResult, attendanceResult] = await Promise.all([
+        supabase.from("alumnos").select("*"),
+        supabase.from("asistencias").select("*"),
+      ]);
+
+      if (cancelled) return;
+
+      if (!studentsResult.error) {
+        setStudents(studentsResult.data || []);
+      }
+
+      if (!attendanceResult.error) {
+        setAttendance(attendanceResult.data || []);
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (

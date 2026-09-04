@@ -52,18 +52,14 @@ export default function AsistenciaResumenPage() {
           fecha.getFullYear() === hoy.getFullYear()
         )
       }).length
-
-      let alerta = 'Sin registros'
-
-      if (dias === null) {
-        alerta = 'Sin registros'
-      } else if (dias >= 14) {
-        alerta = 'ALERTA ROJA'
-      } else if (dias >= 7) {
-        alerta = 'ALERTA AMARILLA'
-      } else {
-        alerta = 'Activo'
-      }
+      const alerta =
+        dias === null
+          ? 'Sin registros'
+          : dias >= 14
+            ? 'ALERTA ROJA'
+            : dias >= 7
+              ? 'ALERTA AMARILLA'
+              : 'Activo'
 
       return {
         ...alumno,
