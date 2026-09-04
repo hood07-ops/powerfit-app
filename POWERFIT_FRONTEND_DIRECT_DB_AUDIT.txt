@@ -1,7 +1,7 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 15:59:38
-Commit base: ff5f442c160494e5dcd5d41e9cffb3c93eeebe78
-Remaining lines containing .from(: 18
+Generated: 2026-09-04 16:02:11
+Commit base: 9b796bbda4cf2458f48e5434bc0f7fa2aba3228d
+Remaining lines containing .from(: 15
 
 NOTE: broad count includes approved Supabase Storage .from calls.
 TARGET: 0 direct database-table access before legacy lockdown.
@@ -9,9 +9,6 @@ TARGET: 0 direct database-table access before legacy lockdown.
 src/App.jsx:2550:      const privatePhotos = supabase.storage.from('profile-photos-private')
 src/App.jsx:2705:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
 src/App.jsx:2753:    const privatePhotos = supabase.storage.from('profile-photos-private')
-src/App.jsx:2890:        .from('alumnos')
-src/App.jsx:2905:      .from('alumnos')
-src/App.jsx:2910:      .from('solicitudes_compra')
 src/pages/GeneradorPage.jsx:526:      .from('rm_alumnos')
 src/pages/GeneradorPage.jsx:552:      .from('planificaciones_generadas')
 src/pages/GeneradorPage.jsx:576:      .from('solicitudes_compra')

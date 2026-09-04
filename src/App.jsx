@@ -2881,35 +2881,20 @@ export default function App() {
   }
 
   async function aprobarSolicitud(solicitud) {
-    let alumno = students.find(
-      (a) => String(a.id) === String(solicitud.alumno_id)
+    if (!solicitud?.id) return
+
+    const { error } = await supabase.rpc(
+      'approve_powerfit_purchase_request_compat_secure',
+      {
+        p_request_id: solicitud.id,
+        p_note: 'Aprobado desde panel administrativo PowerFit 360',
+      },
     )
 
-    if (!alumno) {
-      const { data } = await supabase
-        .from('alumnos')
-        .select('*')
-        .eq('id', solicitud.alumno_id)
-        .single()
-
-      alumno = data
+    if (error) {
+      window.alert(`No se pudo aprobar la solicitud: ${error.message}`)
+      return
     }
-
-    if (!alumno) return
-
-    const nuevasGeneraciones =
-      Number(alumno.generaciones_disponibles || 0) +
-      Number(solicitud.generaciones ?? 1)
-
-    await supabase
-      .from('alumnos')
-      .update({ generaciones_disponibles: nuevasGeneraciones })
-      .eq('id', alumno.id)
-
-    await supabase
-      .from('solicitudes_compra')
-      .update({ estado: 'Aprobado' })
-      .eq('id', solicitud.id)
 
     await cargarUsuario()
   }
