@@ -1,19 +1,18 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 15:28:55
-Commit base: 4028bee4b2f004f5a2dfcca1a15efa106bdea3af
-Remaining lines containing .from(: 20
+Generated: 2026-09-04 15:52:17
+Commit base: 73c541a35fa35f88f39e4a6c915ad6458fd71f5f
+Remaining lines containing .from(: 19
 
-NOTE: broad count includes Supabase Storage .from calls.
+NOTE: broad count includes approved Supabase Storage .from calls.
 TARGET: 0 direct database-table access before legacy lockdown.
 
-src/App.jsx:2664:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
-src/App.jsx:2674:      .from('alumnos')
-src/App.jsx:2696:      .from('profile-photos')
-src/App.jsx:2707:    const { data } = supabase.storage.from('profile-photos').getPublicUrl(path)
-src/App.jsx:2792:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
-src/App.jsx:2803:        .from('alumnos')
-src/App.jsx:2818:      .from('alumnos')
-src/App.jsx:2823:      .from('solicitudes_compra')
+src/App.jsx:2550:      const privatePhotos = supabase.storage.from('profile-photos-private')
+src/App.jsx:2705:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
+src/App.jsx:2753:    const privatePhotos = supabase.storage.from('profile-photos-private')
+src/App.jsx:2865:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
+src/App.jsx:2876:        .from('alumnos')
+src/App.jsx:2891:      .from('alumnos')
+src/App.jsx:2896:      .from('solicitudes_compra')
 src/pages/GeneradorPage.jsx:526:      .from('rm_alumnos')
 src/pages/GeneradorPage.jsx:552:      .from('planificaciones_generadas')
 src/pages/GeneradorPage.jsx:576:      .from('solicitudes_compra')

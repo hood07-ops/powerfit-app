@@ -1694,21 +1694,37 @@ function ChampionAvatar({ photoUrl, templateId, name }) {
 
 function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar }) {
   const [photoUrl, setPhotoUrl] = useState(student?.foto_url || '')
-  const [templateId, setTemplateId] = useState(student?.avatar_template || 'champion_red')
+  const [photoStoragePath, setPhotoStoragePath] = useState(
+    student?.foto_storage_path || '',
+  )
+  const [templateId, setTemplateId] = useState(
+    student?.avatar_template || 'champion_red',
+  )
   const [message, setMessage] = useState('')
   const [saving, setSaving] = useState(false)
 
-  async function saveProfile(nextPhoto = photoUrl, nextTemplate = templateId) {
+  async function saveProfile(
+    nextPhoto = photoUrl,
+    nextTemplate = templateId,
+    nextStoragePath = photoStoragePath,
+  ) {
     setSaving(true)
     setMessage('')
 
     const result = await onSave?.({
       foto_url: nextPhoto,
+      foto_storage_path: nextStoragePath || null,
       avatar_template: nextTemplate,
     })
 
     setSaving(false)
-    setMessage(result?.ok ? 'Perfil visual guardado.' : result?.message || 'No se pudo guardar el perfil visual.')
+    setMessage(
+      result?.ok
+        ? 'Perfil visual guardado.'
+        : result?.message || 'No se pudo guardar el perfil visual.',
+    )
+
+    return result
   }
 
   async function handlePhoto(event) {
@@ -1716,19 +1732,31 @@ function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar 
     if (!file) return
 
     try {
+      setSaving(true)
+      setMessage('')
+
       const resized = await resizeProfilePhoto(file)
-      const uploadedUrl = await onUploadPhoto?.(file)
-      const nextPhoto = uploadedUrl || resized
+      const uploaded = await onUploadPhoto?.(file, resized)
+
+      if (!uploaded?.storagePath) {
+        throw new Error('No se pudo guardar la foto privada.')
+      }
+
+      const nextPhoto = uploaded.previewUrl || resized
+      const nextStoragePath = uploaded.storagePath
+
       setPhotoUrl(nextPhoto)
-      await saveProfile(nextPhoto, templateId)
+      setPhotoStoragePath(nextStoragePath)
+      await saveProfile(nextPhoto, templateId, nextStoragePath)
     } catch (error) {
-      setMessage(error.message)
+      setSaving(false)
+      setMessage(error?.message || 'No se pudo procesar la foto.')
     }
   }
 
   async function selectTemplate(nextTemplate) {
     setTemplateId(nextTemplate)
-    await saveProfile(photoUrl, nextTemplate)
+    await saveProfile(photoUrl, nextTemplate, photoStoragePath)
   }
 
   return (
@@ -1751,7 +1779,7 @@ function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar 
           Foto del alumno
           <input
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp"
             onChange={handlePhoto}
             className="w-full rounded-2xl border border-zinc-700 bg-zinc-950 p-4 text-white"
           />
@@ -1785,18 +1813,21 @@ function ProfileAvatarPanel({ student, onSave, onUploadPhoto, onRequestAiAvatar 
           onClick={async () => {
             setSaving(true)
             setMessage('')
+
             const result = await onRequestAiAvatar?.({
               foto_url: photoUrl,
+              foto_storage_path: photoStoragePath || null,
               avatar_template: templateId,
             })
+
             setSaving(false)
             setMessage(
               result?.ok
                 ? 'Solicitud de avatar IA enviada. Quedara pendiente para generar la imagen final.'
-                : result?.message || 'No se pudo solicitar el avatar IA.'
+                : result?.message || 'No se pudo solicitar el avatar IA.',
             )
           }}
-          disabled={saving || !photoUrl}
+          disabled={saving || (!photoStoragePath && !photoUrl)}
           className="w-full rounded-2xl bg-yellow-500 p-4 font-black text-black hover:bg-yellow-400 disabled:opacity-50"
         >
           Solicitar avatar IA campeon
@@ -2479,10 +2510,6 @@ export default function App() {
     saveBranding(persisted)
   }
 
-  function esErrorSchemaCache(error) {
-    return error?.message?.toLowerCase().includes('schema cache')
-  }
-
   async function asegurarFichaAlumno(currentUser) {
     if (!currentUser?.id) return null
 
@@ -2517,7 +2544,21 @@ export default function App() {
 
     const alumno = await asegurarFichaAlumno(currentUser)
 
-    const alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
+    let alumnoActual = alumno ? alumnoConEstadoAutomatico(alumno) : null
+
+    if (alumnoActual?.foto_storage_path) {
+      const privatePhotos = supabase.storage.from('profile-photos-private')
+      const { data: signedPhoto, error: signedError } =
+        await privatePhotos.createSignedUrl(alumnoActual.foto_storage_path, 3600)
+
+      if (!signedError && signedPhoto?.signedUrl) {
+        alumnoActual = {
+          ...alumnoActual,
+          foto_url: signedPhoto.signedUrl,
+        }
+      }
+    }
+
     setStudent(alumnoActual)
     await cargarMarcaGimnasio(alumnoActual)
 
@@ -2670,42 +2711,68 @@ export default function App() {
       return { ok: false, message: 'No se encontro la ficha del alumno.' }
     }
 
-    const { error } = await supabase
-      .from('alumnos')
-      .update(payload)
-      .eq('id', student.id)
+    const { error } = await supabase.rpc('save_powerfit_visual_profile', {
+      p_alumno_id: student.id,
+      p_avatar_template:
+        payload?.avatar_template || student.avatar_template || 'champion_red',
+      p_photo_storage_path:
+        payload?.foto_storage_path || student.foto_storage_path || null,
+      p_clear_photo: false,
+      p_reason: 'Actualizacion de perfil visual desde PowerFit 360',
+    })
 
     if (error) {
-      const schemaMessage = esErrorSchemaCache(error)
-        ? 'Ejecuta primero supabase/profile_avatar.sql en Supabase y vuelve a intentar.'
-        : error.message
-
-      return { ok: false, message: schemaMessage }
+      return { ok: false, message: error.message }
     }
 
     await cargarUsuario()
     return { ok: true }
   }
 
-  async function subirFotoPerfil(file) {
+  async function subirFotoPerfil(file, resizedDataUrl = null) {
     if (!user?.id || !student?.id || !file) return null
 
-    const extension = file.name?.split('.').pop()?.toLowerCase() || 'jpg'
-    const path = `${user.id}/${student.id}-${Date.now()}.${extension}`
-    const { error } = await supabase.storage
-      .from('profile-photos')
-      .upload(path, file, {
-        cacheControl: '3600',
-        upsert: true,
-      })
+    const sourceBlob = resizedDataUrl
+      ? await fetch(resizedDataUrl).then((response) => response.blob())
+      : file
 
-    if (error) {
-      console.warn('No se pudo subir foto a Storage, usando fallback local:', error.message)
-      return null
+    const mime = sourceBlob.type || file.type || 'image/jpeg'
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) {
+      throw new Error('Formato de imagen no permitido. Usa JPG, PNG o WebP.')
     }
 
-    const { data } = supabase.storage.from('profile-photos').getPublicUrl(path)
-    return data?.publicUrl || null
+    if (sourceBlob.size > 3 * 1024 * 1024) {
+      throw new Error('La foto supera el limite de 3 MB.')
+    }
+
+    const extension =
+      mime === 'image/png' ? 'png' : mime === 'image/webp' ? 'webp' : 'jpg'
+
+    const path = `${user.id}/${student.id}/profile-${Date.now()}.${extension}`
+    const privatePhotos = supabase.storage.from('profile-photos-private')
+
+    const { error: uploadError } = await privatePhotos.upload(path, sourceBlob, {
+      cacheControl: '3600',
+      contentType: mime,
+      upsert: false,
+    })
+
+    if (uploadError) {
+      throw new Error(`No se pudo subir la foto privada: ${uploadError.message}`)
+    }
+
+    const { data: signedPhoto, error: signedError } =
+      await privatePhotos.createSignedUrl(path, 3600)
+
+    if (signedError) {
+      console.warn('Foto privada subida sin preview firmado:', signedError.message)
+    }
+
+    return {
+      storagePath: path,
+      previewUrl: signedPhoto?.signedUrl || resizedDataUrl || null,
+    }
   }
 
   async function solicitarAvatarIA(payload) {
@@ -2713,12 +2780,18 @@ export default function App() {
       return { ok: false, message: 'No se encontro la ficha del alumno.' }
     }
 
-    if (!payload?.foto_url) {
+    const tieneFoto =
+      payload?.foto_storage_path ||
+      student?.foto_storage_path ||
+      payload?.foto_url ||
+      student?.foto_url
+
+    if (!tieneFoto) {
       return { ok: false, message: 'Primero sube una foto de rostro.' }
     }
 
     const { error } = await supabase.rpc('request_powerfit_avatar_ai', {
-      p_template: payload.avatar_template || 'champion_red',
+      p_template: payload?.avatar_template || 'champion_red',
     })
 
     if (error) {
@@ -3213,6 +3286,7 @@ export default function App() {
           <h2 className="text-3xl sm:text-4xl font-black text-yellow-400 mb-6">Ficha personal</h2>
 
           <ProfileAvatarPanel
+            key={`${student?.id || 'self'}-${student?.foto_storage_path || student?.foto_url || 'no-photo'}-${student?.avatar_template || 'champion_red'}`}
             student={student}
             onSave={guardarPerfilVisual}
             onUploadPhoto={subirFotoPerfil}
