@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+﻿import { useEffect, useState } from 'react'
 import './App.css'
 import { DEFAULT_BRANDING, POWERFIT_SIGNATURE, getAppEdition, loadBranding, saveBranding } from './appConfig'
 import { applyPowerFitUpdate, listenForPowerFitUpdate } from './pwa'
@@ -86,7 +86,7 @@ const UI_TEXT = {
     language: 'Idioma',
     blockedTitle: 'SERVICIOS BLOQUEADOS',
     blockedCopy:
-      'Tu cuenta esta pendiente o morosa. Regulariza el pago para desbloquear rutinas, generador IA y metodos.',
+      'Tu cuenta esta pendiente o morosa. El estado financiero no bloquea rutinas, entrenamiento ni acceso deportivo.',
     payMonthly: 'Pagar mensualidad',
   },
   en: {
@@ -114,7 +114,7 @@ const UI_TEXT = {
     language: 'Language',
     blockedTitle: 'SERVICES LOCKED',
     blockedCopy:
-      'Your account is pending or overdue. Update payment to unlock routines, AI generator and methods.',
+      'Your account is pending or overdue. Financial status does not block routines, training or sports access.',
     payMonthly: 'Pay monthly fee',
   },
 }
@@ -216,7 +216,7 @@ const TERMS_TEXT = [
   'Entiendo que las rutinas, evaluaciones y recomendaciones de entrenamiento son orientativas y no reemplazan una evaluacion medica profesional.',
   'Me comprometo a informar lesiones, enfermedades, dolores, restricciones medicas o cualquier condicion que pueda afectar mi entrenamiento.',
   'Acepto que el uso de imagen/foto de perfil y avatar campeon es voluntario, y autorizo su uso dentro de mi ficha y experiencia PowerFit.',
-  'Acepto las reglas de pago, vencimiento de mensualidad, bloqueo por deuda y registro de asistencia segun la administracion del gimnasio o escuela.',
+  'Acepto las reglas de pago, vencimiento de mensualidad y registro de asistencia segun la administracion del gimnasio o escuela. El estado financiero no bloquea el acceso deportivo.',
   'Entiendo que el profesor/gimnasio es responsable de administrar sus alumnos y que PowerFit 360 puede mantener registro tecnico y comercial del servicio.',
 ]
 
@@ -1077,7 +1077,7 @@ function AdminAlumnoModal({
 
         {alumno.estado_pago === 'Moroso' && (
           <div className="bg-red-900 border border-red-500 rounded-2xl p-4 mb-6 font-black">
-            Membresía vencida. El alumno queda bloqueado hasta registrar pago o confirmar la pasarela de pago.
+            Membresía vencida. Estado financiero moroso; el acceso deportivo se mantiene activo.
           </div>
         )}
 
@@ -3021,7 +3021,7 @@ export default function App() {
     (Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION)
   const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
   const pagoAlDia = student?.estado_pago === 'Pagado'
-  const bloqueado = !isAdmin && !pagoAlDia
+  const bloqueado = false // Finance is status only; debt must never block sports access.
   const diasParaVencer = diferenciaDias(student?.fecha_vencimiento)
   const mostrarAvisoVencimiento =
     !isAdmin && pagoAlDia && diasParaVencer !== null && diasParaVencer <= 5
@@ -3365,3 +3365,4 @@ export default function App() {
     </div>
   )
 }
+
