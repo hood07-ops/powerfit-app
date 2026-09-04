@@ -1,7 +1,7 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 13:10:58
-Commit base: c61ac9c769d8e898937890bb422e373aa9fd5b8f
-Remaining lines containing .from(: 48
+Generated: 2026-09-04 13:19:17
+Commit base: a6d558ee9191db786cfb810c68b34702dfcae7f9
+Remaining lines containing .from(: 38
 
 NOTE: broad count includes Supabase Storage .from calls.
 TARGET: 0 direct database-table access before legacy lockdown.
@@ -23,21 +23,11 @@ src/App.jsx:2665:    await supabase.from('alumnos').update({ [campo]: valor }).e
 src/App.jsx:2675:      .from('alumnos')
 src/App.jsx:2697:      .from('profile-photos')
 src/App.jsx:2708:    const { data } = supabase.storage.from('profile-photos').getPublicUrl(path)
-src/App.jsx:2721:    const { error } = await supabase.from('avatar_ia_solicitudes').insert([
-src/App.jsx:2757:      .from('avatar_ia_solicitudes')
-src/App.jsx:2768:        .from('alumnos')
-src/App.jsx:2789:      .from('alumnos')
-src/App.jsx:2801:    const { error: insertError } = await supabase.from('terminos_aceptaciones').insert([
-src/App.jsx:2839:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
-src/App.jsx:2850:        .from('alumnos')
-src/App.jsx:2865:      .from('alumnos')
-src/App.jsx:2870:      .from('solicitudes_compra')
-src/App.jsx:2879:      .from('alumnos')
-src/App.jsx:2894:      supabase.from('asistencias').delete().eq('alumno_id', alumno.id),
-src/App.jsx:2895:      supabase.from('rm_alumnos').delete().eq('alumno_id', alumno.id),
-src/App.jsx:2896:      supabase.from('planificaciones_generadas').delete().eq('alumno_id', alumno.id),
-src/App.jsx:2897:      supabase.from('solicitudes_compra').delete().eq('alumno_id', alumno.id),
-src/App.jsx:2900:    const { error } = await supabase.from('alumnos').delete().eq('id', alumno.id)
+src/App.jsx:2793:    await supabase.from('alumnos').update(updateData).eq('id', alumno.id)
+src/App.jsx:2804:        .from('alumnos')
+src/App.jsx:2819:      .from('alumnos')
+src/App.jsx:2824:      .from('solicitudes_compra')
+src/App.jsx:2833:      .from('alumnos')
 src/pages/ConstructorPage.jsx:407:      .from('alumnos')
 src/pages/ConstructorPage.jsx:420:    const { data: planes, error: insertError } = await supabase.from('planificaciones_generadas').insert([
 src/pages/ConstructorPage.jsx:438:      .from('alumnos')

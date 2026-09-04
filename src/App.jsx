@@ -2718,56 +2718,37 @@ export default function App() {
       return { ok: false, message: 'Primero sube una foto de rostro.' }
     }
 
-    const { error } = await supabase.from('avatar_ia_solicitudes').insert([
-      {
-        alumno_id: student.id,
-        user_id: student.user_id || user.id,
-        gimnasio_id: student.gimnasio_id || null,
-        foto_url: payload.foto_url,
-        template: payload.avatar_template || 'champion_red',
-        prompt:
-          'Avatar campeon PowerFit: boxeador o boxeadora en posicion de combate, cinturon de campeon, una mano en alto, estilo deportivo premium.',
-        estado: 'Pendiente',
-        costo_creditos: 1,
-      },
-    ])
+    const { error } = await supabase.rpc('request_powerfit_avatar_ai', {
+      p_template: payload.avatar_template || 'champion_red',
+    })
 
     if (error) {
-      const schemaMessage = esErrorSchemaCache(error)
-        ? 'Ejecuta primero supabase/avatar_storage_ai.sql en Supabase y vuelve a intentar.'
-        : error.message
-
-      return { ok: false, message: schemaMessage }
+      return { ok: false, message: error.message }
     }
 
+    await cargarUsuario()
     return { ok: true }
   }
 
   async function actualizarSolicitudAvatarIA(solicitud, estado, resultadoUrl = '') {
-    const updateData = {
-      estado,
-      updated_at: new Date().toISOString(),
-    }
+    const decision =
+      estado === 'Completado'
+        ? 'completed'
+        : estado === 'Rechazado'
+          ? 'rejected'
+          : estado
 
-    if (resultadoUrl) {
-      updateData.resultado_url = resultadoUrl
-    }
-
-    const { error } = await supabase
-      .from('avatar_ia_solicitudes')
-      .update(updateData)
-      .eq('id', solicitud.id)
+    const { error } = await supabase.rpc('decide_powerfit_avatar_ai', {
+      p_request_id: solicitud.id,
+      p_decision: decision,
+      p_result_url: resultadoUrl || null,
+      p_result_storage_path: null,
+      p_note: 'Actualizado desde panel PowerFit 360',
+    })
 
     if (error) {
       window.alert(`No se pudo actualizar la solicitud: ${error.message}`)
       return
-    }
-
-    if (estado === 'Completado' && resultadoUrl && solicitud.alumno_id) {
-      await supabase
-        .from('alumnos')
-        .update({ foto_url: resultadoUrl })
-        .eq('id', solicitud.alumno_id)
     }
 
     await cargarUsuario()
@@ -2778,42 +2759,15 @@ export default function App() {
       return { ok: false, message: 'No se encontro la ficha del alumno.' }
     }
 
-    const acceptedAt = new Date().toISOString()
-    const updatePayload = {
-      terminos_aceptados: true,
-      terminos_version: payload.version,
-      terminos_aceptados_at: acceptedAt,
-    }
+    const { error } = await supabase.rpc('accept_powerfit_terms', {
+      p_version: payload.version,
+      p_accept_terms: Boolean(payload.acepto_terminos),
+      p_accept_contract: Boolean(payload.acepto_contrato),
+      p_user_agent: payload.user_agent || navigator.userAgent,
+    })
 
-    const { error: updateError } = await supabase
-      .from('alumnos')
-      .update(updatePayload)
-      .eq('id', student.id)
-
-    if (updateError) {
-      const schemaMessage = esErrorSchemaCache(updateError)
-        ? 'Ejecuta primero supabase/terms_acceptance.sql en Supabase y vuelve a intentar.'
-        : updateError.message
-
-      return { ok: false, message: schemaMessage }
-    }
-
-    const { error: insertError } = await supabase.from('terminos_aceptaciones').insert([
-      {
-        alumno_id: student.id,
-        user_id: student.user_id || user.id,
-        gimnasio_id: student.gimnasio_id || null,
-        version: payload.version,
-        acepto_terminos: payload.acepto_terminos,
-        acepto_contrato: payload.acepto_contrato,
-        nombre_aceptante: student.nombre,
-        email: student.email || user.email,
-        user_agent: payload.user_agent,
-      },
-    ])
-
-    if (insertError && !esErrorSchemaCache(insertError)) {
-      console.warn('No se pudo guardar historial de terminos:', insertError.message)
+    if (error) {
+      return { ok: false, message: error.message }
     }
 
     await cargarUsuario()
@@ -2885,22 +2839,23 @@ export default function App() {
 
   async function eliminarAlumno(alumno) {
     const confirmado = window.confirm(
-      `Eliminar definitivamente a ${alumno.nombre || 'este alumno'}?`
+      `Eliminar definitivamente a ${alumno.nombre || 'este alumno'}? Solo se borrara si no tiene historial.`
     )
 
     if (!confirmado) return
 
-    await Promise.all([
-      supabase.from('asistencias').delete().eq('alumno_id', alumno.id),
-      supabase.from('rm_alumnos').delete().eq('alumno_id', alumno.id),
-      supabase.from('planificaciones_generadas').delete().eq('alumno_id', alumno.id),
-      supabase.from('solicitudes_compra').delete().eq('alumno_id', alumno.id),
-    ])
-
-    const { error } = await supabase.from('alumnos').delete().eq('id', alumno.id)
+    const { error } = await supabase.rpc('hard_delete_powerfit_student_if_empty', {
+      p_alumno_id: alumno.id,
+      p_reason: 'Eliminacion solicitada desde panel administrativo PowerFit 360',
+    })
 
     if (error) {
-      window.alert(`No se pudo eliminar el alumno: ${error.message}`)
+      const tieneHistorial = String(error.message || '').includes('STUDENT_HAS_HISTORY')
+      window.alert(
+        tieneHistorial
+          ? 'Este alumno tiene historial y no puede eliminarse fisicamente. Sus datos deportivos se conservaran.'
+          : `No se pudo eliminar el alumno: ${error.message}`
+      )
       return
     }
 
