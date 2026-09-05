@@ -492,6 +492,7 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [disponiblesLocal, setDisponiblesLocal] = useState(0)
   const [generacionesCompradas, setGeneracionesCompradas] = useState(0)
   const [planesMensualesComprados, setPlanesMensualesComprados] = useState(0)
+  const [purchasePackages, setPurchasePackages] = useState([])
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
   const t = GENERADOR_TEXT[idioma] || GENERADOR_TEXT.es
@@ -516,138 +517,60 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
     disponiblesLocal || student?.generaciones_disponibles || 0
   )
 
-  async function cargarRM() {
-    if (!student?.id) {
-      setRms([])
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('rm_alumnos')
-      .select('*')
-      .eq('alumno_id', student.id)
-
-    if (error) {
-      setMensaje(`Error cargando RM: ${error.message}`)
-      setRms([])
-      return
-    }
-
-    setRms(data || [])
-  }
-
-  async function cargarPlanificacionesMes() {
-    if (!student?.id) {
-      setPlanificaciones([])
-      return
-    }
-
-    await eliminarPlanificacionesVencidas()
-
-    const hoy = new Date()
-    const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString()
-    const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 1).toISOString()
-
-    const { data, error } = await supabase
-      .from('planificaciones_generadas')
-      .select('*')
-      .eq('alumno_id', student.id)
-      .gte('created_at', inicioMes)
-      .lt('created_at', finMes)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      setMensaje(`Error cargando planificaciones: ${error.message}`)
-      setPlanificaciones([])
-      return
-    }
-
-    setPlanificaciones(data || [])
-  }
-
-  async function cargarComprasAprobadas() {
-    if (!student?.id) {
-      setGeneracionesCompradas(0)
-      setPlanesMensualesComprados(0)
-      return
-    }
-
-    const { data, error } = await supabase
-      .from('solicitudes_compra')
-      .select('generaciones,monto')
-      .eq('alumno_id', student.id)
-      .eq('estado', 'Aprobado')
-
-    if (error) {
-      setGeneracionesCompradas(0)
-      setPlanesMensualesComprados(0)
-      return
-    }
-
-    const totalGeneraciones = (data || [])
-      .filter((compra) => Number(compra.monto || 0) !== PRECIO_PLAN_MENSUAL)
-      .reduce((total, compra) => total + Number(compra.generaciones ?? 1), 0)
-    const totalMensuales = (data || []).filter(
-      (compra) => Number(compra.monto || 0) === PRECIO_PLAN_MENSUAL
-    ).length
-
-    setGeneracionesCompradas(totalGeneraciones)
-    setPlanesMensualesComprados(totalMensuales)
-  }
-
-  async function eliminarPlanificacionesVencidas() {
-    if (!student?.id) return
-
-    const limite = new Date()
-    limite.setMonth(limite.getMonth() - 1)
-
-    await supabase
-      .from('planificaciones_generadas')
-      .delete()
-      .eq('alumno_id', student.id)
-      .lt('created_at', limite.toISOString())
-  }
-
-  async function refrescarGeneraciones() {
+  async function cargarEstadoGenerador() {
     const fallback = Number(student?.generaciones_disponibles || disponiblesLocal || 0)
-    if (!student?.id) return fallback
 
-    const { data, error } = await supabase
-      .from('alumnos')
-      .select('generaciones_disponibles')
-      .eq('id', student.id)
-      .single()
-
-    if (error) {
-      setMensaje(`Error actualizando generaciones: ${error.message}`)
+    if (!student?.id) {
+      setRms([])
+      setPlanificaciones([])
+      setGeneracionesCompradas(0)
+      setPlanesMensualesComprados(0)
+      setPurchasePackages([])
       setDisponiblesLocal(fallback)
       return fallback
     }
 
-    const disponibles = Number(data?.generaciones_disponibles ?? fallback)
+    const { data, error } = await supabase.rpc(
+      'get_powerfit_generator_state_secure',
+      {
+        p_alumno_id: student.id,
+      },
+    )
+
+    if (error) {
+      setMensaje(`Error actualizando generador: ${error.message}`)
+      setDisponiblesLocal(fallback)
+      return fallback
+    }
+
+    setRms(data?.rm || [])
+    setPlanificaciones(data?.plans || [])
+    setGeneracionesCompradas(Number(data?.generation_purchases_approved || 0))
+    setPlanesMensualesComprados(Number(data?.monthly_approved || 0))
+    setPurchasePackages(data?.packages || [])
+
+    const disponibles = Number(data?.generations_available ?? fallback)
     setDisponiblesLocal(disponibles)
     return disponibles
   }
 
+  async function refrescarGeneraciones() {
+    return cargarEstadoGenerador()
+  }
+
   useEffect(() => {
-    Promise.resolve().then(() => {
-      cargarRM()
-      cargarPlanificacionesMes()
-      cargarComprasAprobadas()
-      setDisponiblesLocal(Number(student?.generaciones_disponibles || 0))
-    })
+    Promise.resolve().then(() => cargarEstadoGenerador())
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id, student?.generaciones_disponibles])
 
   useEffect(() => {
     const intervalo = setInterval(() => {
-      refrescarGeneraciones()
+      cargarEstadoGenerador()
     }, 30000)
 
     return () => clearInterval(intervalo)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [student?.id])
-
   function textoPlan(p, numero) {
     if (p.tipo === 'mensual') {
       return `
@@ -748,13 +671,6 @@ Vuelta a la calma: dirigida en clase.
 `
   }
 
-  async function borrarPlanesInsertados(planes) {
-    const ids = planes.map((plan) => plan.id).filter(Boolean)
-    if (ids.length === 0) return
-
-    await supabase.from('planificaciones_generadas').delete().in('id', ids)
-  }
-
   async function guardarRM() {
     if (!student?.id || guardandoRM) return
 
@@ -783,7 +699,7 @@ Vuelta a la calma: dirigida en clase.
 
       setRmForm((prev) => ({ ...prev, rm_kg: '' }))
       setMensaje(`RM guardado: ${rmForm.ejercicio} ${rmKg} kg.`)
-      await cargarRM()
+      await cargarEstadoGenerador()
     } finally {
       setGuardandoRM(false)
     }
@@ -800,8 +716,9 @@ Vuelta a la calma: dirigida en clase.
       const disponibles = Math.max(
         Number(disponiblesRefrescados || 0),
         Number(disponiblesLocal || 0),
-        Number(student?.generaciones_disponibles || 0)
+        Number(student?.generaciones_disponibles || 0),
       )
+
       const cantidadFinal =
         tipoPlan === 'mensual'
           ? planesMensualesDisponibles > 0
@@ -815,7 +732,7 @@ Vuelta a la calma: dirigida en clase.
         setMensaje(
           tipoPlan === 'mensual'
             ? `El plan mensual completo cuesta $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}. Solicita la planificación mensual para continuar.`
-            : `No tienes generaciones disponibles. La siguiente generación cuesta $${tramoActual.precio.toLocaleString('es-CL')}.`
+            : `No tienes generaciones disponibles. La siguiente generación cuesta $${tramoActual.precio.toLocaleString('es-CL')}.`,
         )
         return
       }
@@ -837,20 +754,48 @@ Vuelta a la calma: dirigida en clase.
               historial: planificaciones.map((p) => p.contenido),
             })
 
-      const contenidoGenerado = corregirNombresPowerFit(textoPlan(plan, planificaciones.length + 1))
-      const planPayload = {
-        user_id: student.user_id,
-        alumno_id: student.id,
-        nombre_alumno: student.nombre,
-        objetivo: tipoPlan === 'mensual' ? `Plan mensual ${objetivo}` : objetivo,
-        nivel,
-        contenido: contenidoGenerado,
+      const contenidoGenerado = corregirNombresPowerFit(
+        textoPlan(plan, planificaciones.length + 1),
+      )
+
+      let saveData
+      let saveError
+
+      if (tipoPlan === 'mensual') {
+        const result = await supabase.rpc('save_powerfit_monthly_plan_secure', {
+          p_alumno_id: student.id,
+          p_objetivo: `Plan mensual ${objetivo}`,
+          p_nivel: nivel,
+          p_contenido: contenidoGenerado,
+        })
+        saveData = result.data
+        saveError = result.error
+      } else {
+        const result = await supabase.rpc(
+          'save_powerfit_manual_plan_with_generation_secure',
+          {
+            p_alumno_id: student.id,
+            p_objetivo: objetivo,
+            p_nivel: nivel,
+            p_contenido: contenidoGenerado,
+            p_source_ref: 'generator',
+          },
+        )
+        saveData = result.data
+        saveError = result.error
       }
 
-      const planLocal = {
-        ...planPayload,
-        id: `local-${student.id}-${planificaciones.length + 1}`,
-        created_at: new Date().toISOString(),
+      if (saveError) {
+        const message = String(saveError.message || '')
+        if (message.includes('NO_MONTHLY_PLAN_CREDIT')) {
+          setMensaje('No tienes un crédito mensual aprobado disponible.')
+        } else if (message.includes('NO_GENERATIONS_AVAILABLE')) {
+          setMensaje('No tienes generaciones disponibles.')
+        } else {
+          setMensaje(`No se pudo guardar la planificación: ${message}`)
+        }
+        await cargarEstadoGenerador()
+        return
       }
 
       if (tipoPlan === 'mensual') {
@@ -859,69 +804,20 @@ Vuelta a la calma: dirigida en clase.
         descargarWord(contenidoGenerado, student.nombre)
       }
 
-      setPlanificaciones((actuales) => [planLocal, ...actuales])
-      setMensaje(
-        tipoPlan === 'mensual'
-          ? 'Plan mensual generado y descargado. Guardando historial...'
-          : '1 planificacion generada y descargada. Guardando historial...'
-      )
-
-      const { data: nuevosPlanes, error: insertError } = await supabase
-        .from('planificaciones_generadas')
-        .insert([planPayload])
-        .select()
-
-      if (nuevosPlanes?.[0]) {
+      if (saveData?.plan) {
         setPlanificaciones((actuales) => [
-          nuevosPlanes[0],
-          ...actuales.filter((planItem) => planItem.id !== planLocal.id),
+          saveData.plan,
+          ...actuales.filter((item) => String(item.id) !== String(saveData.plan.id)),
         ])
       }
 
-      if (insertError && !contenidoGenerado) {
-        setMensaje(`Error guardando planificación: ${insertError.message}`)
-        return
-      }
-
-      let disponiblesRestantes = disponibles
-
-      if (cantidadFinal > 0) {
-        const { data: alumnoActualizado, error: updateError } = await supabase
-          .from('alumnos')
-          .update({
-            generaciones_disponibles: Math.max(0, disponibles - cantidadFinal),
-          })
-          .eq('id', student.id)
-          .select('generaciones_disponibles')
-
-        if (updateError || !alumnoActualizado?.length) {
-          await borrarPlanesInsertados(nuevosPlanes || [])
-          setMensaje(
-            updateError
-              ? `Rutina generada. No se pudo descontar la generacion: ${updateError.message}`
-              : 'Rutina generada. No se pudo descontar la generacion disponible.'
-          )
-          onUpdateStudent?.()
-          return
-        }
-
-        disponiblesRestantes = Number(
-          alumnoActualizado[0]?.generaciones_disponibles || 0
-        )
-      }
-
-      setDisponiblesLocal(disponiblesRestantes)
       setMensaje(
         tipoPlan === 'mensual'
           ? 'Plan mensual generado, guardado y descargado en Excel. Se usó 1 crédito mensual aprobado.'
-          : '1 planificación generada, guardada y descargada.'
+          : '1 planificación generada, guardada y descargada.',
       )
 
-      if (insertError) {
-        setMensaje(`Rutina generada y descargada. No se pudo guardar en historial: ${insertError.message}`)
-      }
-
-      if (!insertError) await cargarPlanificacionesMes()
+      await cargarEstadoGenerador()
       onUpdateStudent?.()
     } catch (error) {
       setMensaje(`Error inesperado generando rutina: ${error.message}`)
@@ -929,26 +825,35 @@ Vuelta a la calma: dirigida en clase.
       setGenerando(false)
     }
   }
-
   async function solicitarCompra() {
     if (!student) return
 
     const compraMensual = tipoPlan === 'mensual'
     const monto = compraMensual ? PRECIO_PLAN_MENSUAL : tramoActual.precio
     const generaciones = compraMensual ? 0 : 1
+    const packageCode = compraMensual
+      ? 'monthly_atr'
+      : monto === 2500
+        ? 'gen_start_1'
+        : monto === 5000
+          ? 'gen_progress_1'
+          : 'gen_continuous_1'
 
-    const { error } = await supabase
-      .from('solicitudes_compra')
-      .insert([
-        {
-          user_id: student.user_id,
-          alumno_id: student.id,
-          nombre_alumno: student.nombre,
-          monto,
-          generaciones,
-          estado: 'Pendiente',
-        },
-      ])
+    let paquete = purchasePackages.find((item) => item.code === packageCode)
+
+    if (!paquete?.id) {
+      await cargarEstadoGenerador()
+      paquete = purchasePackages.find((item) => item.code === packageCode)
+    }
+
+    if (!paquete?.id) {
+      setMensaje('No se encontró el paquete de compra seguro. Actualiza la app e inténtalo nuevamente.')
+      return
+    }
+
+    const { error } = await supabase.rpc('create_powerfit_purchase_request', {
+      p_package_id: paquete.id,
+    })
 
     if (error) {
       setMensaje(error.message)
@@ -957,17 +862,17 @@ Vuelta a la calma: dirigida en clase.
 
     const texto = compraMensual
       ? `Hola Robinson, soy ${student.nombre}. Quiero solicitar una planificación mensual PowerFit completa por $${PRECIO_PLAN_MENSUAL.toLocaleString('es-CL')}.`
-      : `Hola Robinson, soy ${student.nombre}. Quiero comprar 1 generación PowerFit (${tramoActual.nombre}) por $${tramoActual.precio.toLocaleString('es-CL')}.`
+      : `Hola Robinson, soy ${student.nombre}. Quiero comprar ${generaciones} generación PowerFit (${tramoActual.nombre}) por $${tramoActual.precio.toLocaleString('es-CL')}.`
 
     window.open(
       `https://wa.me/${ADMIN_WHATSAPP}?text=${encodeURIComponent(texto)}`,
       '_blank',
-      'noopener,noreferrer'
+      'noopener,noreferrer',
     )
 
+    await cargarEstadoGenerador()
     setMensaje('Solicitud enviada correctamente.')
   }
-
   const sinDisponibles = generacionesDisponibles < 1
   const generacionBloqueada =
     tipoPlan === 'mensual'

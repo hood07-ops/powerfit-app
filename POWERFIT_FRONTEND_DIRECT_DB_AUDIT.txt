@@ -1,10 +1,12 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 22:07:52
-Commit base: 130edb2a9a285a618950a3009999d3b382f85031
-Remaining lines containing .from(: 1
-Remaining direct database .from candidates: 9
+Generated: 2026-09-04 22:18:52
+Commit base: ae2d02e0ddbd7b5e56a168acb23a65bbc6b764ed
+Remaining broad lines containing .from(: 2
+Remaining direct database supabase.from calls: 0
 
-NOTE: broad count includes approved Supabase Storage .from calls.
-TARGET: 0 direct database-table access before legacy lockdown.
+Approved Supabase Storage .from calls may remain.
+TARGET: 0 direct database-table calls.
 
-System.Collections.Hashtable
+BROAD .from LINES:
+src/App.jsx:2566:      const privatePhotos = supabase.storage.from('profile-photos-private')
+src/App.jsx:2782:    const privatePhotos = supabase.storage.from('profile-photos-private')
