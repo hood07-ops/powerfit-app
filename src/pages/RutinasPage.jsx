@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 
 export default function RutinasPage({ student, onUpdateStudent }) {
-
-  const [user, setUser] = useState(null)
   const [mensaje, setMensaje] = useState('')
   const [formValues, setFormValues] = useState({})
   const [entrenosAsignados, setEntrenosAsignados] = useState([])
@@ -155,44 +153,40 @@ export default function RutinasPage({ student, onUpdateStudent }) {
 
   ]
 
-  useEffect(() => {
-    cargar()
-    cargarEntrenosAsignados()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student?.id])
-
-  async function cargar() {
-
-    const { data } = await supabase.auth.getUser()
-    const currentUser = data?.user
-
-    if (!currentUser) return
-
-    setUser(currentUser)
-
-  }
-
   async function cargarEntrenosAsignados() {
     if (!student?.id) return
 
-    const { data, error } = await supabase
-      .from('planificaciones_generadas')
-      .select('*')
-      .eq('alumno_id', student.id)
-      .like('objetivo', 'coach_personalizado%')
-      .order('created_at', { ascending: false })
+    const { data, error } = await supabase.rpc(
+      'get_powerfit_training_history_secure',
+      {
+        p_alumno_id: student.id,
+        p_limit: 100,
+      },
+    )
 
-    if (!error) {
-      setEntrenosAsignados(data || [])
+    if (error) {
+      setEntrenosAsignados([])
+      return
     }
+
+    const asignados = (data?.plans || []).filter((plan) =>
+      String(plan?.objetivo || '').startsWith('coach_personalizado'),
+    )
+
+    setEntrenosAsignados(asignados)
   }
+
+  useEffect(() => {
+    Promise.resolve().then(() => cargarEntrenosAsignados())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student?.id])
 
   const pagoActivo = student?.estado_pago === 'Pagado'
   const premiumActivo = Number(student?.bloques_premium || 0) > 0
 
   const bloquesVisibles = bloques.filter((b) => {
     if (b.tipo === 'gratis') return true
-    return pagoActivo && premiumActivo
+    return premiumActivo
   })
 
   function actualizarValor(nombre, campo, valor) {
@@ -208,61 +202,36 @@ export default function RutinasPage({ student, onUpdateStudent }) {
   }
 
   async function guardarRecord(bloque) {
-
-    if (!user || !student) return
+    if (!student) return
 
     const valores = formValues[bloque.nombre] || {}
 
-    const payload = {
-      user_id: user.id,
-      alumno_id: student.id,
-      rutina_nombre: bloque.nombre,
-      metodo: bloque.metodo,
-      tipo_record: bloque.record,
-      vueltas: bloque.record === 'vueltas'
-        ? Number(valores.vueltas || 0)
-        : null,
-
-      repeticiones: bloque.record === 'repeticiones'
-        ? Number(valores.repeticiones || 0)
-        : null,
-
-      tiempo_segundos: bloque.record === 'tiempo'
-        ? Number(valores.tiempo_segundos || 0)
-        : null,
-
-      peso_kg: bloque.record === 'peso'
-        ? Number(valores.peso_kg || 0)
-        : null,
-
-      porcentaje_rm: bloque.record === 'peso'
-        ? Number(valores.porcentaje_rm || 0)
-        : null,
-    }
-
-    const { error } = await supabase
-      .from('records_entrenamiento')
-      .insert([payload])
+    const { error } = await supabase.rpc(
+      'save_powerfit_routine_record_with_xp_secure',
+      {
+        p_alumno_id: student.id,
+        p_rutina_nombre: bloque.nombre,
+        p_metodo: bloque.metodo,
+        p_tipo_record: bloque.record,
+        p_vueltas: bloque.record === 'vueltas' ? Number(valores.vueltas || 0) : null,
+        p_repeticiones: bloque.record === 'repeticiones' ? Number(valores.repeticiones || 0) : null,
+        p_tiempo_segundos: bloque.record === 'tiempo' ? Number(valores.tiempo_segundos || 0) : null,
+        p_peso_kg: bloque.record === 'peso' ? Number(valores.peso_kg || 0) : null,
+        p_porcentaje_rm: bloque.record === 'peso' ? Number(valores.porcentaje_rm || 0) : null,
+        p_xp: Number(bloque.xp || 20),
+        p_reason: 'Rutina completada desde RutinasPage',
+      },
+    )
 
     if (error) {
-      setMensaje('Error guardando record')
+      setMensaje(`Error guardando record: ${error.message}`)
       return
     }
 
-    const nuevoXP = Number(student?.xp || 0) + Number(bloque.xp || 20)
-
-    await supabase
-      .from('alumnos')
-      .update({ xp: nuevoXP })
-      .eq('id', student.id)
-
     setMensaje(`+${bloque.xp} XP ganados`)
     setFormValues({})
-    cargar()
     onUpdateStudent?.()
-
   }
-
   return (
 
     <div className="min-h-screen bg-black text-white p-6">
@@ -284,11 +253,11 @@ export default function RutinasPage({ student, onUpdateStudent }) {
         <div className="bg-red-950 border border-red-600 rounded-3xl p-6 mb-8">
 
           <h2 className="text-3xl font-black text-red-400">
-            PAGO PENDIENTE
+            ESTADO DE PAGO PENDIENTE
           </h2>
 
           <p className="text-zinc-300 mt-3">
-            Debes regularizar tu mensualidad para desbloquear contenido premium.
+            Tu estado financiero es informativo y no bloquea rutinas, entrenamiento ni acceso deportivo.
           </p>
 
         </div>

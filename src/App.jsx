@@ -2702,10 +2702,23 @@ export default function App() {
   }, [])
 
   async function actualizarAlumno(id, campo, valor) {
-    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
+    const { error } = await supabase.rpc(
+      'update_powerfit_student_field_admin_secure',
+      {
+        p_alumno_id: id,
+        p_field: campo,
+        p_value: valor,
+        p_reason: 'Edicion administrativa desde ficha de alumno PowerFit 360',
+      },
+    )
+
+    if (error) {
+      window.alert(`No se pudo actualizar el alumno: ${error.message}`)
+      return
+    }
+
     await cargarUsuario()
   }
-
   async function guardarPerfilVisual(payload) {
     if (!student?.id) {
       return { ok: false, message: 'No se encontro la ficha del alumno.' }

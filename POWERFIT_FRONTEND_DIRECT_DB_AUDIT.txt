@@ -1,23 +1,10 @@
 ﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 16:02:11
-Commit base: 9b796bbda4cf2458f48e5434bc0f7fa2aba3228d
-Remaining lines containing .from(: 15
+Generated: 2026-09-04 22:07:52
+Commit base: 130edb2a9a285a618950a3009999d3b382f85031
+Remaining lines containing .from(: 1
+Remaining direct database .from candidates: 9
 
 NOTE: broad count includes approved Supabase Storage .from calls.
 TARGET: 0 direct database-table access before legacy lockdown.
 
-src/App.jsx:2550:      const privatePhotos = supabase.storage.from('profile-photos-private')
-src/App.jsx:2705:    await supabase.from('alumnos').update({ [campo]: valor }).eq('id', id)
-src/App.jsx:2753:    const privatePhotos = supabase.storage.from('profile-photos-private')
-src/pages/GeneradorPage.jsx:526:      .from('rm_alumnos')
-src/pages/GeneradorPage.jsx:552:      .from('planificaciones_generadas')
-src/pages/GeneradorPage.jsx:576:      .from('solicitudes_compra')
-src/pages/GeneradorPage.jsx:605:      .from('planificaciones_generadas')
-src/pages/GeneradorPage.jsx:616:      .from('alumnos')
-src/pages/GeneradorPage.jsx:755:    await supabase.from('planificaciones_generadas').delete().in('id', ids)
-src/pages/GeneradorPage.jsx:870:        .from('planificaciones_generadas')
-src/pages/GeneradorPage.jsx:890:          .from('alumnos')
-src/pages/GeneradorPage.jsx:941:      .from('solicitudes_compra')
-src/pages/RutinasPage.jsx:179:      .from('planificaciones_generadas')
-src/pages/RutinasPage.jsx:244:      .from('records_entrenamiento')
-src/pages/RutinasPage.jsx:255:      .from('alumnos')
+System.Collections.Hashtable
