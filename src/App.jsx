@@ -1039,6 +1039,8 @@ function AdminAlumnoModal({
   onEliminarGeneraciones,
   onEliminarAlumno,
 }) {
+  const [fechaPago, setFechaPago] = useState(fechaHoy())
+
   if (!alumno) return null
 
   const resumen = resumenAsistenciaAlumno(alumno, asistencias)
@@ -1158,9 +1160,23 @@ function AdminAlumnoModal({
               />
             </div>
 
+
+            <div className="mt-5">
+              <label className="grid gap-2 text-sm font-black text-zinc-300">
+                <span>Fecha de pago</span>
+                <input
+                  type="date"
+                  value={fechaPago}
+                  onChange={(e) => setFechaPago(e.target.value)}
+                  className="w-full bg-black p-3 rounded-xl text-white border border-zinc-700"
+                  title="Fecha real en que se recibió el pago"
+                />
+              </label>
+            </div>
+
             <div className="grid sm:grid-cols-2 gap-3 mt-5">
               <button
-                onClick={() => onRegistrarPago(alumno)}
+                onClick={() => onRegistrarPago(alumno, fechaPago)}
                 className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
               >
                 Registrar pago
@@ -1189,7 +1205,7 @@ function AdminAlumnoModal({
               <p className="font-black text-yellow-400">Mercado Pago</p>
               <p className="text-zinc-400 mt-2">
                 Cuando Mercado Pago confirme el pago, el webhook debe actualizar esta misma ficha:
-                fecha de pago hoy, vencimiento +1 mes, estado Pagado y generaciones disponibles.
+                fecha de pago confirmada, vencimiento correspondiente, estado Pagado y generaciones disponibles.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 mt-4">
                 <Info label="Fecha de pago" value={formatearFecha(alumno.fecha_pago)} />
@@ -2859,11 +2875,11 @@ export default function App() {
     return { ok: true }
   }
 
-  async function registrarPago(alumno) {
-    await aplicarPagoConfirmado(alumno)
+  async function registrarPago(alumno, fechaPago = fechaHoy()) {
+    await aplicarPagoConfirmado(alumno, fechaPago)
   }
 
-  async function aplicarPagoConfirmado(alumno) {
+  async function aplicarPagoConfirmado(alumno, fechaPago = fechaHoy()) {
     if (!alumno?.id) return
 
     const requestId = `payment-${alumno.id}-${Date.now()}`
@@ -2880,7 +2896,7 @@ export default function App() {
           ? Number(alumno.monto)
           : null,
         p_notes: 'Pago registrado desde panel PowerFit 360',
-        p_paid_on: new Date().toISOString().slice(0, 10),
+        p_paid_on: fechaPago || fechaHoy(),
         p_generation_balance: 6,
       },
     )
@@ -3395,6 +3411,7 @@ export default function App() {
       )}
 
       <AdminAlumnoModal
+        key={alumnoDetalle?.id || 'closed'}
         alumno={alumnoDetalle}
         asistencias={asistencias}
         onClose={() => setAlumnoDetalle(null)}
