@@ -2884,7 +2884,9 @@ export default function App() {
         p_client_request_id: requestId,
         p_alumno_id: alumno.id,
         p_payment_method: 'manual',
-        p_period_start: null,
+        p_period_start: alumno.fecha_vencimiento
+          ? null
+          : fechaPago || fechaHoy(),
         p_months: 1,
         p_amount: Number.isFinite(Number(alumno.monto))
           ? Number(alumno.monto)
