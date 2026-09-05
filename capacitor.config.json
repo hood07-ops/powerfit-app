@@ -1,10 +1,5 @@
 {
-  "appId": "cl.powerfit.app",
-  "appName": "PowerFit 360",
-  "webDir": "dist",
-  "server": {
-    "url": "https://powerfit-app-cv9o.vercel.app",
-    "cleartext": false,
-    "androidScheme": "https"
-  }
+    "appId":  "cl.powerfit.app",
+    "appName":  "PowerFit 360",
+    "webDir":  "dist"
 }

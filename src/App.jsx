@@ -84,9 +84,6 @@ const UI_TEXT = {
     purchaseLog: 'Registro compras',
     brandSettings: 'Marca',
     language: 'Idioma',
-    blockedTitle: 'SERVICIOS BLOQUEADOS',
-    blockedCopy:
-      'Tu cuenta esta pendiente o morosa. El estado financiero no bloquea rutinas, entrenamiento ni acceso deportivo.',
     payMonthly: 'Pagar mensualidad',
   },
   en: {
@@ -112,9 +109,6 @@ const UI_TEXT = {
     purchaseLog: 'Purchase log',
     brandSettings: 'Brand',
     language: 'Language',
-    blockedTitle: 'SERVICES LOCKED',
-    blockedCopy:
-      'Your account is pending or overdue. Financial status does not block routines, training or sports access.',
     payMonthly: 'Pay monthly fee',
   },
 }
@@ -3082,7 +3076,6 @@ export default function App() {
     (Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION)
   const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
   const pagoAlDia = student?.estado_pago === 'Pagado'
-  const bloqueado = false // Finance is status only; debt must never block sports access.
   const diasParaVencer = diferenciaDias(student?.fecha_vencimiento)
   const mostrarAvisoVencimiento =
     !isAdmin && pagoAlDia && diasParaVencer !== null && diasParaVencer <= 5
@@ -3185,46 +3178,30 @@ export default function App() {
           {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
           {isAdmin && <Btn show={editionAllows('Entrenamientos')} text={t.customTrainings} active={visibleSection === 'Entrenamientos'} set={() => setSection('Entrenamientos')} />}
           <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
-          <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} disabled={bloqueado} set={() => setSection('XPRangos')} />
-          <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} disabled={bloqueado} set={() => setSection('Metodos')} />
-          <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} disabled={bloqueado} set={() => setSection('Generador')} />
-          <Btn show={editionAllows('Constructor')} text={t.workoutBuilder} active={visibleSection === 'Constructor'} disabled={bloqueado} set={() => setSection('Constructor')} />
-          <Btn show={editionAllows('Rutinas')} text={t.routines} active={visibleSection === 'Rutinas'} disabled={bloqueado} set={() => setSection('Rutinas')} />
+          <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} set={() => setSection('XPRangos')} />
+          <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} set={() => setSection('Metodos')} />
+          <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} set={() => setSection('Generador')} />
+          <Btn show={editionAllows('Constructor')} text={t.workoutBuilder} active={visibleSection === 'Constructor'} set={() => setSection('Constructor')} />
+          <Btn show={editionAllows('Rutinas')} text={t.routines} active={visibleSection === 'Rutinas'} set={() => setSection('Rutinas')} />
           <Btn show={editionAllows('Premium')} text={t.premium} active={visibleSection === 'Premium'} set={() => setSection('Premium')} />
           <Btn show={editionAllows('Reportes')} text={t.reports} active={visibleSection === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
-          <Btn show={editionAllows('Estadísticas')} text={t.stats} active={visibleSection === 'Estadísticas'} disabled={bloqueado} set={() => setSection('Estadísticas')} />
+          <Btn show={editionAllows('Estadísticas')} text={t.stats} active={visibleSection === 'Estadísticas'} set={() => setSection('Estadísticas')} />
           <Btn show={editionAllows('Notificaciones')} text={t.notifications} active={visibleSection === 'Notificaciones'} set={() => setSection('Notificaciones')} />
 
           <Btn show={editionAllows('Ficha')} text={t.profile} active={visibleSection === 'Ficha'} set={() => setSection('Ficha')} />
           <Btn show={editionAllows('Pago')} text={t.payment} active={visibleSection === 'Pago'} set={() => setSection('Pago')} />
-          <Btn show={editionAllows('Evaluaciones')} text={t.evaluations} active={visibleSection === 'Evaluaciones'} disabled={bloqueado} set={() => setSection('Evaluaciones')} />
+          <Btn show={editionAllows('Evaluaciones')} text={t.evaluations} active={visibleSection === 'Evaluaciones'} set={() => setSection('Evaluaciones')} />
           {isAdmin && <Btn show={editionAllows('RegistroCompras')} text={t.purchaseLog} active={visibleSection === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
           {isAdmin && <Btn show={edition.allowBranding && editionAllows('Marca')} text={t.brandSettings} active={visibleSection === 'Marca'} set={() => setSection('Marca')} />}
         </div>
       </div>
-
-      {bloqueado && (
-        <div className="bg-red-950 border border-red-600 rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
-          <h2 className="text-2xl sm:text-3xl font-black text-red-400">{t.blockedTitle}</h2>
-          <p className="text-zinc-300 mt-2">
-            Tu cuenta está pendiente o morosa. Regulariza el pago para desbloquear rutinas,
-            generador IA y métodos.
-          </p>
-          <button
-            onClick={abrirPagoMensualidad}
-            className="mt-5 bg-green-600 hover:bg-green-700 px-6 py-4 rounded-2xl font-black"
-          >
-            {t.payMonthly}
-          </button>
-        </div>
-      )}
 
       {mostrarAvisoVencimiento && (
         <div className="bg-yellow-500 text-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
           <h2 className="text-2xl sm:text-3xl font-black">MEMBRESÍA POR VENCER</h2>
           <p className="mt-2 font-bold">
             Tu membresía vence {diasParaVencer === 0 ? 'hoy' : `en ${diasParaVencer} día(s)`}.
-            Regulariza el pago para evitar el bloqueo automático.
+            Regulariza el pago para mantener tu situación financiera al día.
           </p>
           <button
             onClick={abrirPagoMensualidad}
@@ -3244,7 +3221,7 @@ export default function App() {
         />
       )}
 
-      {editionAllows('XPRangos') && visibleSection === 'XPRangos' && !bloqueado && (
+      {editionAllows('XPRangos') && visibleSection === 'XPRangos' && (
         <XpRangosPanel
           student={student}
           students={students}
@@ -3252,13 +3229,13 @@ export default function App() {
         />
       )}
 
-      {editionAllows('Metodos') && visibleSection === 'Metodos' && !bloqueado && <MetodosPage idioma={idioma} />}
+      {editionAllows('Metodos') && visibleSection === 'Metodos' && <MetodosPage idioma={idioma} />}
 
-      {editionAllows('Generador') && visibleSection === 'Generador' && !bloqueado && (
+      {editionAllows('Generador') && visibleSection === 'Generador' && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
-      {editionAllows('Constructor') && visibleSection === 'Constructor' && !bloqueado && (
+      {editionAllows('Constructor') && visibleSection === 'Constructor' && (
         <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
@@ -3270,7 +3247,7 @@ export default function App() {
         />
       )}
 
-      {editionAllows('Rutinas') && visibleSection === 'Rutinas' && !bloqueado && (
+      {editionAllows('Rutinas') && visibleSection === 'Rutinas' && (
         <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
       )}
 
@@ -3291,7 +3268,7 @@ export default function App() {
         />
       )}
 
-      {editionAllows('Estadísticas') && visibleSection === 'Estadísticas' && !bloqueado && (
+      {editionAllows('Estadísticas') && visibleSection === 'Estadísticas' && (
         <EstadísticasPanel
           students={students}
           asistencias={asistencias}
@@ -3370,7 +3347,7 @@ export default function App() {
         </div>
       )}
 
-      {editionAllows('Evaluaciones') && visibleSection === 'Evaluaciones' && !bloqueado && (
+      {editionAllows('Evaluaciones') && visibleSection === 'Evaluaciones' && (
         <EvaluacionesPage
           student={student}
           user={user}
