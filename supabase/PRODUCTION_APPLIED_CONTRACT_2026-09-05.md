@@ -110,11 +110,11 @@ Presentes en repositorio:
 - `create-mercadopago-preference`
 - `mercadopago-webhook`
 
-Pendiente de sincronización real de fuente:
+Fuente sincronizada desde producción:
 
-- `powerfit-ai-coach`
+- `powerfit-ai-coach` v11
 
-La función `powerfit-ai-coach` existe desplegada en producción, pero su fuente no fue localizada todavía dentro de `supabase/functions/`. No inventar ni recrear su código sin extraer/verificar la versión real desplegada.
+La fuente de `powerfit-ai-coach` v11 fue recuperada directamente desde producción y guardada en `supabase/functions/powerfit-ai-coach/index.ts`. No redeployar sin comparación y E2E.
 
 ## Seguridad del repositorio
 
