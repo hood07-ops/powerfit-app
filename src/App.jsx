@@ -2888,9 +2888,10 @@ export default function App() {
           ? null
           : fechaPago || fechaHoy(),
         p_months: 1,
-        p_amount: Number.isFinite(Number(alumno.monto))
-          ? Number(alumno.monto)
-          : null,
+        p_amount:
+          Number.isFinite(Number(alumno.monto)) && Number(alumno.monto) > 0
+            ? Number(alumno.monto)
+            : null,
         p_notes: 'Pago registrado desde panel PowerFit 360',
         p_paid_on: fechaPago || fechaHoy(),
         p_generation_balance: 6,
