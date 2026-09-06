@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { generarEntrenamiento, generarPlanMensual } from './workoutSystem'
+import { generarPlanMensual } from './workoutSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
 const TRAMOS_GENERACION = [
@@ -336,6 +336,92 @@ function descargarExcelMensual(contenido, nombreAlumno) {
   URL.revokeObjectURL(url)
 }
 
+function crearPowerFitAiRequestId(studentId) {
+  const cryptoApi = globalThis.crypto
+
+  if (typeof cryptoApi?.randomUUID === 'function') {
+    return `powerfit-ai-${studentId}-${cryptoApi.randomUUID()}`
+  }
+
+  if (typeof cryptoApi?.getRandomValues === 'function') {
+    const values = new Uint32Array(4)
+    cryptoApi.getRandomValues(values)
+    return `powerfit-ai-${studentId}-${Array.from(values, (value) =>
+      value.toString(16).padStart(8, '0'),
+    ).join('')}`
+  }
+
+  throw new Error('SECURE_RANDOM_UNAVAILABLE')
+}
+
+function textoWorkoutIA(workout, numero) {
+  if (!workout || typeof workout !== 'object') return ''
+
+  const lineaEjercicio = (exercise) => {
+    const partes = [exercise?.name || 'Ejercicio']
+    if (exercise?.sets != null) partes.push(`${exercise.sets} series`)
+    if (exercise?.reps) partes.push(`${exercise.reps} reps`)
+    if (exercise?.duration != null) partes.push(`${exercise.duration}s`)
+    if (exercise?.distance != null) partes.push(`${exercise.distance}m`)
+    if (exercise?.load != null) partes.push(`${exercise.load} kg`)
+    if (exercise?.percentage_rm != null) partes.push(`${exercise.percentage_rm}% RM`)
+    if (exercise?.rpe != null) partes.push(`RPE ${exercise.rpe}`)
+    if (exercise?.rir != null) partes.push(`RIR ${exercise.rir}`)
+    if (exercise?.rest != null) partes.push(`descanso ${exercise.rest}s`)
+    if (exercise?.tempo) partes.push(`tempo ${exercise.tempo}`)
+    if (exercise?.notes) partes.push(exercise.notes)
+    return `- ${partes.join(' | ')}`
+  }
+
+  const lines = [
+    'POWERFIT 360',
+    `PLANIFICACIÓN IA ${numero}`,
+    '',
+    workout.name || 'Sesión PowerFit AI',
+    `Objetivo: ${workout.objective || ''}`,
+    `Modalidad: ${workout.modality || ''}`,
+    `Nivel: ${workout.level || ''}`,
+    `Duración: ${workout.duration || ''} min`,
+    '',
+    'CALENTAMIENTO',
+    ...(Array.isArray(workout.warmup) ? workout.warmup.map(lineaEjercicio) : []),
+  ]
+
+  ;(Array.isArray(workout.blocks) ? workout.blocks : []).forEach((block, index) => {
+    lines.push(
+      '',
+      `BLOQUE ${index + 1} - ${block?.name || block?.type || 'Trabajo'}`,
+      block?.objective ? `Objetivo: ${block.objective}` : '',
+      block?.intensity ? `Intensidad: ${block.intensity}` : '',
+      block?.duration != null ? `Duración: ${block.duration} min` : '',
+      block?.rest != null ? `Descanso: ${block.rest}s` : '',
+      block?.instructions ? `Instrucciones: ${block.instructions}` : '',
+      ...(Array.isArray(block?.exercises) ? block.exercises.map(lineaEjercicio) : []),
+    )
+  })
+
+  lines.push(
+    '',
+    'VUELTA A LA CALMA',
+    ...(Array.isArray(workout.cooldown) ? workout.cooldown.map(lineaEjercicio) : []),
+    '',
+    'CARGA ESTIMADA',
+    workout.estimatedLoad?.level ? `Nivel: ${workout.estimatedLoad.level}` : '',
+    workout.estimatedLoad?.volume ? `Volumen: ${workout.estimatedLoad.volume}` : '',
+    workout.estimatedLoad?.intensity ? `Intensidad: ${workout.estimatedLoad.intensity}` : '',
+    workout.estimatedLoad?.notes ? `Notas: ${workout.estimatedLoad.notes}` : '',
+  )
+
+  if (Array.isArray(workout.coachNotes) && workout.coachNotes.length) {
+    lines.push('', 'NOTAS DEL COACH', ...workout.coachNotes.map((note) => `- ${note}`))
+  }
+
+  if (Array.isArray(workout.warnings) && workout.warnings.length) {
+    lines.push('', 'ADVERTENCIAS', ...workout.warnings.map((warning) => `- ${warning}`))
+  }
+
+  return lines.filter((line) => line !== '').join('\n')
+}
 function esPlanMensual(plan) {
   return (
     String(plan?.objetivo || '').toLowerCase().includes('mensual') ||
@@ -737,54 +823,85 @@ Vuelta a la calma: dirigida en clase.
         return
       }
 
-      const plan =
-        tipoPlan === 'mensual'
-          ? generarPlanMensual({
-              objetivo,
-              nivel,
-              rms,
-              faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
-            })
-          : generarEntrenamiento({
-              objetivo,
-              nivel,
-              faseATR,
-              rms,
-              faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
-              historial: planificaciones.map((p) => p.contenido),
-            })
-
-      const contenidoGenerado = corregirNombresPowerFit(
-        textoPlan(plan, planificaciones.length + 1),
-      )
-
+      let contenidoGenerado = ''
       let saveData
       let saveError
 
       if (tipoPlan === 'mensual') {
+        const plan = generarPlanMensual({
+          objetivo,
+          nivel,
+          rms,
+          faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
+        })
+
+        contenidoGenerado = corregirNombresPowerFit(
+          textoPlan(plan, planificaciones.length + 1),
+        )
+
         const result = await supabase.rpc('save_powerfit_monthly_plan_secure', {
           p_alumno_id: student.id,
           p_objetivo: `Plan mensual ${objetivo}`,
           p_nivel: nivel,
           p_contenido: contenidoGenerado,
         })
+
         saveData = result.data
         saveError = result.error
       } else {
-        const result = await supabase.rpc(
-          'save_powerfit_manual_plan_with_generation_secure',
-          {
-            p_alumno_id: student.id,
-            p_objetivo: objetivo,
-            p_nivel: nivel,
-            p_contenido: contenidoGenerado,
-            p_source_ref: 'generator',
-          },
-        )
-        saveData = result.data
-        saveError = result.error
-      }
+        const requestId = crearPowerFitAiRequestId(student.id)
 
+        const result = await supabase.functions.invoke('powerfit-ai-coach', {
+          body: {
+            alumno_id: student.id,
+            request_id: requestId,
+            configuration: {
+              objective: objetivo,
+              level: nivel,
+              modality: student?.categoria || 'PowerFit',
+              duration: 60,
+              atr_phase: faseATR,
+              menstrual_phase: usarCicloMenstrual ? faseMenstrual : null,
+            },
+            context: {
+              alumno_id: student.id,
+              nombre: student?.nombre || '',
+              objetivo,
+              nivel,
+              rms,
+              fase_atr: faseATR,
+              fase_menstrual: usarCicloMenstrual ? faseMenstrual : null,
+            },
+            prompt:
+              'Genera una sesión PowerFit profesional, segura, progresiva y aplicable usando el contexto adaptativo real del atleta.',
+          },
+        })
+
+        saveError = result.error
+
+        if (!saveError && result.data?.ok === false) {
+          saveError = new Error(result.data?.error || 'AI_COACH_ERROR')
+        }
+
+        if (!saveError) {
+          const workout = result.data?.workout || result.data?.result
+
+          if (!workout) {
+            saveError = new Error('AI_COACH_EMPTY_RESULT')
+          } else {
+            contenidoGenerado = corregirNombresPowerFit(
+              textoWorkoutIA(workout, planificaciones.length + 1),
+            )
+
+            saveData = {
+              planificacion_id: result.data?.planificacion_id || null,
+              ai_generation_id: result.data?.ai_generation_id || null,
+              quota_after: result.data?.quota_after,
+              idempotent: Boolean(result.data?.idempotent),
+            }
+          }
+        }
+      }
       if (saveError) {
         const message = String(saveError.message || '')
         if (message.includes('NO_MONTHLY_PLAN_CREDIT')) {
