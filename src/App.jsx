@@ -2522,6 +2522,7 @@ export default function App() {
   const [branding, setBranding] = useState(() => loadBranding())
   const [gimnasio, setGimnasio] = useState(null)
   const [pwaUpdate, setPwaUpdate] = useState(null)
+  const [studentPaymentPlan, setStudentPaymentPlan] = useState('monthly')
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
@@ -3063,16 +3064,20 @@ export default function App() {
     await cargarUsuario()
   }
 
-  async function abrirPagoAlumno(alumno) {
+  async function abrirPagoAlumno(alumno, planCode = 'monthly') {
     if (!alumno) return
 
+    const selectedPlan = paymentPlanByCode(planCode)
     const popup = window.open('', '_blank', 'noopener,noreferrer')
     const paymentUrl = import.meta.env.VITE_PAYMENT_URL
     const paymentPayload = {
       alumno_id: alumno.id,
       user_id: alumno.user_id || user.id,
       nombre: alumno.nombre || user.email,
-      monto: Number(alumno.monto || 0),
+      plan_code: selectedPlan.code,
+      months: selectedPlan.months,
+      monto: selectedPlan.amount,
+      amount: selectedPlan.amount,
     }
     function cerrarPagoConAviso(mensaje) {
       popup?.close()
@@ -3082,7 +3087,7 @@ export default function App() {
     }
 
     if (!paymentPayload.monto || paymentPayload.monto <= 0) {
-      cerrarPagoConAviso('La mensualidad no tiene monto configurado. Corrige el monto del alumno antes de pagar por Mercado Pago.')
+      cerrarPagoConAviso('El plan seleccionado no tiene un monto válido.')
       return
     }
 
@@ -3135,8 +3140,8 @@ export default function App() {
     }
   }
 
-  function abrirPagoMensualidad() {
-    abrirPagoAlumno(student)
+  function abrirPagoMensualidad(planCode = studentPaymentPlan) {
+    abrirPagoAlumno(student, planCode)
   }
 
   async function cerrarSesion() {
@@ -3438,11 +3443,33 @@ export default function App() {
             />
           </div>
 
+          <div className="mt-6">
+            <p className="text-sm font-black uppercase tracking-wide text-zinc-300 mb-3">Elige tu plan</p>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {PAYMENT_PLANS.map((plan) => {
+                const active = studentPaymentPlan === plan.code
+                return (
+                  <button
+                    key={plan.code}
+                    type="button"
+                    onClick={() => setStudentPaymentPlan(plan.code)}
+                    className={`rounded-2xl border p-4 text-left transition ${active ? 'border-green-400 bg-green-500/10 shadow-lg shadow-green-950/20' : 'border-zinc-700 bg-black hover:border-zinc-500'}`}
+                  >
+                    <p className={`font-black uppercase ${active ? 'text-green-300' : 'text-white'}`}>{plan.name}</p>
+                    <p className="mt-1 text-2xl font-black">{formatearCLP(plan.amount)}</p>
+                    <p className="text-sm text-zinc-400">{plan.months} {plan.months === 1 ? 'mes' : 'meses'}</p>
+                    {plan.saving > 0 && <p className="mt-3 text-sm font-black text-yellow-400">Ahorras {formatearCLP(plan.saving)}</p>}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
           <button
-            onClick={abrirPagoMensualidad}
+            onClick={() => abrirPagoMensualidad(studentPaymentPlan)}
             className="mt-6 w-full bg-green-600 hover:bg-green-700 p-5 rounded-2xl font-black text-xl"
           >
-            Pagar mensualidad
+            Pagar {paymentPlanByCode(studentPaymentPlan).name} · {formatearCLP(paymentPlanByCode(studentPaymentPlan).amount)}
           </button>
         </div>
       )}
