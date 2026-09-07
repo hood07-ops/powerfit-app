@@ -422,6 +422,59 @@ function textoWorkoutIA(workout, numero) {
 
   return lines.filter((line) => line !== '').join('\n')
 }
+function mensajeErrorGenerador(code, idioma = 'es') {
+  const mensajes = {
+    es: {
+      NO_MONTHLY_PLAN_CREDIT: 'No tienes un crédito mensual aprobado disponible.',
+      NO_GENERATIONS_AVAILABLE: 'No tienes generaciones disponibles.',
+      REQUEST_IN_PROGRESS: 'La IA todavía está procesando esta solicitud. Espera unos segundos e inténtalo nuevamente.',
+      REQUEST_RELEASED_USE_NEW_REQUEST_ID: 'La solicitud anterior fue liberada. Intenta generar nuevamente.',
+      OPENAI_TIMEOUT: 'La IA tardó demasiado en responder. No se descontó la generación; inténtalo nuevamente.',
+      AI_COACH_EMPTY_RESULT: 'La IA no devolvió una planificación válida. No se completó la generación.',
+      ADAPTIVE_CONTEXT_ERROR: 'No se pudo cargar el contexto deportivo del atleta para generar la sesión.',
+      UNAUTHORIZED: 'Tu sesión expiró o no tiene autorización para usar el Generador IA.',
+      SERVER_CONFIG_ERROR: 'El Generador IA no está disponible temporalmente por configuración del servidor.',
+      MISSING_OPENAI_API_KEY: 'El Generador IA no está disponible temporalmente.',
+      MISSING_SERVICE_ROLE_KEY: 'El Generador IA no está disponible temporalmente.',
+      RESERVATION_ERROR: 'No se pudo reservar la generación. No se realizó el consumo.',
+      FINALIZE_ERROR: 'La IA generó contenido, pero no pudo finalizar el registro de forma segura. Inténtalo nuevamente.',
+      AI_COACH_ERROR: 'Ocurrió un error en el Generador IA. Inténtalo nuevamente.',
+      SECURE_RANDOM_UNAVAILABLE: 'Este dispositivo no permite iniciar una generación IA segura. Actualiza el navegador o la app.',
+    },
+    en: {
+      NO_MONTHLY_PLAN_CREDIT: 'You do not have an approved monthly plan credit available.',
+      NO_GENERATIONS_AVAILABLE: 'You do not have any generations available.',
+      REQUEST_IN_PROGRESS: 'AI is still processing this request. Wait a few seconds and try again.',
+      REQUEST_RELEASED_USE_NEW_REQUEST_ID: 'The previous request was released. Try generating again.',
+      OPENAI_TIMEOUT: 'AI took too long to respond. The generation was not charged; try again.',
+      AI_COACH_EMPTY_RESULT: 'AI did not return a valid workout plan. The generation was not completed.',
+      ADAPTIVE_CONTEXT_ERROR: 'The athlete training context could not be loaded for this session.',
+      UNAUTHORIZED: 'Your session expired or is not authorized to use the AI Generator.',
+      SERVER_CONFIG_ERROR: 'The AI Generator is temporarily unavailable due to server configuration.',
+      MISSING_OPENAI_API_KEY: 'The AI Generator is temporarily unavailable.',
+      MISSING_SERVICE_ROLE_KEY: 'The AI Generator is temporarily unavailable.',
+      RESERVATION_ERROR: 'The generation could not be reserved. No generation was consumed.',
+      FINALIZE_ERROR: 'AI generated content, but the secure record could not be finalized. Please try again.',
+      AI_COACH_ERROR: 'An AI Generator error occurred. Please try again.',
+      SECURE_RANDOM_UNAVAILABLE: 'This device cannot start a secure AI generation. Update the browser or app.',
+    },
+  }
+  return mensajes[idioma]?.[code] || mensajes.es[code] || null
+}
+
+async function extraerCodigoErrorFuncion(error) {
+  if (!error) return null
+  try {
+    const response = error.context
+    if (response && typeof response.clone === 'function') {
+      const payload = await response.clone().json()
+      return String(payload?.error || '').trim() || null
+    }
+  } catch {
+    // fallback al mensaje base
+  }
+  return null
+}
 function esPlanMensual(plan) {
   return (
     String(plan?.objetivo || '').toLowerCase().includes('mensual') ||
@@ -879,6 +932,13 @@ Vuelta a la calma: dirigida en clase.
 
         saveError = result.error
 
+        if (saveError) {
+          const functionErrorCode = await extraerCodigoErrorFuncion(saveError)
+          if (functionErrorCode) {
+            saveError = new Error(functionErrorCode)
+          }
+        }
+
         if (!saveError && result.data?.ok === false) {
           saveError = new Error(result.data?.error || 'AI_COACH_ERROR')
         }
@@ -904,13 +964,21 @@ Vuelta a la calma: dirigida en clase.
       }
       if (saveError) {
         const message = String(saveError.message || '')
-        if (message.includes('NO_MONTHLY_PLAN_CREDIT')) {
-          setMensaje('No tienes un crédito mensual aprobado disponible.')
-        } else if (message.includes('NO_GENERATIONS_AVAILABLE')) {
-          setMensaje('No tienes generaciones disponibles.')
-        } else {
-          setMensaje(`No se pudo guardar la planificación: ${message}`)
-        }
+        const knownCodes = [
+          'NO_MONTHLY_PLAN_CREDIT','NO_GENERATIONS_AVAILABLE','REQUEST_IN_PROGRESS',
+          'REQUEST_RELEASED_USE_NEW_REQUEST_ID','OPENAI_TIMEOUT','AI_COACH_EMPTY_RESULT',
+          'ADAPTIVE_CONTEXT_ERROR','UNAUTHORIZED','SERVER_CONFIG_ERROR','MISSING_OPENAI_API_KEY',
+          'MISSING_SERVICE_ROLE_KEY','RESERVATION_ERROR','FINALIZE_ERROR','AI_COACH_ERROR',
+          'SECURE_RANDOM_UNAVAILABLE',
+        ]
+        const errorCode = knownCodes.find((code) => message.includes(code)) || null
+        const friendlyMessage = errorCode ? mensajeErrorGenerador(errorCode, idioma) : null
+        setMensaje(
+          friendlyMessage ||
+            (idioma === 'en'
+              ? `The plan could not be generated: ${message}`
+              : `No se pudo generar la planificación: ${message}`),
+        )
         await cargarEstadoGenerador()
         return
       }
@@ -937,7 +1005,14 @@ Vuelta a la calma: dirigida en clase.
       await cargarEstadoGenerador()
       onUpdateStudent?.()
     } catch (error) {
-      setMensaje(`Error inesperado generando rutina: ${error.message}`)
+      const errorMessage = String(error?.message || 'AI_COACH_ERROR')
+      const friendlyMessage = mensajeErrorGenerador(errorMessage, idioma)
+      setMensaje(
+        friendlyMessage ||
+          (idioma === 'en'
+            ? `Unexpected workout generation error: ${errorMessage}`
+            : `Error inesperado generando rutina: ${errorMessage}`),
+      )
     } finally {
       setGenerando(false)
     }
