@@ -204,6 +204,48 @@ function avatarTemplateById(templateId) {
   return AVATAR_TEMPLATES.find((template) => template.id === templateId) || AVATAR_TEMPLATES[0]
 }
 
+const PAYMENT_PLANS = [
+  {
+    code: 'monthly',
+    name: 'Plan mensual',
+    months: 1,
+    amount: 40000,
+    saving: 0,
+    badge: 'Ideal para comenzar',
+  },
+  {
+    code: 'quarterly',
+    name: 'Plan trimestral',
+    months: 3,
+    amount: 105000,
+    saving: 15000,
+    badge: 'Más elegido',
+  },
+  {
+    code: 'semiannual',
+    name: 'Plan semestral',
+    months: 6,
+    amount: 190000,
+    saving: 50000,
+    badge: 'Mejor relación precio/beneficio',
+  },
+  {
+    code: 'annual',
+    name: 'Plan anual',
+    months: 12,
+    amount: 360000,
+    saving: 120000,
+    badge: 'Mejor oferta',
+  },
+]
+
+function paymentPlanByCode(code) {
+  return PAYMENT_PLANS.find((plan) => plan.code === code) || PAYMENT_PLANS[0]
+}
+
+function formatearCLP(value) {
+  return `$${Number(value || 0).toLocaleString('es-CL')}`
+}
 const TERMS_VERSION = '2026-07-18-v1'
 const TERMS_TEXT = [
   'Declaro que los datos entregados son verdaderos y autorizo su uso para gestion de alumnos, asistencia, pagos, evaluaciones y planificaciones dentro de PowerFit 360.',
@@ -1034,6 +1076,7 @@ function AdminAlumnoModal({
   onEliminarAlumno,
 }) {
   const [fechaPago, setFechaPago] = useState(fechaHoy())
+  const [planPago, setPlanPago] = useState('monthly')
 
   if (!alumno) return null
 
@@ -1156,6 +1199,58 @@ function AdminAlumnoModal({
 
 
             <div className="mt-5">
+              <p className="text-sm font-black text-zinc-300 mb-3">Plan contratado</p>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {PAYMENT_PLANS.map((plan) => {
+                  const active = planPago === plan.code
+
+                  return (
+                    <button
+                      key={plan.code}
+                      type="button"
+                      onClick={() => setPlanPago(plan.code)}
+                      className={`text-left rounded-2xl border p-4 transition ${
+                        active
+                          ? 'border-yellow-400 bg-yellow-500/10 shadow-lg shadow-yellow-950/20'
+                          : 'border-zinc-700 bg-zinc-950 hover:border-zinc-500'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className={`font-black uppercase ${active ? 'text-yellow-300' : 'text-white'}`}>
+                            {plan.name}
+                          </p>
+                          <p className="text-2xl font-black mt-1">{formatearCLP(plan.amount)}</p>
+                          <p className="text-sm text-zinc-400">
+                            {plan.months} {plan.months === 1 ? 'mes' : 'meses'}
+                          </p>
+                        </div>
+                        {plan.badge && (
+                          <span className="rounded-lg bg-zinc-800 px-2 py-1 text-[11px] font-black uppercase text-zinc-200">
+                            {plan.badge}
+                          </span>
+                        )}
+                      </div>
+
+                      {plan.saving > 0 && (
+                        <p className="mt-3 text-sm font-black text-green-400">
+                          Ahorras {formatearCLP(plan.saving)}
+                        </p>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="mt-3 rounded-xl border border-zinc-700 bg-black p-3 text-sm">
+                <span className="text-zinc-400">Seleccionado: </span>
+                <span className="font-black text-white">
+                  {paymentPlanByCode(planPago).name} · {formatearCLP(paymentPlanByCode(planPago).amount)} ·{' '}
+                  {paymentPlanByCode(planPago).months} {paymentPlanByCode(planPago).months === 1 ? 'mes' : 'meses'}
+                </span>
+              </div>
+            </div>
+            <div className="mt-5">
               <label className="grid gap-2 text-sm font-black text-zinc-300">
                 <span>Fecha de pago</span>
                 <input
@@ -1170,7 +1265,7 @@ function AdminAlumnoModal({
 
             <div className="grid sm:grid-cols-2 gap-3 mt-5">
               <button
-                onClick={() => onRegistrarPago(alumno, fechaPago)}
+                onClick={() => onRegistrarPago(alumno, fechaPago, planPago)}
                 className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
               >
                 Registrar pago
@@ -2869,14 +2964,19 @@ export default function App() {
     return { ok: true }
   }
 
-  async function registrarPago(alumno, fechaPago = fechaHoy()) {
-    await aplicarPagoConfirmado(alumno, fechaPago)
+  async function registrarPago(alumno, fechaPago = fechaHoy(), planCode = 'monthly') {
+    await aplicarPagoConfirmado(alumno, fechaPago, planCode)
   }
 
-  async function aplicarPagoConfirmado(alumno, fechaPago = fechaHoy()) {
+  async function aplicarPagoConfirmado(
+    alumno,
+    fechaPago = fechaHoy(),
+    planCode = 'monthly',
+  ) {
     if (!alumno?.id) return
 
-    const requestId = `payment-${alumno.id}-${Date.now()}`
+    const selectedPlan = paymentPlanByCode(planCode)
+    const requestId = `payment-${alumno.id}-${selectedPlan.code}-${Date.now()}`
 
     const { error } = await supabase.rpc(
       'register_powerfit_payment_with_generation_reset_secure',
@@ -2887,12 +2987,9 @@ export default function App() {
         p_period_start: alumno.fecha_vencimiento
           ? null
           : fechaPago || fechaHoy(),
-        p_months: 1,
-        p_amount:
-          Number.isFinite(Number(alumno.monto)) && Number(alumno.monto) > 0
-            ? Number(alumno.monto)
-            : null,
-        p_notes: 'Pago registrado desde panel PowerFit 360',
+        p_months: selectedPlan.months,
+        p_amount: selectedPlan.amount,
+        p_notes: `Pago ${selectedPlan.name} (${selectedPlan.months} meses) registrado desde panel PowerFit 360`,
         p_paid_on: fechaPago || fechaHoy(),
         p_generation_balance: 6,
       },
