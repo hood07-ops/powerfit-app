@@ -90,7 +90,10 @@ export default function CheckInPage({ alumnoId }) {
               : 'bg-red-950 border-red-500'
         }`}
       >
-        <h1 className="text-4xl font-black mb-6">CHECK-IN POWERFIT</h1>
+        <h1 className="text-4xl font-black mb-2">CHECK-IN POWERFIT</h1>
+        <p className="text-sm font-black text-blue-300 mb-6">
+          MODO ASISTENCIA · ESTE FLUJO NO PROCESA PAGOS
+        </p>
         <h2 className="text-3xl font-black text-yellow-400">{alumno.nombre}</h2>
 
         <div className="mt-6 space-y-3 text-xl">

@@ -1,7 +1,7 @@
 import { QRCodeCanvas } from 'qrcode.react'
 
 export default function MiQRPage({ student }) {
-  const urlCheckIn = `${window.location.origin}?checkin=${student?.id}`
+  const urlCheckIn = `${window.location.origin}?checkin=${student?.id}&mode=attendance`
 
   return (
     <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6 text-center">
