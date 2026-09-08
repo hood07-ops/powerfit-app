@@ -3007,7 +3007,7 @@ export default function App() {
 
     const selectedPlan = paymentPlanByCode(planCode)
     const safePaymentMethod = String(paymentMethod || 'efectivo').trim().toLowerCase()
-    const requestId = `payment----`
+    const requestId = `payment-${alumno.id}-${selectedPlan.code}-${safePaymentMethod}-${Date.now()}`
 
     const { error } = await supabase.rpc(
       'register_powerfit_payment_with_generation_reset_secure',
