@@ -2523,6 +2523,9 @@ export default function App() {
   const [gimnasio, setGimnasio] = useState(null)
   const [pwaUpdate, setPwaUpdate] = useState(null)
   const [studentPaymentPlan, setStudentPaymentPlan] = useState('monthly')
+  const [paymentReturn, setPaymentReturn] = useState(() =>
+    new URLSearchParams(window.location.search).get('payment'),
+  )
 
   const params = new URLSearchParams(window.location.search)
   const alumnoCheckIn = params.get('checkin')
@@ -3144,6 +3147,21 @@ export default function App() {
     abrirPagoAlumno(student, planCode)
   }
 
+  async function actualizarRetornoPago() {
+    await cargarUsuario()
+    setSection('Pago')
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete('payment')
+    window.history.replaceState(
+      {},
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    )
+
+    setPaymentReturn(null)
+  }
+
   async function cerrarSesion() {
     await supabase.auth.signOut()
     window.location.reload()
@@ -3301,6 +3319,61 @@ export default function App() {
         </div>
       </div>
 
+      {paymentReturn && (
+        <div
+          className={`rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8 border ${
+            paymentReturn === 'success'
+              ? 'border-green-500 bg-green-950/60'
+              : paymentReturn === 'pending'
+                ? 'border-yellow-500 bg-yellow-950/50'
+                : 'border-red-500 bg-red-950/50'
+          }`}
+        >
+          <h2
+            className={`text-2xl sm:text-3xl font-black ${
+              paymentReturn === 'success'
+                ? 'text-green-300'
+                : paymentReturn === 'pending'
+                  ? 'text-yellow-300'
+                  : 'text-red-300'
+            }`}
+          >
+            {paymentReturn === 'success'
+              ? idioma === 'en'
+                ? 'PAYMENT RECEIVED'
+                : 'PAGO RECIBIDO'
+              : paymentReturn === 'pending'
+                ? idioma === 'en'
+                  ? 'PAYMENT PENDING'
+                  : 'PAGO PENDIENTE'
+                : idioma === 'en'
+                  ? 'PAYMENT NOT COMPLETED'
+                  : 'PAGO NO COMPLETADO'}
+          </h2>
+
+          <p className="mt-2 font-bold text-zinc-200">
+            {paymentReturn === 'success'
+              ? idioma === 'en'
+                ? 'Mercado Pago returned the payment as approved. Refresh your PowerFit payment record to confirm the webhook update.'
+                : 'Mercado Pago devolvió el pago como aprobado. Actualiza tu ficha para confirmar el registro del webhook.'
+              : paymentReturn === 'pending'
+                ? idioma === 'en'
+                  ? 'Mercado Pago is still processing the payment. Your membership will update only after approval.'
+                  : 'Mercado Pago todavía está procesando el pago. Tu membresía se actualizará solo cuando sea aprobado.'
+                : idioma === 'en'
+                  ? 'The payment was cancelled or rejected. No membership period should be added.'
+                  : 'El pago fue cancelado o rechazado. No se debe sumar ningún período a tu membresía.'}
+          </p>
+
+          <button
+            type="button"
+            onClick={actualizarRetornoPago}
+            className="mt-4 rounded-xl bg-white px-5 py-3 font-black text-black hover:bg-zinc-200"
+          >
+            {idioma === 'en' ? 'Refresh payment status' : 'Actualizar estado de pago'}
+          </button>
+        </div>
+      )}
       {mostrarAvisoVencimiento && (
         <div className="bg-yellow-500 text-black rounded-2xl sm:rounded-3xl p-5 sm:p-6 mb-8">
           <h2 className="text-2xl sm:text-3xl font-black">MEMBRESÍA POR VENCER</h2>
