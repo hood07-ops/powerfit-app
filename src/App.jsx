@@ -1077,6 +1077,7 @@ function AdminAlumnoModal({
 }) {
   const [fechaPago, setFechaPago] = useState(fechaHoy())
   const [planPago, setPlanPago] = useState('monthly')
+  const [metodoPago, setMetodoPago] = useState('efectivo')
 
   if (!alumno) return null
 
@@ -1252,6 +1253,24 @@ function AdminAlumnoModal({
             </div>
             <div className="mt-5">
               <label className="grid gap-2 text-sm font-black text-zinc-300">
+                <span>Método de pago manual</span>
+                <select
+                  value={metodoPago}
+                  onChange={(e) => setMetodoPago(e.target.value)}
+                  className="w-full bg-black p-3 rounded-xl text-white border border-zinc-700"
+                >
+                  <option value="efectivo">Efectivo</option>
+                  <option value="transferencia">Transferencia bancaria</option>
+                  <option value="deposito">Depósito</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </label>
+              <p className="mt-2 text-xs text-zinc-500">
+                Este método se guarda en el historial financiero del alumno.
+              </p>
+            </div>
+            <div className="mt-5">
+              <label className="grid gap-2 text-sm font-black text-zinc-300">
                 <span>Fecha de pago</span>
                 <input
                   type="date"
@@ -1265,16 +1284,16 @@ function AdminAlumnoModal({
 
             <div className="grid sm:grid-cols-2 gap-3 mt-5">
               <button
-                onClick={() => onRegistrarPago(alumno, fechaPago, planPago)}
+                onClick={() => onRegistrarPago(alumno, fechaPago, planPago, metodoPago)}
                 className="bg-green-600 hover:bg-green-700 p-3 rounded-xl font-black"
               >
-                Registrar pago
+                Registrar pago manual
               </button>
               <button
-                onClick={() => onEnviarPago(alumno)}
+                onClick={() => onEnviarPago(alumno, planPago)}
                 className="bg-green-800 hover:bg-green-900 p-3 rounded-xl font-black"
               >
-                Enviar link de pago
+                Enviar link Mercado Pago
               </button>
               <button
                 onClick={() => onEliminarGeneraciones(alumno)}
@@ -1293,8 +1312,9 @@ function AdminAlumnoModal({
             <div className="bg-black/40 border border-zinc-700 rounded-2xl p-4 mt-5">
               <p className="font-black text-yellow-400">Mercado Pago</p>
               <p className="text-zinc-400 mt-2">
-                Cuando Mercado Pago confirme el pago, el webhook debe actualizar esta misma ficha:
-                fecha de pago confirmada, vencimiento correspondiente, estado Pagado y generaciones disponibles.
+                Cuando Mercado Pago confirme el pago, el webhook actualizará esta misma ficha:
+                fecha de pago confirmada, vencimiento correspondiente y estado Pagado.
+                Los créditos del Generador IA se administran por separado.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 mt-4">
                 <Info label="Fecha de pago" value={formatearFecha(alumno.fecha_pago)} />
@@ -1428,7 +1448,7 @@ function AdminAlumnosPanel({
                   onClick={() => registrarPago(alumno)}
                   className="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-xl font-black"
                 >
-                  Registrar pago
+                  Registrar pago manual
                 </button>
               </div>
             </div>
@@ -2968,32 +2988,39 @@ export default function App() {
     return { ok: true }
   }
 
-  async function registrarPago(alumno, fechaPago = fechaHoy(), planCode = 'monthly') {
-    await aplicarPagoConfirmado(alumno, fechaPago, planCode)
+  async function registrarPago(
+    alumno,
+    fechaPago = fechaHoy(),
+    planCode = 'monthly',
+    paymentMethod = 'efectivo',
+  ) {
+    await aplicarPagoConfirmado(alumno, fechaPago, planCode, paymentMethod)
   }
 
   async function aplicarPagoConfirmado(
     alumno,
     fechaPago = fechaHoy(),
     planCode = 'monthly',
+    paymentMethod = 'efectivo',
   ) {
     if (!alumno?.id) return
 
     const selectedPlan = paymentPlanByCode(planCode)
-    const requestId = `payment-${alumno.id}-${selectedPlan.code}-${Date.now()}`
+    const safePaymentMethod = String(paymentMethod || 'efectivo').trim().toLowerCase()
+    const requestId = `payment----`
 
     const { error } = await supabase.rpc(
       'register_powerfit_payment_with_generation_reset_secure',
       {
         p_client_request_id: requestId,
         p_alumno_id: alumno.id,
-        p_payment_method: 'manual',
+        p_payment_method: safePaymentMethod,
         p_period_start: alumno.fecha_vencimiento
           ? null
           : fechaPago || fechaHoy(),
         p_months: selectedPlan.months,
         p_amount: selectedPlan.amount,
-        p_notes: `Pago ${selectedPlan.name} (${selectedPlan.months} meses) registrado desde panel PowerFit 360`,
+        p_notes: `Pago ${selectedPlan.name} (${selectedPlan.months} meses) · método ${safePaymentMethod} · registrado desde panel PowerFit 360`,
         p_paid_on: fechaPago || fechaHoy(),
         p_generation_balance: 6,
       },
