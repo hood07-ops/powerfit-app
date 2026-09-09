@@ -3194,14 +3194,18 @@ export default function App() {
     window.location.reload()
   }
 
-  if (alumnoCheckIn) {
-    return <CheckInPage alumnoId={alumnoCheckIn} />
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white p-10">Cargando...</div>
     )
+  }
+
+  if (alumnoCheckIn && !user) {
+    return <LoginPage onLogin={checkUser} />
+  }
+
+  if (alumnoCheckIn) {
+    return <CheckInPage alumnoId={alumnoCheckIn} />
   }
 
   if (passwordRecovery) {
