@@ -3015,9 +3015,7 @@ export default function App() {
         p_client_request_id: requestId,
         p_alumno_id: alumno.id,
         p_payment_method: safePaymentMethod,
-        p_period_start: alumno.fecha_vencimiento
-          ? null
-          : fechaPago || fechaHoy(),
+        p_period_start: fechaPago || fechaHoy(),
         p_months: selectedPlan.months,
         p_amount: selectedPlan.amount,
         p_notes: `Pago ${selectedPlan.name} (${selectedPlan.months} meses) · método ${safePaymentMethod} · registrado desde panel PowerFit 360`,
@@ -3636,4 +3634,3 @@ export default function App() {
     </div>
   )
 }
-
