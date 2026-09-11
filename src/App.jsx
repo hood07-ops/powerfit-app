@@ -2559,6 +2559,14 @@ export default function App() {
   }, [edition.appName])
 
   function editionAllows(sectionName) {
+    if (
+      sectionName === 'Pago' &&
+      student &&
+      student.role?.toLowerCase() !== 'admin'
+    ) {
+      return true
+    }
+
     return edition.sections.includes(sectionName)
   }
 
