@@ -3158,6 +3158,17 @@ export default function App() {
         return
       }
 
+      if (error) {
+        const context = await error.context?.json?.().catch(() => null)
+        cerrarPagoConAviso(
+          context?.message ||
+            context?.error ||
+            error.message ||
+            'No se pudo crear la preferencia de Mercado Pago.'
+        )
+        return
+      }
+
       cerrarPagoConAviso(
         'Mercado Pago todavía no está configurado o la función create-preference no está desplegada. Configura MP_ACCESS_TOKEN y despliega la función para abrir Checkout Pro.'
       )
