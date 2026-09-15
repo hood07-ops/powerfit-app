@@ -17,6 +17,8 @@ const EDITIONS = {
     commissionRate: 0.1,
     sections: [
       'Admin',
+      'MiCamino',
+      'Graduaciones',
       'AsistenciaQR',
       'RegistroCompras',
       'Reportes',
@@ -35,6 +37,7 @@ const EDITIONS = {
     commissionRate: 0,
     sections: [
       'AsistenciaQR',
+      'MiCamino',
       'XPRangos',
       'Rutinas',
       'Estadísticas',
@@ -54,6 +57,8 @@ const EDITIONS = {
     commissionRate: 0.1,
     sections: [
       'Admin',
+      'MiCamino',
+      'Graduaciones',
       'Entrenamientos',
       'Generador',
       'Constructor',

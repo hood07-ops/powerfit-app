@@ -1,1 +1,188 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CPS Admin</title><style>body{margin:0;background:#050505;color:#fff;font-family:Arial}*{box-sizing:border-box}.w{max-width:1150px;margin:auto;padding:16px}.c{background:#111;border:1px solid #333;border-radius:18px;padding:16px;margin:12px 0}.r{border-color:#7f1d1d}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}.row{display:flex;gap:8px;flex-wrap:wrap}button,input,textarea{background:#080808;color:#fff;border:1px solid #444;border-radius:10px;padding:10px;font:inherit}button{background:#b91c1c;border:0;font-weight:800;cursor:pointer}.b{background:#1d4ed8}.m{color:#aaa}.hide{display:none}.set{display:grid;grid-template-columns:1fr 100px;gap:8px;align-items:center;margin:6px 0}.chk{display:flex;gap:8px;align-items:center;background:#080808;padding:8px;border-radius:10px}.tech{border:1px solid #333;border-radius:12px;padding:10px;margin:8px 0}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:7px;border-bottom:1px solid #333;text-align:left}a{color:#fff;text-decoration:none}</style></head><body><main class="w"><div class="row" style="justify-content:space-between;align-items:center"><a href="/"><b style="color:#ef4444">← POWERFIT 360</b></a><a href="/cps.html">Mi Camino CPS</a></div><div id="msg"></div><section id="login" class="c r"><h1>PowerFit 360 + CPS</h1><p class="m">Misma cuenta PowerFit360</p><div class="g"><input id="email" placeholder="Correo"><input id="pass" type="password" placeholder="Contraseña"></div><button id="go">Ingresar</button></section><section id="app" class="hide"><div class="c r"><h1>Administrador Maestro CPS</h1><div id="who"></div><p class="m">Control de pruebas, parámetros, tarjetas y graduaciones.</p></div><div id="stats" class="g"></div><div class="c"><h2>Parámetros por ruta / nivel</h2><div id="buttons" class="g"></div><div id="editor"></div></div><div class="c"><h2>Pruebas y exámenes</h2><div id="tests"></div></div><div class="c"><h2>Reglas por técnica</h2><div id="cards"></div></div><button id="out">Salir</button></section></main><script type="module">import{createClient}from'https://esm.sh/@supabase/supabase-js@2';const s=createClient('https://sabsmurhriohwmczaktn.supabase.co','sb_publishable_tj-oblYhYqN5sKWFrrxe1g_NzimyN0p'),$=q=>document.querySelector(q),E=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),M=(x,b=0)=>$('#msg').innerHTML=x?`<div class="c ${b?'r':''}">${E(x)}</div>`:'';let D=null,A=null;async function R(n,a={}){const{data,error}=await s.rpc(n,a);if(error)throw error;return data}async function load(){const{data:{user}}=await s.auth.getUser();if(!user){$('#login').classList.remove('hide');$('#app').classList.add('hide');return}const role=String(await R('get_powerfit_effective_role')||'alumno').toLowerCase();if(role!=='admin')return M('Esta pantalla es sólo para Administrador CPS.',1);$('#login').classList.add('hide');$('#app').classList.remove('hide');$('#who').innerHTML=`<b>${E(user.email)}</b> · ADMIN`;D=await R('get_powerfit_cps_admin_center_secure');render()}function render(){const t=D.tomo_tests||[],e=D.final_exams||[],p=D.promotions||[],v=D.video_queue||[],l=D.live_queue||[];$('#stats').innerHTML=[['Pruebas tomo',t.length],['Exámenes finales',e.length],['Promociones',p.length],['Videos pendientes',v.length],['Presenciales',l.length]].map(x=>`<div class="c"><b>${x[0]}</b><h2>${x[1]}</h2></div>`).join('');$('#buttons').innerHTML=(D.settings||[]).map(x=>`<button class="b" data-s="${x.route_code}|${x.stage_order}">${x.route_code} · ${x.stage_order}</button>`).join('');document.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>edit(b.dataset.s));$('#tests').innerHTML=`<div style="overflow:auto"><table><tr><th>Tipo</th><th>Ruta</th><th>Etapa</th><th>Alumno</th><th>Estado</th><th>Puntaje</th></tr>${t.map(x=>`<tr><td>Tomo ${x.tomo_no}</td><td>${x.route_code}</td><td>${x.stage_order||'-'}</td><td>${x.alumno_id}</td><td>${x.status}</td><td>${x.theory_score}/${x.practical_score}</td></tr>`).join('')}${e.map(x=>`<tr><td>Final</td><td>${x.route_code}</td><td>${x.stage_order}</td><td>${x.alumno_id}</td><td>${x.status}</td><td>${x.weighted_score??x.final_score??'-'}</td></tr>`).join('')}</table></div>`;$('#cards').innerHTML=(D.cards||[]).map(c=>`<div class="tech"><b>${E(c.name)}</b><p class="m">${c.path_code} · Nivel ${c.level_order} · Tomo ${c.tomo_no}</p><div class="row"><label class="chk"><input type="checkbox" data-c="${c.id}" data-k="video_required" ${c.video_required?'checked':''}>Video</label><label class="chk"><input type="checkbox" data-c="${c.id}" data-k="live_required" ${c.live_required?'checked':''}>Presencial</label><label class="chk"><input type="checkbox" data-c="${c.id}" data-k="critical" ${c.critical?'checked':''}>Crítica</label><label class="chk"><input type="checkbox" data-c="${c.id}" data-k="active" ${c.active?'checked':''}>Activa</label><button data-save="${c.id}">Guardar</button></div></div>`).join('');document.querySelectorAll('[data-save]').forEach(b=>b.onclick=()=>card(+b.dataset.save))}function edit(raw){const[r,n]=raw.split('|'),x=D.settings.find(y=>y.route_code===r&&y.stage_order===+n);A=x;const w=x.final_exam_weights||{};$('#editor').innerHTML=`<div class="c r"><h3>${r} · ${n}</h3><div class="g"><div><label class="set">Meses mínimos<input id="mm" type="number" value="${x.minimum_months}"></label><label class="set">Asistencia %<input id="ma" type="number" value="${x.minimum_attendance_pct}"></label><label class="set">Nota tomo<input id="mt" type="number" value="${x.minimum_tomo_score}"></label><label class="set">Nota final<input id="mf" type="number" value="${x.minimum_final_exam_score}"></label></div><div><label class="chk"><input id="rs" type="checkbox" ${x.require_schedule?'checked':''}>Exigir asistencia</label><label class="chk"><input id="rt" type="checkbox" ${x.require_tomo_tests?'checked':''}>Pruebas tomo</label><label class="chk"><input id="rc" type="checkbox" ${x.require_all_cards?'checked':''}>Todas tarjetas</label><label class="chk"><input id="rk" type="checkbox" ${x.require_no_critical_fail?'checked':''}>Bloquear falla crítica</label><label class="chk"><input id="ra" type="checkbox" ${x.require_coach_approval?'checked':''}>Aprobación coach</label></div></div><h3>Ponderación examen final (100%)</h3><div class="g">${Object.entries(w).map(([k,v])=>`<label class="set">${k}<input data-w="${k}" type="number" value="${v}"></label>`).join('')}</div><h3>Rúbrica video</h3><textarea id="vr" rows="5" style="width:100%">${E(JSON.stringify(x.video_rubric,null,2))}</textarea><h3>Rúbrica presencial</h3><textarea id="lr" rows="5" style="width:100%">${E(JSON.stringify(x.live_rubric,null,2))}</textarea><button id="saveCfg">Guardar parámetros</button></div>`;$('#saveCfg').onclick=saveCfg}async function saveCfg(){try{const w={};document.querySelectorAll('[data-w]').forEach(i=>w[i.dataset.w]=+i.value);await R('save_powerfit_cps_evaluation_settings_secure',{p_route_code:A.route_code,p_stage_order:A.stage_order,p_settings:{minimum_months:+$('#mm').value,minimum_attendance_pct:+$('#ma').value,minimum_tomo_score:+$('#mt').value,minimum_final_exam_score:+$('#mf').value,require_schedule:$('#rs').checked,require_tomo_tests:$('#rt').checked,require_all_cards:$('#rc').checked,require_no_critical_fail:$('#rk').checked,require_coach_approval:$('#ra').checked,final_exam_weights:w,video_rubric:JSON.parse($('#vr').value),live_rubric:JSON.parse($('#lr').value)},p_reason:'Cambio desde Administrador Maestro CPS'});M('Parámetros guardados y auditados.');await load()}catch(e){M(e.message,1)}}async function card(id){try{const g=k=>document.querySelector(`[data-c="${id}"][data-k="${k}"]`).checked;await R('save_powerfit_cps_card_rules_secure',{p_card_id:id,p_video_required:g('video_required'),p_live_required:g('live_required'),p_critical:g('critical'),p_active:g('active'),p_reason:'Cambio desde Administrador Maestro CPS'});M('Técnica actualizada.');await load()}catch(e){M(e.message,1)}}$('#go').onclick=async()=>{const{error}=await s.auth.signInWithPassword({email:$('#email').value,password:$('#pass').value});if(error)return M(error.message,1);load()};$('#out').onclick=async()=>{await s.auth.signOut();location.reload()};s.auth.onAuthStateChange(()=>load());load();</script></body></html>
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PowerFit 360 CPS Admin</title>
+    <style>
+      :root { color-scheme: dark; --bg:#07080b; --panel:#17191f; --soft:#232733; --line:#3b4050; --gold:#ffc400; --red:#ef233c; --green:#17c964; --text:#f8f8fb; --muted:#b7bdca; }
+      * { box-sizing:border-box; }
+      body { margin:0; font-family:Arial, Helvetica, sans-serif; background:var(--bg); color:var(--text); }
+      header { position:sticky; top:0; z-index:5; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 20px; background:#0d0f14f2; border-bottom:1px solid var(--line); }
+      h1,h2,h3 { margin:0; letter-spacing:0; }
+      h1 { color:var(--gold); font-size:clamp(24px,4vw,40px); }
+      main { max-width:1260px; margin:0 auto; padding:22px 16px 54px; }
+      button { border:0; border-radius:8px; padding:10px 12px; font-weight:800; cursor:pointer; background:var(--gold); color:#111; }
+      button.secondary { background:var(--soft); color:var(--text); border:1px solid var(--line); }
+      button.admin { background:var(--red); color:white; }
+      .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
+      .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; }
+      .student { display:grid; gap:12px; }
+      .muted { color:var(--muted); }
+      .tag { display:inline-flex; margin:3px 4px 3px 0; padding:4px 9px; border-radius:999px; font-size:12px; font-weight:800; background:var(--soft); color:var(--muted); }
+      .unlocked { background:var(--green); color:#07140b; }
+      .route { margin-top:16px; border-left:5px solid var(--gold); }
+      .columns { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-top:12px; }
+      .small-list { display:grid; gap:8px; max-height:360px; overflow:auto; }
+      .row { background:#20232c; border:1px solid var(--line); border-radius:8px; padding:10px; }
+      .actions { display:flex; flex-wrap:wrap; gap:8px; }
+      .error { border-color:var(--red); color:#ffd4da; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div>
+        <h1>PowerFit 360 CPS Admin</h1>
+        <div class="muted">Fichas individuales y accesos persistentes</div>
+      </div>
+      <a href="/" style="color:var(--gold);font-weight:800;">Volver a PowerFit</a>
+    </header>
+    <main>
+      <section id="state" class="panel">Cargando administrador CPS...</section>
+      <h2 style="margin:24px 0 12px;color:var(--gold);">ALUMNOS CPS</h2>
+      <section id="students" class="grid"></section>
+      <section id="file" style="margin-top:18px;"></section>
+    </main>
+    <script type="module">
+      import { createClient } from "https://esm.sh/@supabase/supabase-js@2.105.4";
+
+      const supabase = createClient(
+        "https://sabsmurhriohwmczaktn.supabase.co",
+        "sb_publishable_tj-oblYhYqN5sKWFrrxe1g_NzimyN0p",
+      );
+
+      const stateEl = document.querySelector("#state");
+      const studentsEl = document.querySelector("#students");
+      const fileEl = document.querySelector("#file");
+
+      const humanError = (message) => {
+        if (String(message).includes("ATTENDANCE_SCHEDULE_MISSING")) {
+          return "Horario de asistencia aun no configurado. Esto se usara mas adelante para habilitar tu examen de nivel.";
+        }
+        if (String(message).includes("ADMIN_REQUIRED")) return "Esta pantalla es solo para administradores PowerFit CPS.";
+        return String(message || "No se pudo completar la accion.");
+      };
+      const isUnlocked = (status) => ["UNLOCKED", "IN_PROGRESS", "CARDS_COMPLETE", "TOMO_TEST_ELIGIBLE", "TOMO_TEST_PASSED", "TOMO_COMPLETED"].includes(status);
+
+      async function loadStudents() {
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) {
+          stateEl.innerHTML = "<strong>Sesion requerida.</strong><br><span class='muted'>Ingresa primero en PowerFit 360 con una cuenta admin.</span>";
+          return;
+        }
+        const { data, error } = await supabase.rpc("get_powerfit_cps_admin_students_secure");
+        if (error) {
+          stateEl.className = "panel error";
+          stateEl.textContent = humanError(error.message);
+          return;
+        }
+        stateEl.className = "panel";
+        stateEl.textContent = `${data.length} alumno(s) CPS encontrados.`;
+        studentsEl.innerHTML = data.map((student) => `
+          <article class="panel student">
+            <div>
+              <h3>${student.nombre || "Alumno sin nombre"}</h3>
+              <div class="muted">${student.email || "sin email"} | ${student.estado_pago || "Pendiente"}</div>
+            </div>
+            <div>${(student.routes || []).map((route) => `<span class="tag">${route.route_code} ${route.stage_label || ""}</span>`).join("")}</div>
+            <div class="muted">Tomos desbloqueados persistentes: ${student.unlocked_tomos || 0}</div>
+            <button data-file="${student.alumno_id}">Abrir ficha CPS</button>
+          </article>
+        `).join("");
+      }
+
+      function list(label, items, renderItem) {
+        return `
+          <div class="panel">
+            <h3>${label}</h3>
+            <div class="small-list">${items.length ? items.map(renderItem).join("") : "<div class='muted'>Sin registros</div>"}</div>
+          </div>
+        `;
+      }
+
+      async function openFile(alumnoId) {
+        fileEl.innerHTML = "<div class='panel'>Cargando ficha individual...</div>";
+        const { data, error } = await supabase.rpc("get_powerfit_cps_admin_student_file_secure", { p_alumno_id: alumnoId });
+        if (error) {
+          fileEl.innerHTML = `<div class="panel error">${humanError(error.message)}</div>`;
+          return;
+        }
+        const student = data.student || {};
+        fileEl.innerHTML = `
+          <section class="panel">
+            <h2>${student.nombre || "Alumno"}</h2>
+            <p class="muted">${student.email || "sin email"} | Pago: ${student.estado_pago || "Pendiente"} | Vence: ${student.fecha_vencimiento || "sin fecha"}</p>
+          </section>
+          ${(data.routes || []).map((route) => {
+            const access = route.tomo_access || [];
+            const enrollment = route.enrollment || {};
+            return `
+              <section class="panel route">
+                <h2>${enrollment.route_code}</h2>
+                <p class="muted">Nivel/grado actual: ${route.stage?.label || enrollment.current_stage_order}</p>
+                <div class="actions">
+                  <button class="admin" data-all="${student.alumno_id}:${enrollment.route_code}">Abrir todos los tomos</button>
+                </div>
+                <div class="columns">
+                  ${list("Tomos", access, (tomo) => `
+                    <div class="row">
+                      <strong>Tomo ${tomo.tomo_no}</strong> <span class="tag ${isUnlocked(tomo.status) ? "unlocked" : ""}">${tomo.status}</span>
+                      <div class="actions" style="margin-top:8px;">
+                        <button class="secondary" data-grant="${student.alumno_id}:${enrollment.route_code}:${tomo.tomo_no}">Abrir tomo</button>
+                      </div>
+                    </div>
+                  `)}
+                  ${list("Tarjetas tecnicas", route.card_progress || [], (item) => `<div class="row">Card ${item.card_id}: ${item.status || "sin estado"}</div>`)}
+                  ${list("Videos", route.videos || [], (item) => `<div class="row">Card ${item.card_id}: ${item.status} | ${item.created_at || ""}</div>`)}
+                  ${list("Evaluaciones en vivo", route.evaluaciones || [], (item) => `<div class="row">Card ${item.card_id}: ${item.decision || ""}</div>`)}
+                  ${list("Pruebas de tomo", route.tome_tests || [], (item) => `<div class="row">Tomo ${item.tomo_no}: ${item.status || item.result || ""}</div>`)}
+                  ${list("Examen final", route.final_exams || [], (item) => `<div class="row">${item.status || item.result || ""}</div>`)}
+                  ${list("Promociones", route.promotions || [], (item) => `<div class="row">${item.from_stage_order || ""} -> ${item.to_stage_order || ""}</div>`)}
+                </div>
+              </section>
+            `;
+          }).join("")}
+        `;
+      }
+
+      async function grantTomo(alumnoId, routeCode, tomoNo) {
+        const reason = window.prompt("Motivo del desbloqueo admin:", "Gestion administrativa CPS");
+        if (!reason) return;
+        const { error } = await supabase.rpc("grant_powerfit_tomo_admin_secure", {
+          p_alumno_id: Number(alumnoId),
+          p_path_code: routeCode,
+          p_tomo_no: Number(tomoNo),
+          p_reason: reason,
+        });
+        if (error) alert(humanError(error.message));
+        await openFile(Number(alumnoId));
+        await loadStudents();
+      }
+
+      async function grantAll(alumnoId, routeCode) {
+        const reason = window.prompt("Motivo para abrir todos los tomos:", "Gestion administrativa CPS");
+        if (!reason) return;
+        const { error } = await supabase.rpc("grant_powerfit_all_tomos_admin_secure", {
+          p_alumno_id: Number(alumnoId),
+          p_path_code: routeCode,
+          p_reason: reason,
+        });
+        if (error) alert(humanError(error.message));
+        await openFile(Number(alumnoId));
+        await loadStudents();
+      }
+
+      document.addEventListener("click", (event) => {
+        const target = event.target.closest("button");
+        if (!target) return;
+        if (target.dataset.file) openFile(Number(target.dataset.file));
+        const grant = target.dataset.grant?.split(":");
+        const all = target.dataset.all?.split(":");
+        if (grant) grantTomo(grant[0], grant[1], grant[2]);
+        if (all) grantAll(all[0], all[1]);
+      });
+
+      loadStudents();
+    </script>
+  </body>
+</html>

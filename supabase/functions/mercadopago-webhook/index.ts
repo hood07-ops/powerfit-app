@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
       payment.additional_info?.items?.[0]?.id ||
       '',
     ).trim()
+    const paymentType = String(payment.metadata?.tipo || '').trim().toLowerCase()
 
     const planCode = String(
       payment.metadata?.plan_code || 'monthly',
@@ -103,6 +104,7 @@ Deno.serve(async (req) => {
 
     const plan = PLANS[planCode]
     const amount = Number(payment.transaction_amount || 0)
+    const isCpsTomo = paymentType === 'cps_tomo_powerfit'
 
     console.info('MP_WEBHOOK_APPROVED_DATA', {
       payment_id: paymentId,
@@ -117,6 +119,58 @@ Deno.serve(async (req) => {
         alumno_id: alumnoId || null,
       })
       return jsonResponse({ error: 'Pago aprobado sin alumno asociado' }, 400)
+    }
+
+    if (isCpsTomo) {
+      const pathCode = String(payment.metadata?.path_code || '').trim().toUpperCase()
+      const tomoNo = Number(payment.metadata?.tomo_no || 0)
+      if (!['BOXING', 'KICKBOXING'].includes(pathCode) || !Number.isInteger(tomoNo) || tomoNo < 1 || tomoNo > 12) {
+        console.error('MP_WEBHOOK_INVALID_CPS_TOMO', {
+          payment_id: paymentId,
+          path_code: pathCode || null,
+          tomo_no: tomoNo || null,
+        })
+        return jsonResponse({ error: 'INVALID_CPS_TOMO_PAYMENT' }, 400)
+      }
+
+      const supabase = createClient(supabaseUrl, serviceRoleKey)
+      const paidOnRaw = String(payment.date_approved || payment.date_created || '')
+      const paidOn = paidOnRaw
+        ? paidOnRaw.slice(0, 10)
+        : new Date().toISOString().slice(0, 10)
+
+      const { data: receipt, error: paymentError } = await supabase.rpc(
+        'register_powerfit_tomo_payment_secure',
+        {
+          p_external_payment_id: paymentId,
+          p_alumno_id: Number(alumnoId),
+          p_path_code: pathCode,
+          p_tomo_no: tomoNo,
+          p_amount: amount,
+          p_paid_on: paidOn,
+        },
+      )
+
+      if (paymentError) {
+        console.error('MP_WEBHOOK_CPS_RPC_FAILED', {
+          payment_id: paymentId,
+          alumno_id: alumnoId,
+          code: paymentError.code || null,
+          message: String(paymentError.message || '').slice(0, 500),
+        })
+        return jsonResponse({ error: paymentError.message }, 500)
+      }
+
+      return jsonResponse({
+        received: true,
+        payment_type: 'cps_tomo',
+        alumno_id: alumnoId,
+        path_code: pathCode,
+        tomo_no: tomoNo,
+        amount,
+        payment_id: paymentId,
+        receipt,
+      })
     }
 
     if (!plan) {

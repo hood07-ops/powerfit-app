@@ -5,6 +5,7 @@ import { applyPowerFitUpdate, listenForPowerFitUpdate } from './pwa'
 import { supabase } from './supabase'
 
 import CheckInPage from './pages/CheckInPage'
+import CombatPathPage from './pages/CombatPathPage'
 import ConstructorPage from './pages/ConstructorPage'
 import GeneradorPage from './pages/GeneradorPage'
 import LoginPage from './pages/LoginPage'
@@ -80,6 +81,8 @@ const UI_TEXT = {
     payment: 'Pago / deuda',
     evaluations: 'Evaluaciones',
     customTrainings: 'Entrenos alumnos',
+    combatPath: 'Mi Camino',
+    graduations: 'Graduaciones',
     adminStudents: 'ADMIN ALUMNOS',
     purchaseLog: 'Registro compras',
     brandSettings: 'Marca',
@@ -105,6 +108,8 @@ const UI_TEXT = {
     payment: 'Payment / debt',
     evaluations: 'Evaluations',
     customTrainings: 'Student plans',
+    combatPath: 'My Path',
+    graduations: 'Graduations',
     adminStudents: 'STUDENTS ADMIN',
     purchaseLog: 'Purchase log',
     brandSettings: 'Brand',
@@ -115,6 +120,8 @@ const UI_TEXT = {
 
 const NAV_ITEMS = {
   Admin: { label: 'adminStudents', adminOnly: true },
+  MiCamino: { label: 'combatPath' },
+  Graduaciones: { label: 'graduations', adminOnly: true },
   Entrenamientos: { label: 'customTrainings', adminOnly: true },
   AsistenciaQR: { label: 'attendanceQr' },
   XPRangos: { label: 'xpRanks', lockable: true },
@@ -2589,7 +2596,7 @@ export default function App() {
 
   function canOpenSection(sectionName, adminStatus) {
     if (!editionAllows(sectionName)) return false
-    if (['Admin', 'Entrenamientos', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
+    if (['Admin', 'Entrenamientos', 'Graduaciones', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
       return adminStatus
     }
 
@@ -3364,6 +3371,8 @@ export default function App() {
       <div data-nav-items={Object.keys(NAV_ITEMS).length} className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
           {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
+          <Btn show={editionAllows('MiCamino')} text={t.combatPath} active={visibleSection === 'MiCamino'} set={() => setSection('MiCamino')} />
+          {isAdmin && <Btn show={editionAllows('Graduaciones')} text={t.graduations} active={visibleSection === 'Graduaciones'} set={() => setSection('Graduaciones')} />}
           {isAdmin && <Btn show={editionAllows('Entrenamientos')} text={t.customTrainings} active={visibleSection === 'Entrenamientos'} set={() => setSection('Entrenamientos')} />}
           <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
           <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} set={() => setSection('XPRangos')} />
@@ -3468,6 +3477,22 @@ export default function App() {
         <XpRangosPanel
           student={student}
           students={students}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {editionAllows('MiCamino') && visibleSection === 'MiCamino' && (
+        <CombatPathPage
+          student={student}
+          user={user}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {editionAllows('Graduaciones') && visibleSection === 'Graduaciones' && isAdmin && (
+        <CombatPathPage
+          student={student}
+          user={user}
           isAdmin={isAdmin}
         />
       )}

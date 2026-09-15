@@ -62,20 +62,63 @@ Deno.serve(async (req) => {
     const authUser = authData?.user
     if (authError || !authUser) return jsonResponse({ error: 'UNAUTHORIZED', message: 'Sesion no autorizada.' }, 401)
     const body = await req.json().catch(() => null)
+    const paymentType = String(body?.payment_type || body?.tipo || 'membership').trim().toLowerCase()
     const alumnoId = String(body?.alumno_id || '').trim()
     const planCode = String(body?.plan_code || 'monthly').trim().toLowerCase() as PlanCode
+    const cpsPath = String(body?.path_code || '').trim().toUpperCase()
+    const cpsTomoNo = Number(body?.tomo_no || 0)
     const plan = PLANS[planCode]
-    if (!alumnoId || !plan) return jsonResponse({ error: 'INVALID_PAYMENT_DATA', message: 'Datos de pago invalidos' }, 400)
+    const isCpsTomo = paymentType === 'cps_tomo'
+    if (!alumnoId || (!isCpsTomo && !plan)) return jsonResponse({ error: 'INVALID_PAYMENT_DATA', message: 'Datos de pago invalidos' }, 400)
+    if (isCpsTomo && (!['BOXING', 'KICKBOXING'].includes(cpsPath) || !Number.isInteger(cpsTomoNo) || cpsTomoNo < 1 || cpsTomoNo > 12)) {
+      return jsonResponse({ error: 'INVALID_CPS_TOMO_PAYMENT', message: 'Datos CPS invalidos.' }, 400)
+    }
     const serverDb = createClient(supabaseUrl, serviceRoleKey)
     const { data: alumno, error: alumnoError } = await serverDb.from('alumnos').select('id,user_id,nombre').eq('id', alumnoId).maybeSingle()
     if (alumnoError || !alumno) return jsonResponse({ error: 'STUDENT_NOT_FOUND', message: 'Alumno no encontrado' }, 404)
     if (String(alumno.user_id || '') !== authUser.id) return jsonResponse({ error: 'FORBIDDEN', message: 'No puedes iniciar el pago de este alumno.' }, 403)
     const nombre = String(alumno.nombre || authUser.email || 'Alumno PowerFit').trim()
+    let cpsQuote: Record<string, unknown> | null = null
+    if (isCpsTomo) {
+      const { data: quote, error: quoteError } = await serverDb.rpc('get_powerfit_cps_payment_quote_server', {
+        p_alumno_id: Number(alumnoId),
+        p_path_code: cpsPath,
+        p_tomo_no: cpsTomoNo,
+        p_user_id: authUser.id,
+      })
+      if (quoteError || !quote) {
+        return jsonResponse(
+          {
+            error: 'CPS_PAYMENT_QUOTE_ERROR',
+            message: quoteError?.message || 'No se pudo calcular el precio del tomo CPS.',
+          },
+          400,
+        )
+      }
+      cpsQuote = quote as Record<string, unknown>
+    }
+    const itemTitle = isCpsTomo
+      ? `CPS Tomo ${cpsTomoNo} ${cpsPath === 'BOXING' ? 'Boxeo' : 'Kickboxing'} - ${String(cpsQuote?.title || nombre)}`
+      : `${plan.name} PowerFit 360 - ${nombre}`
+    const itemAmount = isCpsTomo ? Number(cpsQuote?.amount_clp || 0) : plan.amount
+    if (!Number.isFinite(itemAmount) || itemAmount <= 0) {
+      return jsonResponse({ error: 'INVALID_PAYMENT_AMOUNT', message: 'Monto de pago invalido.' }, 400)
+    }
     const preference = {
-      items: [{ id: `${planCode}-${alumnoId}`, title: `${plan.name} PowerFit 360 - ${nombre}`, quantity: 1, unit_price: plan.amount, currency_id: 'CLP' }],
+      items: [{ id: isCpsTomo ? `cps-${cpsPath}-${cpsTomoNo}-${alumnoId}` : `${planCode}-${alumnoId}`, title: itemTitle, quantity: 1, unit_price: itemAmount, currency_id: 'CLP' }],
       payer: { name: nombre, email: authUser.email },
       external_reference: alumnoId,
-      metadata: { alumno_id: alumnoId, user_id: authUser.id, tipo: 'membership_powerfit', plan_code: planCode, months: plan.months, amount: plan.amount },
+      metadata: isCpsTomo
+        ? {
+          alumno_id: alumnoId,
+          user_id: authUser.id,
+          tipo: 'cps_tomo_powerfit',
+          path_code: cpsPath,
+          tomo_no: cpsTomoNo,
+          amount: itemAmount,
+          membership_current: Boolean(cpsQuote?.membership_current),
+        }
+        : { alumno_id: alumnoId, user_id: authUser.id, tipo: 'membership_powerfit', plan_code: planCode, months: plan.months, amount: plan.amount },
       back_urls: { success: `${appUrl}?payment=success`, failure: `${appUrl}?payment=failure`, pending: `${appUrl}?payment=pending` },
       auto_return: 'approved',
       notification_url: webhookUrl,
@@ -100,7 +143,18 @@ Deno.serve(async (req) => {
         502,
       )
     }
-    return jsonResponse({ preferenceId: data.id, id: data.id, init_point: data.init_point, sandbox_init_point: data.sandbox_init_point, plan_code: planCode, months: plan.months, amount: plan.amount })
+    return jsonResponse({
+      preferenceId: data.id,
+      id: data.id,
+      init_point: data.init_point,
+      sandbox_init_point: data.sandbox_init_point,
+      payment_type: isCpsTomo ? 'cps_tomo' : 'membership',
+      plan_code: isCpsTomo ? null : planCode,
+      months: isCpsTomo ? null : plan.months,
+      path_code: isCpsTomo ? cpsPath : null,
+      tomo_no: isCpsTomo ? cpsTomoNo : null,
+      amount: itemAmount,
+    })
   } catch (error) {
     return jsonResponse(
       {
