@@ -11,9 +11,19 @@
     <meta name="apple-mobile-web-app-title" content="PowerFit 360" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>PowerFit 360</title>
+    <style>
+      .cps-quick-links{position:fixed;right:14px;bottom:14px;z-index:9999;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;max-width:min(94vw,560px)}
+      .cps-quick-links a{font-family:Arial,sans-serif;text-decoration:none;color:#fff;background:#b91c1c;border:1px solid #7f1d1d;border-radius:999px;padding:10px 14px;font-size:13px;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+      .cps-quick-links a:last-child{background:#18181b;border-color:#3f3f46}
+      @media(max-width:520px){.cps-quick-links{left:10px;right:10px;bottom:10px}.cps-quick-links a{flex:1;text-align:center;padding:11px 10px}}
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <nav class="cps-quick-links" aria-label="Accesos CPS">
+      <a href="/cps.html">Mi Camino CPS</a>
+      <a href="/cps-admin.html">Administrador CPS</a>
+    </nav>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
