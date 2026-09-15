@@ -2551,8 +2551,25 @@ export default function App() {
   const alumnoCheckIn = params.get('checkin')
   const edition = getAppEdition()
   const t = UI_TEXT[idioma] || UI_TEXT.es
+  const sessionIsAdmin = student?.role?.toLowerCase() === 'admin'
 
   useEffect(() => listenForPowerFitUpdate(setPwaUpdate), [])
+
+  useEffect(() => {
+    if (!user || !alumnoCheckIn || sessionIsAdmin) return
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete('checkin')
+    if (url.searchParams.get('mode') === 'attendance') {
+      url.searchParams.delete('mode')
+    }
+
+    window.history.replaceState(
+      {},
+      '',
+      `${url.pathname}${url.search}${url.hash}`,
+    )
+  }, [alumnoCheckIn, sessionIsAdmin, user])
 
   useEffect(() => {
     document.title = `${edition.appName || 'PowerFit 360'}`
@@ -3221,7 +3238,7 @@ export default function App() {
     return <LoginPage onLogin={checkUser} />
   }
 
-  if (alumnoCheckIn) {
+  if (alumnoCheckIn && sessionIsAdmin) {
     return <CheckInPage alumnoId={alumnoCheckIn} />
   }
 
@@ -3237,7 +3254,7 @@ export default function App() {
 
   if (!user) return <LoginPage onLogin={checkUser} />
 
-  const isAdmin = student?.role?.toLowerCase() === 'admin'
+  const isAdmin = sessionIsAdmin
   const termsFeatureActive = Object.prototype.hasOwnProperty.call(
     student || {},
     'terminos_aceptados'
