@@ -1,7 +1,8 @@
 import { QRCodeCanvas } from 'qrcode.react'
 
 export default function MiQRPage({ student }) {
-  const urlCheckIn = `${window.location.origin}?checkin=${student?.id}&mode=attendance`
+  const alumnoId = encodeURIComponent(student?.id || '')
+  const urlCheckIn = `${window.location.origin}/checkin.html?alumno=${alumnoId}`
 
   return (
     <div className="bg-zinc-900 border border-green-600 rounded-3xl p-6 text-center">
@@ -9,8 +10,11 @@ export default function MiQRPage({ student }) {
         MI QR DE ASISTENCIA
       </h2>
 
-      <p className="text-zinc-300 mb-6">
+      <p className="text-zinc-300 mb-2">
         Muestra este QR al profesor al llegar a entrenar.
+      </p>
+      <p className="text-zinc-500 text-sm mb-6">
+        Al escanearlo con una cuenta Administrador se abrira el boton REGISTRAR ASISTENCIA.
       </p>
 
       <div className="bg-white inline-block p-5 rounded-3xl">
