@@ -37,6 +37,21 @@ function ageFromBirth(value) {
   return age >= 0 ? age : '-'
 }
 
+function studentDraft(student) {
+  if (!student) return null
+  return {
+    id: student.id,
+    nombre: student.nombre || '',
+    rut: student.rut || '',
+    telefono: student.telefono || '',
+    fecha_nacimiento: student.fecha_nacimiento || '',
+    peso: student.peso ?? '',
+    altura: student.altura ?? '',
+    contacto_emergencia: student.contacto_emergencia || '',
+    observaciones: student.observaciones || '',
+  }
+}
+
 function Field({ label, value, onChange, type = 'text', multiline = false }) {
   const shared = 'w-full rounded-2xl border border-zinc-700 bg-zinc-950 px-4 py-3 text-white outline-none focus:border-red-500'
   return (
@@ -72,7 +87,10 @@ function PremiumStudentEditor({ onClose }) {
       } else {
         const rows = data?.students || []
         setStudents(rows)
-        if (rows[0]?.id) setSelectedId(String(rows[0].id))
+        if (rows[0]?.id) {
+          setSelectedId(String(rows[0].id))
+          setDraft(studentDraft(rows[0]))
+        }
       }
       setLoading(false)
     }
@@ -86,21 +104,12 @@ function PremiumStudentEditor({ onClose }) {
     return students.filter((student) => normalize([student.nombre, student.rut, student.telefono, student.email].join(' ')).includes(q))
   }, [students, query])
 
-  useEffect(() => {
-    const selected = students.find((student) => String(student.id) === String(selectedId))
-    setDraft(selected ? {
-      id: selected.id,
-      nombre: selected.nombre || '',
-      rut: selected.rut || '',
-      telefono: selected.telefono || '',
-      fecha_nacimiento: selected.fecha_nacimiento || '',
-      peso: selected.peso ?? '',
-      altura: selected.altura ?? '',
-      contacto_emergencia: selected.contacto_emergencia || '',
-      observaciones: selected.observaciones || '',
-    } : null)
+  function selectStudent(nextId) {
+    setSelectedId(nextId)
+    const selected = students.find((student) => String(student.id) === String(nextId))
+    setDraft(studentDraft(selected))
     setMessage('')
-  }, [selectedId, students])
+  }
 
   async function save() {
     if (!draft?.id || saving) return
@@ -146,7 +155,7 @@ function PremiumStudentEditor({ onClose }) {
         {loading ? <p className="py-8 text-center text-zinc-400">Cargando alumnos...</p> : (
           <>
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por nombre, RUT o teléfono" className="premium-search mt-5" />
-            <select value={selectedId} onChange={(e) => setSelectedId(e.target.value)} className="premium-search mt-3">
+            <select value={selectedId} onChange={(e) => selectStudent(e.target.value)} className="premium-search mt-3">
               {filtered.map((student) => <option key={student.id} value={student.id}>{student.nombre || `Alumno #${student.id}`}</option>)}
             </select>
 
