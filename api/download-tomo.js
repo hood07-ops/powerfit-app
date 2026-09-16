@@ -14,9 +14,20 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "EMPTY_CONTENT" });
   }
 
-  res.setHeader("Content-Type", "text/plain; charset=utf-8");
-  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
-  res.setHeader("Cache-Control", "no-store, max-age=0");
+  const payload = Buffer.from(content, "utf8");
+  const encodedFilename = encodeURIComponent(filename);
+
+  res.statusCode = 200;
+  res.setHeader("Content-Type", "application/octet-stream");
+  res.setHeader("Content-Length", String(payload.length));
+  res.setHeader(
+    "Content-Disposition",
+    `attachment; filename="${filename}"; filename*=UTF-8''${encodedFilename}`
+  );
+  res.setHeader("Content-Transfer-Encoding", "binary");
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
   res.setHeader("X-Content-Type-Options", "nosniff");
-  return res.status(200).send(content);
+  return res.end(payload);
 }
