@@ -2,17 +2,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { supabase } from './supabase'
 
 const STUDENT_PRIMARY = [
-  { label: 'Inicio', aliases: ['Asistencia QR', 'QR attendance'] },
   { label: 'CPS', aliases: ['Mi Camino', 'My Path'] },
   { label: 'QR', aliases: ['Asistencia QR', 'QR attendance'] },
+  { label: 'Entrenar', aliases: ['Rutinas', 'Routines'] },
   { label: 'Ficha', aliases: ['Ficha personal', 'Personal profile'] },
 ]
 
 const ADMIN_PRIMARY = [
-  { label: 'Inicio', aliases: ['ADMIN ALUMNOS', 'STUDENTS ADMIN'] },
   { label: 'Alumnos', aliases: ['ADMIN ALUMNOS', 'STUDENTS ADMIN'] },
   { label: 'QR', aliases: ['Asistencia QR', 'QR attendance'] },
   { label: 'CPS', aliases: ['Graduaciones', 'Graduations', 'Mi Camino', 'My Path'] },
+  { label: 'Entrenar', aliases: ['Entrenos alumnos', 'Student plans'] },
 ]
 
 function normalize(text) {
