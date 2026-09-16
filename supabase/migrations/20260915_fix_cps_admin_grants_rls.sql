@@ -1,6 +1,10 @@
 -- Fix CPS admin grants under RLS without exposing direct table INSERT permissions.
 -- Applied to production project sabsmurhriohwmczaktn on 2026-09-15.
 
+-- Access rows must be created only through controlled server-side/admin paths.
+revoke insert on table public.cps_tomo_access from authenticated;
+revoke insert on table public.cps_tomo_access from anon;
+
 create or replace function public.grant_powerfit_tomo_admin_secure(
   p_alumno_id bigint,
   p_path_code text,
