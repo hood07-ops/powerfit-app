@@ -1,3 +1,12 @@
+function esc(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -14,41 +23,61 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "EMPTY_CONTENT" });
   }
 
-  const payload = Buffer.from(content, "utf8");
-  const base64 = payload.toString("base64");
-  const dataUrl = `data:text/plain;charset=utf-8;base64,${base64}`;
-  const safeFilename = filename.replace(/[&<>"']/g, (char) => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;",
-  })[char]);
-
   const html = `<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <title>Descargar tomo CPS</title>
-  <style>
-    :root{color-scheme:dark;--bg:#08090c;--panel:#17191f;--line:#3a3f4f;--gold:#ffc400;--text:#f7f7fb;--muted:#b7bdca;--green:#19c463}
-    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;min-height:100vh;display:grid;place-items:center;padding:20px}.card{width:min(560px,100%);background:var(--panel);border:1px solid var(--line);border-radius:24px;padding:24px;box-shadow:0 22px 70px #0008}.brand{font-size:14px;color:var(--gold);font-weight:900;letter-spacing:.08em;text-transform:uppercase}.title{font-size:30px;font-weight:900;margin:8px 0 4px}.file{margin:16px 0;padding:14px;border-radius:14px;background:#0d0f14;border:1px solid var(--line);word-break:break-word}.hint{color:var(--muted);line-height:1.5}.actions{display:grid;gap:12px;margin-top:22px}a{display:block;text-align:center;text-decoration:none;border-radius:16px;padding:16px;font-size:17px;font-weight:900}.download{background:var(--gold);color:#111}.open{background:#20232c;color:white;border:1px solid var(--line)}.ok{margin-top:18px;color:var(--green);font-size:13px;font-weight:800}.back{margin-top:18px;text-align:center}.back a{display:inline;color:var(--gold);padding:8px;font-size:14px}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${esc(filename)} · PowerFit</title>
+<style>
+:root{color-scheme:dark;--bg:#08090c;--panel:#17191f;--line:#343947;--gold:#ffc400;--text:#f7f7fb;--muted:#b7bdca;--green:#19c463}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}main{max-width:820px;margin:0 auto;padding:18px 14px 40px}.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}.brand{font-weight:900;color:var(--gold);font-size:22px}.muted{color:var(--muted);font-size:13px;line-height:1.5}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.file{font-weight:900;word-break:break-word;margin-bottom:12px}.actions{display:grid;gap:10px;margin:14px 0}.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px 16px;text-align:center;text-decoration:none;font-weight:900;font-size:16px;cursor:pointer}.primary{background:var(--gold);color:#111}.secondary{background:#252936;color:#fff;border:1px solid var(--line)}.success{background:var(--green);color:#06120a}pre{white-space:pre-wrap;word-break:break-word;line-height:1.5;background:#0d0f14;border:1px solid var(--line);border-radius:12px;padding:14px;max-height:none;overflow:auto;font-family:Arial,Helvetica,sans-serif;font-size:14px}#status{min-height:22px;margin-top:8px;font-weight:800;color:var(--gold)}
+</style>
 </head>
 <body>
-  <main class="card">
-    <div class="brand">PowerFit 360 · CPS</div>
-    <div class="title">Tu tomo está listo</div>
-    <p class="hint">Android bloqueó la descarga automática anterior. Ahora toca el botón para autorizar la descarga directamente.</p>
-    <div class="file">${safeFilename}</div>
+<main>
+  <div class="top"><div><div class="brand">PowerFit 360 CPS</div><div class="muted">Documento seguro del tomo</div></div></div>
+  <section class="card">
+    <div class="file">${esc(filename)}</div>
+    <div class="muted">El documento se abrió en esta misma pestaña. Puedes guardarlo o compartirlo usando Android.</div>
     <div class="actions">
-      <a class="download" href="${dataUrl}" download="${safeFilename}">DESCARGAR ARCHIVO</a>
-      <a class="open" href="${dataUrl}">ABRIR ARCHIVO</a>
+      <button id="saveBtn" class="btn primary">GUARDAR EN EL DISPOSITIVO</button>
+      <button id="shareBtn" class="btn success">COMPARTIR / GUARDAR CON ANDROID</button>
+      <button id="backBtn" class="btn secondary">VOLVER A CPS</button>
     </div>
-    <div class="ok">El archivo se genera dentro de esta sesión y no queda publicado en internet.</div>
-    <div class="back"><a href="/cps.html">← Volver a CPS</a></div>
-  </main>
+    <div id="status"></div>
+    <pre id="doc">${esc(content)}</pre>
+  </section>
+</main>
+<script>
+const filename=${JSON.stringify(filename)};
+const content=${JSON.stringify(content)};
+const status=document.getElementById('status');
+function makeFile(){return new File([content],filename,{type:'text/plain;charset=utf-8'});}
+function makeBlobUrl(){return URL.createObjectURL(new Blob([content],{type:'text/plain;charset=utf-8'}));}
+document.getElementById('saveBtn').addEventListener('click',()=>{
+  try{
+    const url=makeBlobUrl();
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.rel='noopener';
+    document.body.appendChild(a);a.click();a.remove();
+    status.textContent='Solicitud de guardado enviada a Android.';
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }catch(e){status.textContent='Tu navegador bloqueó el guardado directo. Usa el botón verde.';}
+});
+document.getElementById('shareBtn').addEventListener('click',async()=>{
+  try{
+    const file=makeFile();
+    if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+      await navigator.share({files:[file],title:filename,text:'Documento CPS PowerFit 360'});
+      status.textContent='Selector de Android abierto.';
+      return;
+    }
+    status.textContent='Este navegador no permite compartir archivos. Mantén presionado el texto o usa el menú del navegador para guardar.';
+  }catch(e){if(e && e.name!=='AbortError')status.textContent='No se pudo abrir el selector de Android.';}
+});
+document.getElementById('backBtn').addEventListener('click',()=>{location.href='/cps.html';});
+</script>
 </body>
 </html>`;
 
@@ -58,6 +87,6 @@ export default async function handler(req, res) {
   res.setHeader("Pragma", "no-cache");
   res.setHeader("Expires", "0");
   res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'");
+  res.setHeader("Referrer-Policy", "same-origin");
   return res.end(html);
 }
