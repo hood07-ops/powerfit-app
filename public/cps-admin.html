@@ -146,8 +146,8 @@
       }
 
       async function grantTomo(alumnoId, routeCode, tomoNo) {
-        const reason = window.prompt("Motivo del desbloqueo admin:", "Gestion administrativa CPS");
-        if (!reason) return;
+        if (!window.confirm("¿Abrir este tomo como administrador?")) return;
+        const reason = "Prueba administrativa CPS";
         const { error } = await supabase.rpc("grant_powerfit_tomo_admin_secure", {
           p_alumno_id: Number(alumnoId),
           p_path_code: routeCode,
@@ -160,8 +160,8 @@
       }
 
       async function grantAll(alumnoId, routeCode) {
-        const reason = window.prompt("Motivo para abrir todos los tomos:", "Gestion administrativa CPS");
-        if (!reason) return;
+        if (!window.confirm("¿Abrir todos los tomos de esta disciplina?")) return;
+        const reason = "Prueba administrativa CPS";
         const { error } = await supabase.rpc("grant_powerfit_all_tomos_admin_secure", {
           p_alumno_id: Number(alumnoId),
           p_path_code: routeCode,
