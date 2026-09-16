@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PowerFit 360 · Asistencia</title>
+<!-- ATTENDANCE_BUILD=20260915-r1 -->
+<style>
+:root{color-scheme:dark;--bg:#07080b;--panel:#17191f;--line:#3b4050;--gold:#ffc400;--green:#17c964;--red:#ef233c;--text:#f8f8fb;--muted:#b7bdca}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif}main{max-width:680px;margin:auto;padding:22px 16px 50px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}h1{color:var(--gold);font-size:34px;margin:0 0 8px}.muted{color:var(--muted)}button{width:100%;border:0;border-radius:14px;padding:18px;font-size:20px;font-weight:900;background:#1677ff;color:white;cursor:pointer}button:disabled{opacity:.5}.ok{background:#0d3b21;border-color:var(--green)}.warn{background:#4a3510}.bad{background:#47151b;border-color:var(--red)}input{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#090a0d;color:white;margin-top:10px;font-size:16px}.status{font-size:20px;font-weight:900;margin:12px 0}.msg{font-weight:800;line-height:1.4}.back{color:var(--gold);font-weight:900}
+</style>
+</head>
+<body>
+<main>
+<section class="panel"><h1>CHECK-IN POWERFIT</h1><div class="muted">Escaneo QR · registro de asistencia</div></section>
+<section id="app" class="panel">Cargando...</section>
+</main>
+<script type="module">
+import{createClient}from"https://esm.sh/@supabase/supabase-js@2.105.4";
+const supabase=createClient("https://sabsmurhriohwmczaktn.supabase.co","sb_publishable_tj-oblYhYqN5sKWFrrxe1g_NzimyN0p");
+const app=document.querySelector('#app');
+const alumnoId=new URLSearchParams(location.search).get('alumno');
+let alumno=null;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){
+ if(!alumnoId){app.className='panel bad';app.innerHTML='<div class="msg">QR invalido: falta alumno.</div>';return}
+ const{data:userData}=await supabase.auth.getUser();
+ if(!userData.user){renderLogin();return}
+ app.innerHTML='Verificando permisos de administrador...';
+ const{data,error}=await supabase.rpc('get_powerfit_checkin_alumno',{p_alumno_id:String(alumnoId)});
+ if(error||!data){app.className='panel bad';app.innerHTML=`<div class="msg">No se pudo abrir el check-in.<br>${esc(error?.message||'Sin respuesta')}<br><br>Debes usar una cuenta Administrador PowerFit.</div><p><a class="back" href="/">Volver a PowerFit</a></p>`;return}
+ alumno=data;renderAlumno();
+}
+function renderLogin(){app.className='panel';app.innerHTML=`<h2>Inicia sesion como Administrador</h2><p class="muted">Este QR solo permite registrar asistencia a una cuenta autorizada.</p><input id="email" type="email" placeholder="Correo administrador"><input id="password" type="password" placeholder="Contraseña"><button id="login" style="margin-top:14px">INICIAR SESION Y CONTINUAR</button><div id="loginMsg" class="msg" style="margin-top:12px"></div>`;document.querySelector('#login').onclick=login}
+async function login(){const email=document.querySelector('#email').value.trim(),password=document.querySelector('#password').value,msg=document.querySelector('#loginMsg');msg.textContent='Ingresando...';const{error}=await supabase.auth.signInWithPassword({email,password});if(error){msg.textContent=`No se pudo iniciar sesion: ${error.message}`;return}await load()}
+function renderAlumno(){const estado=alumno.estado_pago||'Pendiente';app.className=`panel ${estado==='Pagado'?'ok':estado==='Moroso'?'bad':'warn'}`;app.innerHTML=`<h2 style="font-size:30px;margin:0">${esc(alumno.nombre)}</h2><div class="status">Estado pago: ${esc(estado)}</div><p>Vencimiento: <strong>${esc(alumno.fecha_vencimiento||'-')}</strong></p><p>XP: <strong>${esc(alumno.experiencia||0)}</strong> · Rango: <strong>${esc(alumno.rango||'Bronce')}</strong></p><button id="check" ${alumno.ya_registrado?'disabled':''}>${alumno.ya_registrado?'ASISTENCIA YA REGISTRADA':'REGISTRAR ASISTENCIA'}</button><div id="msg" class="msg" style="margin-top:16px"></div><p><a class="back" href="/">Volver a PowerFit</a></p>`;document.querySelector('#check').onclick=registrar}
+async function registrar(){const btn=document.querySelector('#check'),msg=document.querySelector('#msg');btn.disabled=true;btn.textContent='REGISTRANDO...';const{data,error}=await supabase.rpc('registrar_powerfit_checkin',{p_alumno_id:String(alumno.id)});if(error||!data){msg.textContent=`Error: ${error?.message||'No se pudo registrar.'}`;btn.disabled=false;btn.textContent='REGISTRAR ASISTENCIA';return}msg.textContent=data.message||'Asistencia registrada correctamente.';btn.textContent='ASISTENCIA YA REGISTRADA';alumno.ya_registrado=true}
+load();
+</script>
+</body>
+</html>
