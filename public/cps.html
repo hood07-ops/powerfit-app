@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PowerFit 360 CPS</title>
-    <!-- CPS_BUILD=20260915-r3 -->
+    <!-- CPS_BUILD=20260915-r4 -->
     <style>
       :root { color-scheme: dark; --bg:#08090c; --panel:#17191f; --soft:#242733; --line:#3a3f4f; --gold:#ffc400; --red:#ef233c; --green:#19c463; --text:#f7f7fb; --muted:#b7bdca; }
       * { box-sizing:border-box; } body { margin:0; font-family:Arial,Helvetica,sans-serif; background:var(--bg); color:var(--text); }
@@ -12,12 +12,15 @@
       h1,h2,h3 { margin:0; } h1 { color:var(--gold); font-size:clamp(24px,4vw,42px); } main { max-width:1180px; margin:0 auto; padding:22px 16px 54px; }
       button { border:0; border-radius:8px; padding:12px 14px; font-weight:800; cursor:pointer; background:var(--gold); color:#111; }
       button.secondary { background:var(--soft); color:var(--text); border:1px solid var(--line); } button.admin { background:var(--red); color:white; }
+      button:disabled { opacity:.55; cursor:not-allowed; }
       .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; } .panel { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:16px; }
       .route { border-left:5px solid var(--gold); } .muted { color:var(--muted); } .status { display:inline-flex; border-radius:999px; padding:5px 10px; font-weight:800; font-size:12px; background:var(--soft); color:var(--muted); }
       .status.unlocked { color:#07140b; background:var(--green); } .status.locked { color:white; background:#4a4f60; } .tomos { display:grid; gap:10px; margin-top:14px; }
       .tomo { display:grid; gap:10px; background:#20232c; border:1px solid var(--line); border-radius:8px; padding:12px; } .actions { display:flex; gap:10px; flex-wrap:wrap; }
       .section-title { margin:24px 0 10px; color:var(--gold); font-size:18px; } pre { white-space:pre-wrap; line-height:1.5; color:#eef1f8; font-family:Arial,Helvetica,sans-serif; }
-      .card-list { display:grid; gap:10px; } .tech-card { background:#20232c; border:1px solid var(--line); border-radius:8px; padding:12px; } .error { border-color:var(--red); color:#ffd4da; }
+      .card-list { display:grid; gap:10px; } .tech-card { background:#20232c; border:1px solid var(--line); border-radius:8px; padding:14px; display:grid; gap:12px; } .error { border-color:var(--red); color:#ffd4da; }
+      .upload-note { font-size:13px; color:var(--muted); line-height:1.4; }
+      .upload-state { font-size:13px; font-weight:700; min-height:18px; }
     </style>
   </head>
   <body>
@@ -31,7 +34,8 @@
       const humanError=(message)=>String(message).includes("ATTENDANCE_SCHEDULE_MISSING")?"Horario de asistencia aun no configurado. Esto se usara mas adelante para habilitar tu examen de nivel.":String(message||"No se pudo completar la accion.");
       const isUnlocked=(status)=>["UNLOCKED","IN_PROGRESS","CARDS_COMPLETE","TOMO_TEST_ELIGIBLE","TOMO_TEST_PASSED","TOMO_COMPLETED"].includes(status);
       const canDownload=(status)=>["UNLOCKED","GRANTED","TOMO_COMPLETED"].includes(status);
-      const safeName=(value)=>String(value||"").replace(/[^a-z0-9_-]+/gi,"_");
+      const safeName=(value)=>String(value||"").replace(/[^a-z0-9._-]+/gi,"_");
+      const videoFinal=(status)=>["VIDEO_APPROVED","LIVE_PENDING","LIVE_APPROVED","COMPLETED"].includes(String(status||"").toUpperCase());
 
       async function loadHome(){
         const {data:userData}=await supabase.auth.getUser(); if(!userData.user){stateEl.innerHTML="<strong>Sesion requerida.</strong><br><span class='muted'>Ingresa primero en PowerFit 360 y vuelve a abrir CPS.</span>";return;}
@@ -56,11 +60,51 @@
         const {data,error}=await supabase.rpc("get_powerfit_tomo_study_secure",{p_path_code:pathCode,p_tomo_no:Number(tomoNo)}); if(error) throw error; return data?.study||data;
       }
 
+      function renderCard(card,pathCode,tomoNo){
+        const status=card.video_status||card.status||"AVAILABLE";
+        const uploadAllowed=card.video_required&&!videoFinal(status);
+        return `<article class="tech-card">
+          <h3>${card.name}</h3>
+          <p>${card.objective||""}</p>
+          <p class="muted">${card.video_required?"Video requerido":"Sin video"} | ${card.live_required?"Evaluacion presencial":"Sin evaluacion presencial"} | Estado: ${card.status||"AVAILABLE"}</p>
+          ${card.video_required?`<div class="actions"><button ${uploadAllowed?"":"disabled"} data-video="${pathCode}:${card.id}:${tomoNo}">${uploadAllowed?(String(status).includes("CORRECTION")?"Reenviar video":"Subir video"):"Video aprobado"}</button></div><div class="upload-note">Formatos: MP4, WebM o MOV. Maximo 100 MB. El video queda privado y solo puede verlo el alumno, su entrenador autorizado o el administrador.</div><div class="upload-state" id="upload-state-${card.id}">${String(status).startsWith("VIDEO_")?`Estado del video: ${status}`:""}</div>`:""}
+        </article>`;
+      }
+
       async function loadDetail(pathCode,tomoNo){
         detailEl.innerHTML="<div class='panel'>Cargando tomo...</div>";
         try{const [detailResult,study]=await Promise.all([supabase.rpc("get_powerfit_tomo_detail_secure",{p_path_code:pathCode,p_tomo_no:Number(tomoNo)}),getStudy(pathCode,tomoNo)]); if(detailResult.error) throw detailResult.error; const detail=detailResult.data;
-          detailEl.innerHTML=`<h2 class="section-title">MATERIAL DE ESTUDIO</h2><section class="panel"><h3>${study?.title||detail.tomo?.title||`Tomo ${tomoNo}`}</h3><p class="muted">Version: ${study?.study_version||study?.version||detail.tomo?.study_version||"study-v1"} | Acceso: ${study?.access_status||detail.access_status}</p><pre>${study?.content||"Material no disponible."}</pre></section><h2 class="section-title">EVALUACION TECNICA</h2><section class="card-list">${(detail.cards||[]).map((card)=>`<article class="tech-card"><h3>${card.name}</h3><p>${card.objective||""}</p><p class="muted">${card.video_required?"Video requerido":"Sin video"} | ${card.live_required?"Evaluacion presencial":"Sin evaluacion presencial"} | Estado: ${card.status}</p></article>`).join("")||"<div class='panel'>No hay tarjetas tecnicas para este tomo.</div>"}</section>`;
+          detailEl.innerHTML=`<h2 class="section-title">MATERIAL DE ESTUDIO</h2><section class="panel"><h3>${study?.title||detail.tomo?.title||`Tomo ${tomoNo}`}</h3><p class="muted">Version: ${study?.study_version||study?.version||detail.tomo?.study_version||"study-v1"} | Acceso: ${study?.access_status||detail.access_status}</p><pre>${study?.content||"Material no disponible."}</pre></section><h2 class="section-title">EVALUACION TECNICA</h2><section class="card-list">${(detail.cards||[]).map((card)=>renderCard(card,pathCode,tomoNo)).join("")||"<div class='panel'>No hay tarjetas tecnicas para este tomo.</div>"}</section>`;
         }catch(error){detailEl.innerHTML=`<div class="panel error">${humanError(error.message)}</div>`;}
+      }
+
+      async function chooseVideo(pathCode,cardId,tomoNo){
+        const input=document.createElement("input");
+        input.type="file"; input.accept="video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov"; input.style.display="none";
+        input.addEventListener("change",async()=>{const file=input.files?.[0]; if(file) await uploadCardVideo(pathCode,Number(cardId),Number(tomoNo),file); input.remove();},{once:true});
+        document.body.appendChild(input); input.click();
+      }
+
+      async function uploadCardVideo(pathCode,cardId,tomoNo,file){
+        const statusEl=document.querySelector(`#upload-state-${cardId}`);
+        const allowed=["video/mp4","video/webm","video/quicktime"];
+        if(!allowed.includes(file.type)){alert("Formato no permitido. Usa MP4, WebM o MOV.");return;}
+        if(file.size>100*1024*1024){alert("El video supera el maximo de 100 MB.");return;}
+        if(statusEl)statusEl.textContent="Subiendo video... no cierres esta pantalla.";
+        let storagePath=null;
+        try{
+          const {data:userData,error:userError}=await supabase.auth.getUser(); if(userError||!userData.user) throw new Error("AUTH_REQUIRED");
+          const filename=`${Date.now()}_${safeName(file.name)}`;
+          storagePath=`${userData.user.id}/${safeName(pathCode)}/card_${cardId}/${filename}`;
+          const {error:uploadError}=await supabase.storage.from("cps-technique-submissions").upload(storagePath,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+          if(uploadError) throw uploadError;
+          if(statusEl)statusEl.textContent="Video subido. Registrando envio para evaluacion...";
+          const {data,error}=await supabase.rpc("submit_powerfit_card_video_secure",{p_path_code:pathCode,p_card_id:Number(cardId),p_storage_path:storagePath,p_original_filename:file.name});
+          if(error){await supabase.storage.from("cps-technique-submissions").remove([storagePath]);throw error;}
+          if(statusEl)statusEl.textContent="Video enviado correctamente. Estado: EN REVISION.";
+          alert("Video enviado correctamente para evaluacion.");
+          await loadDetail(pathCode,tomoNo);
+        }catch(error){if(statusEl)statusEl.textContent=`Error: ${humanError(error.message)}`;alert(humanError(error.message));}
       }
 
       async function downloadTomo(pathCode,tomoNo){
@@ -77,14 +121,14 @@
           document.body.appendChild(a); a.click();
           if(fallbackWindow){fallbackWindow.location.replace(url);}
           setTimeout(()=>{a.remove();URL.revokeObjectURL(url);},60000);
-          stateEl.innerHTML=`<strong>Descarga preparada:</strong> ${filename}<br><span class="muted">Si tu navegador no la descargó automáticamente, se abrió una copia segura en otra pestaña para guardarla.</span>`;
+          stateEl.innerHTML=`<strong>Descarga preparada:</strong> ${filename}<br><span class="muted">Si tu navegador no la descargo automaticamente, se abrio una copia segura en otra pestana para guardarla.</span>`;
         }catch(error){if(fallbackWindow)fallbackWindow.close();alert(humanError(error.message));}
       }
 
       async function buyTomo(pathCode,tomoNo){const {data,error}=await supabase.functions.invoke("create-preference",{body:{payment_type:"cps_tomo",alumno_id:home.student_alumno_id,path_code:pathCode,tomo_no:tomoNo}});if(error||data?.error){alert(humanError(error?.message||data?.message));return;}window.location.href=data.init_point||data.sandbox_init_point;}
       async function grant(pathCode,tomoNo){if(!window.confirm("¿Abrir este tomo como administrador?"))return;const {error}=await supabase.rpc("grant_powerfit_tomo_admin_secure",{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_tomo_no:Number(tomoNo),p_reason:"Prueba administrativa CPS"});if(error)alert(humanError(error.message));await loadHome();}
       async function grantAll(pathCode){if(!window.confirm("¿Abrir todos los tomos de esta disciplina?"))return;const {error}=await supabase.rpc("grant_powerfit_all_tomos_admin_secure",{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_reason:"Prueba administrativa CPS"});if(error)alert(humanError(error.message));await loadHome();}
-      document.addEventListener("click",(event)=>{const target=event.target.closest("button");if(!target)return;const detail=target.dataset.detail?.split(":"),download=target.dataset.download?.split(":"),buy=target.dataset.buy?.split(":"),grantOne=target.dataset.grant?.split(":");if(detail)loadDetail(detail[0],Number(detail[1]));if(download)downloadTomo(download[0],Number(download[1]));if(buy)buyTomo(buy[0],Number(buy[1]));if(grantOne)grant(grantOne[0],Number(grantOne[1]));if(target.dataset.all)grantAll(target.dataset.all);});
+      document.addEventListener("click",(event)=>{const target=event.target.closest("button");if(!target)return;const detail=target.dataset.detail?.split(":"),download=target.dataset.download?.split(":"),buy=target.dataset.buy?.split(":"),grantOne=target.dataset.grant?.split(":"),video=target.dataset.video?.split(":");if(detail)loadDetail(detail[0],Number(detail[1]));if(download)downloadTomo(download[0],Number(download[1]));if(buy)buyTomo(buy[0],Number(buy[1]));if(grantOne)grant(grantOne[0],Number(grantOne[1]));if(video)chooseVideo(video[0],Number(video[1]),Number(video[2]));if(target.dataset.all)grantAll(target.dataset.all);});
       loadHome();
     </script>
   </body>
