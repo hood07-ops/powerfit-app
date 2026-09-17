@@ -1,0 +1,13 @@
+{
+  "name": "@powerfit/powerfit360",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:admin": "vite build --mode management",
+    "build:coach": "vite build --mode professor_full",
+    "build:alumno": "vite build --mode student"
+  }
+}
