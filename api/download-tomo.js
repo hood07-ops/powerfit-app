@@ -1,3 +1,5 @@
+import { Buffer } from 'node:buffer';
+
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 
 function safeFilename(value) {
