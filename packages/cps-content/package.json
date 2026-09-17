@@ -1,0 +1,7 @@
+{
+  "name": "@powerfit/cps-content",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": "./src/catalog.js"
+}
