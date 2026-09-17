@@ -28,6 +28,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Validate shared CPS packages
+        run: node scripts/validate-cps-packages.mjs
+
       - name: Lint
         run: npm run lint
 
