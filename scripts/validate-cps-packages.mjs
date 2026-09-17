@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import {
   APP_ORIGINS,
   CPS_DISCIPLINES,
@@ -93,5 +94,24 @@ assert.equal(PAYMENT_PROVIDERS.MERCADOPAGO, 'mercadopago');
 assert.ok(PAYMENT_STATUS.includes('approved'));
 assert.deepEqual(parsePaymentExternalReference(externalReference), { origin: 'cps', productType: 'tomo', productId: '1', userId: 'test-user' });
 assert.equal(paymentUnlockKey({ origin: 'powerfit360', productType: 'membership', productId: 'gym-basic', userId: 'u1' }), 'powerfit360:membership:gym-basic:u1');
+
+const cpsPage = await readFile(new URL('../public/cps.html', import.meta.url), 'utf8');
+assert.match(cpsPage, /Abrir tomo \/ Subir videos/);
+assert.match(cpsPage, /new Blob\(\[text\]/);
+assert.match(cpsPage, /const canDownload=s=>isUnlocked\(s\)/);
+assert.doesNotMatch(cpsPage, /form\.action='\/api\/download-tomo'/);
+assert.match(cpsPage, /cps-technique-submissions/);
+assert.match(cpsPage, /submit_powerfit_card_video_secure/);
+
+const downloadEndpoint = await readFile(new URL('../api/download-tomo.js', import.meta.url), 'utf8');
+assert.match(downloadEndpoint, /new URLSearchParams\(raw\)/);
+assert.match(downloadEndpoint, /Content-Disposition/);
+assert.match(downloadEndpoint, /MAX_CONTENT_BYTES/);
+
+const secureEvaluationMigration = await readFile(new URL('../supabase/migrations/20260917033202_secure_cps_evaluation_writes.sql', import.meta.url), 'utf8');
+assert.match(secureEvaluationMigration, /security definer/i);
+assert.match(secureEvaluationMigration, /set search_path = ''/i);
+assert.match(secureEvaluationMigration, /revoke all on function public\.review_powerfit_card_video_secure/);
+assert.match(secureEvaluationMigration, /revoke all on function public\.save_powerfit_live_assessment_secure/);
 
 console.log('CPS monorepo shared package validation: PASS');
