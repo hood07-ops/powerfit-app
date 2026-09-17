@@ -3,19 +3,26 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "engines": {
     "node": "24.x"
   },
   "scripts": {
     "dev": "vite apps/powerfit360 --config apps/powerfit360/vite.config.js",
+    "dev:powerfit": "npm run dev --workspace @powerfit/powerfit360",
+    "dev:cps": "npm run dev --workspace @powerfit/cps",
     "build": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js",
+    "build:powerfit": "npm run build --workspace @powerfit/powerfit360",
     "build:admin": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode management",
     "build:coach": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode professor_full",
     "build:alumno": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode student",
     "build:management": "npm run build:admin",
     "build:student": "npm run build:alumno",
     "build:professor": "npm run build:coach",
-    "build:cps": "vite build --config apps/cps/vite.config.js",
+    "build:cps": "npm run build --workspace @powerfit/cps",
     "lint": "eslint .",
     "preview": "vite preview apps/powerfit360 --config apps/powerfit360/vite.config.js"
   },
