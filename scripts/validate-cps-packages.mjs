@@ -29,12 +29,29 @@ import {
   nextAttemptNumber,
   validateTechniqueVideoFile,
 } from '../packages/cps-video/src/index.js';
+import {
+  TOMO_TEST_STATUS,
+  FINAL_EXAM_STATUS,
+  canPromoteStage,
+  nextStageOrder,
+  isTomoComplete,
+} from '../packages/cps-graduation/src/index.js';
+import {
+  calculateSessionLoad,
+  completionPercent,
+  TRAINING_SESSION_STATUS,
+} from '../packages/training-engine/src/index.js';
+import {
+  PAYMENT_PROVIDERS,
+  PAYMENT_STATUS,
+  parsePaymentExternalReference,
+  paymentUnlockKey,
+} from '../packages/payments/src/index.js';
 
 assert.equal(CPS_TOMOS.length, 12, 'Current production schema supports exactly 12 CPS tomos');
 assert.deepEqual(CPS_TOMOS.map((item) => item.tomoNo), Array.from({ length: 12 }, (_, index) => index + 1));
 assert.ok(CPS_TOMOS.every((item) => item.priceClp === CPS_TOMO_PRICE_CLP));
 assert.equal(CPS_TOMO_PRICE_CLP, 5000);
-
 assert.equal(CPS_STAGES.BOXING.length, 7);
 assert.equal(CPS_STAGES.KICKBOXING.length, 7);
 assert.equal(getCpsStage(CPS_ROUTE_CODES.BOXING, 1)?.label, 'Boxeo Nivel 1');
@@ -44,53 +61,37 @@ assert.equal(getCpsTomo(13), null);
 
 assert.ok(CPS_DISCIPLINES.includes('boxing'));
 assert.equal(CPS_ROLES.ADMIN, 'admin');
-assert.equal(
-  makePaymentExternalReference({
-    origin: APP_ORIGINS.CPS,
-    productType: 'tomo',
-    productId: 1,
-    userId: 'test-user',
-  }),
-  'cps:tomo:1:test-user',
-);
+const externalReference = makePaymentExternalReference({ origin: APP_ORIGINS.CPS, productType: 'tomo', productId: 1, userId: 'test-user' });
+assert.equal(externalReference, 'cps:tomo:1:test-user');
 
 assert.equal(VIDEO_REVIEW_MAX_SCORE, 100);
 assert.equal(LIVE_ASSESSMENT_MAX_SCORE, 100);
 assert.ok(CARD_PROGRESS_STATUSES.includes('VIDEO_UNDER_REVIEW'));
 assert.ok(REVIEW_DECISIONS.includes('APPROVED'));
-assert.equal(calculateVideoReviewScore({
-  guard_score: 20,
-  base_score: 15,
-  mechanics_score: 15,
-  kinetic_chain_score: 15,
-  coordination_score: 10,
-  recovery_score: 10,
-  control_score: 10,
-  complete_execution_score: 5,
-}), 100);
-assert.equal(calculateLiveAssessmentScore({
-  reproduce_score: 15,
-  guard_score: 15,
-  base_score: 15,
-  correction_score: 10,
-  speed_score: 10,
-  movement_score: 10,
-  combination_score: 10,
-  partner_score: 10,
-  safety_score: 5,
-}), 100);
+assert.equal(calculateVideoReviewScore({ guard_score: 20, base_score: 15, mechanics_score: 15, kinetic_chain_score: 15, coordination_score: 10, recovery_score: 10, control_score: 10, complete_execution_score: 5 }), 100);
+assert.equal(calculateLiveAssessmentScore({ reproduce_score: 15, guard_score: 15, base_score: 15, correction_score: 10, speed_score: 10, movement_score: 10, combination_score: 10, partner_score: 10, safety_score: 5 }), 100);
 assert.equal(canProceedToLive({ videoRequired: true, videoStatus: 'VIDEO_APPROVED' }), true);
 assert.equal(isCardComplete({ videoStatus: 'VIDEO_APPROVED', liveStatus: 'LIVE_APPROVED' }), true);
 
 assert.equal(CPS_VIDEO_BUCKET, 'cps-technique-videos');
-assert.equal(
-  buildTechniqueVideoPath({ alumnoId: 7, routeCode: 'boxing', cardId: 3, attemptNo: 2 }),
-  '7/BOXING/3/attempt-2.mp4',
-);
+assert.equal(buildTechniqueVideoPath({ alumnoId: 7, routeCode: 'boxing', cardId: 3, attemptNo: 2 }), '7/BOXING/3/attempt-2.mp4');
 assert.equal(nextAttemptNumber([{ attempt_no: 1 }, { attempt_no: 3 }]), 4);
-assert.deepEqual(
-  validateTechniqueVideoFile({ type: 'video/mp4', size: 1024 }),
-  { ok: true, reason: null },
-);
+assert.deepEqual(validateTechniqueVideoFile({ type: 'video/mp4', size: 1024 }), { ok: true, reason: null });
 
-console.log('CPS package validation: PASS');
+assert.ok(TOMO_TEST_STATUS.includes('PASSED'));
+assert.ok(FINAL_EXAM_STATUS.includes('PROMOTION_READY'));
+assert.equal(canPromoteStage({ finalExamStatus: 'PASSED', criticalFail: false, coachApproved: true }), true);
+assert.equal(nextStageOrder(6), 7);
+assert.equal(nextStageOrder(7), null);
+assert.equal(isTomoComplete('TOMO_COMPLETED'), true);
+
+assert.ok(TRAINING_SESSION_STATUS.includes('COMPLETED'));
+assert.equal(calculateSessionLoad({ durationMinutes: 60, srpe: 7 }), 420);
+assert.equal(completionPercent({ completed: 3, total: 4 }), 75);
+
+assert.equal(PAYMENT_PROVIDERS.MERCADOPAGO, 'mercadopago');
+assert.ok(PAYMENT_STATUS.includes('approved'));
+assert.deepEqual(parsePaymentExternalReference(externalReference), { origin: 'cps', productType: 'tomo', productId: '1', userId: 'test-user' });
+assert.equal(paymentUnlockKey({ origin: 'powerfit360', productType: 'membership', productId: 'gym-basic', userId: 'u1' }), 'powerfit360:membership:gym-basic:u1');
+
+console.log('CPS monorepo shared package validation: PASS');
