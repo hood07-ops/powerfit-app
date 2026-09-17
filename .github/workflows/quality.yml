@@ -8,7 +8,7 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     steps:
       - name: Checkout
@@ -34,14 +34,29 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Build default
+      - name: Build root default
         run: npm run build
 
-      - name: Build admin
+      - name: Build root admin
         run: npm run build:admin
 
-      - name: Build coach
+      - name: Build root coach
         run: npm run build:coach
 
-      - name: Build alumno
+      - name: Build root alumno
         run: npm run build:alumno
+
+      - name: Build app PowerFit360 default
+        run: npx vite build apps/powerfit360 --config apps/powerfit360/vite.config.js
+
+      - name: Build app PowerFit360 admin
+        run: npx vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode management
+
+      - name: Build app PowerFit360 coach
+        run: npx vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode professor_full
+
+      - name: Build app PowerFit360 alumno
+        run: npx vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode student
+
+      - name: Build app CPS
+        run: npx vite build --config apps/cps/vite.config.js

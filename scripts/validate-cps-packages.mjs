@@ -95,7 +95,7 @@ assert.ok(PAYMENT_STATUS.includes('approved'));
 assert.deepEqual(parsePaymentExternalReference(externalReference), { origin: 'cps', productType: 'tomo', productId: '1', userId: 'test-user' });
 assert.equal(paymentUnlockKey({ origin: 'powerfit360', productType: 'membership', productId: 'gym-basic', userId: 'u1' }), 'powerfit360:membership:gym-basic:u1');
 
-const cpsPage = await readFile(new URL('../public/cps.html', import.meta.url), 'utf8');
+const cpsPage = await readFile(new URL('../apps/cps/index.html', import.meta.url), 'utf8');
 assert.match(cpsPage, /Abrir tomo \/ Subir videos/);
 assert.match(cpsPage, /new Blob\(\[text\]/);
 assert.match(cpsPage, /const canDownload=s=>isUnlocked\(s\)/);
