@@ -7,16 +7,17 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:admin": "vite build --mode management",
-    "build:coach": "vite build --mode professor_full",
-    "build:alumno": "vite build --mode student",
-    "build:management": "vite build --mode management",
-    "build:student": "vite build --mode student",
-    "build:professor": "vite build --mode professor_full",
+    "dev": "vite apps/powerfit360 --config apps/powerfit360/vite.config.js",
+    "build": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js",
+    "build:admin": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode management",
+    "build:coach": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode professor_full",
+    "build:alumno": "vite build apps/powerfit360 --config apps/powerfit360/vite.config.js --mode student",
+    "build:management": "npm run build:admin",
+    "build:student": "npm run build:alumno",
+    "build:professor": "npm run build:coach",
+    "build:cps": "vite build --config apps/cps/vite.config.js",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview apps/powerfit360 --config apps/powerfit360/vite.config.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.4",
