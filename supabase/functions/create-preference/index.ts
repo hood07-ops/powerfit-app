@@ -1,9 +1,25 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+const allowedOrigins = new Set([
+  'https://powerfit-app-alpha.vercel.app',
+  'https://cps-staging.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost',
+  'capacitor://localhost',
+])
+
+function corsHeaders(req: Request) {
+  const origin = req.headers.get('origin') || ''
+  const allowed = allowedOrigins.has(origin) ? origin : 'https://powerfit-app-alpha.vercel.app'
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'X-Content-Type-Options': 'nosniff',
+    'Referrer-Policy': 'no-referrer',
+  }
 }
 
 const PLANS = {
@@ -19,8 +35,21 @@ const DEFAULT_POWERFIT_APP_URL = 'https://powerfit-app-cv9o.vercel.app'
 const DEFAULT_MERCADOPAGO_WEBHOOK_URL =
   'https://sabsmurhriohwmczaktn.supabase.co/functions/v1/mercadopago-webhook'
 
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+function jsonResponse(req: Request, body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders(req), ...extraHeaders, 'Content-Type': 'application/json' },
+  })
+}
+
+async function enforceRateLimit(serverDb: any, key: string, limit: number, windowSeconds: number) {
+  const { data, error } = await serverDb.rpc('server_consume_powerfit_rate_limit', {
+    p_bucket_key: key,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  })
+  if (error) throw new Error('RATE_LIMIT_CHECK_FAILED')
+  return data as { allowed?: boolean; retry_after_seconds?: number }
 }
 
 function safeMessage(value: unknown) {
@@ -33,8 +62,8 @@ function safeMessage(value: unknown) {
 
 Deno.serve(async (req) => {
   try {
-    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
-    if (req.method !== 'POST') return jsonResponse({ error: 'METHOD_NOT_ALLOWED', message: 'Metodo no permitido' }, 405)
+    if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders(req) })
+    if (req.method !== 'POST') return jsonResponse(req, { error: 'METHOD_NOT_ALLOWED', message: 'Metodo no permitido' }, 405)
     const accessToken = Deno.env.get('MP_ACCESS_TOKEN')
     const appUrl = Deno.env.get('POWERFIT_APP_URL') || DEFAULT_POWERFIT_APP_URL
     const webhookUrl = Deno.env.get('MERCADOPAGO_WEBHOOK_URL') || DEFAULT_MERCADOPAGO_WEBHOOK_URL
@@ -49,7 +78,7 @@ Deno.serve(async (req) => {
       !serviceRoleKey ? 'SUPABASE_SERVICE_ROLE_KEY' : '',
     ].filter(Boolean)
     if (missingConfig.length) {
-      return jsonResponse(
+      return jsonResponse(req, 
         {
           error: 'PAYMENT_CONFIGURATION_ERROR',
           message: `Configuracion de pago incompleta: ${missingConfig.join(', ')}`,
@@ -60,7 +89,9 @@ Deno.serve(async (req) => {
     const userDb = createClient(supabaseUrl, anonKey, { global: { headers: { Authorization: authorization } } })
     const { data: authData, error: authError } = await userDb.auth.getUser()
     const authUser = authData?.user
-    if (authError || !authUser) return jsonResponse({ error: 'UNAUTHORIZED', message: 'Sesion no autorizada.' }, 401)
+    if (authError || !authUser) return jsonResponse(req, { error: 'UNAUTHORIZED', message: 'Sesion no autorizada.' }, 401)
+    const contentLength = Number(req.headers.get('content-length') || '0')
+    if (contentLength > 32768) return jsonResponse(req, { error: 'PAYLOAD_TOO_LARGE' }, 413)
     const body = await req.json().catch(() => null)
     const paymentType = String(body?.payment_type || body?.tipo || 'membership').trim().toLowerCase()
     const alumnoId = String(body?.alumno_id || '').trim()
@@ -69,14 +100,22 @@ Deno.serve(async (req) => {
     const cpsTomoNo = Number(body?.tomo_no || 0)
     const plan = PLANS[planCode]
     const isCpsTomo = paymentType === 'cps_tomo'
-    if (!alumnoId || (!isCpsTomo && !plan)) return jsonResponse({ error: 'INVALID_PAYMENT_DATA', message: 'Datos de pago invalidos' }, 400)
-    if (isCpsTomo && (!['BOXING', 'KICKBOXING'].includes(cpsPath) || !Number.isInteger(cpsTomoNo) || cpsTomoNo < 1 || cpsTomoNo > 12)) {
-      return jsonResponse({ error: 'INVALID_CPS_TOMO_PAYMENT', message: 'Datos CPS invalidos.' }, 400)
+    if (!alumnoId || (!isCpsTomo && !plan)) return jsonResponse(req, { error: 'INVALID_PAYMENT_DATA', message: 'Datos de pago invalidos' }, 400)
+    if (isCpsTomo && (!['BOXING', 'KICKBOXING'].includes(cpsPath) || !Number.isInteger(cpsTomoNo) || cpsTomoNo < 1 || cpsTomoNo > 15)) {
+      return jsonResponse(req, { error: 'INVALID_CPS_TOMO_PAYMENT', message: 'Datos CPS invalidos.' }, 400)
     }
-    const serverDb = createClient(supabaseUrl, serviceRoleKey)
+    const serverDb = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+    const shortLimit = await enforceRateLimit(serverDb, `create-preference:user:${authUser.id}`, 8, 60)
+    if (!shortLimit.allowed) {
+      return jsonResponse(req, { error: 'RATE_LIMITED' }, 429, { 'Retry-After': String(shortLimit.retry_after_seconds || 60) })
+    }
+    const hourlyLimit = await enforceRateLimit(serverDb, `create-preference-hour:user:${authUser.id}`, 30, 3600)
+    if (!hourlyLimit.allowed) {
+      return jsonResponse(req, { error: 'RATE_LIMITED' }, 429, { 'Retry-After': String(hourlyLimit.retry_after_seconds || 3600) })
+    }
     const { data: alumno, error: alumnoError } = await serverDb.from('alumnos').select('id,user_id,nombre').eq('id', alumnoId).maybeSingle()
-    if (alumnoError || !alumno) return jsonResponse({ error: 'STUDENT_NOT_FOUND', message: 'Alumno no encontrado' }, 404)
-    if (String(alumno.user_id || '') !== authUser.id) return jsonResponse({ error: 'FORBIDDEN', message: 'No puedes iniciar el pago de este alumno.' }, 403)
+    if (alumnoError || !alumno) return jsonResponse(req, { error: 'STUDENT_NOT_FOUND', message: 'Alumno no encontrado' }, 404)
+    if (String(alumno.user_id || '') !== authUser.id) return jsonResponse(req, { error: 'FORBIDDEN', message: 'No puedes iniciar el pago de este alumno.' }, 403)
     const nombre = String(alumno.nombre || authUser.email || 'Alumno PowerFit').trim()
     let cpsQuote: Record<string, unknown> | null = null
     if (isCpsTomo) {
@@ -87,7 +126,7 @@ Deno.serve(async (req) => {
         p_user_id: authUser.id,
       })
       if (quoteError || !quote) {
-        return jsonResponse(
+        return jsonResponse(req, 
           {
             error: 'CPS_PAYMENT_QUOTE_ERROR',
             message: quoteError?.message || 'No se pudo calcular el precio del tomo CPS.',
@@ -102,7 +141,7 @@ Deno.serve(async (req) => {
       : `${plan.name} PowerFit 360 - ${nombre}`
     const itemAmount = isCpsTomo ? Number(cpsQuote?.amount_clp || 0) : plan.amount
     if (!Number.isFinite(itemAmount) || itemAmount <= 0) {
-      return jsonResponse({ error: 'INVALID_PAYMENT_AMOUNT', message: 'Monto de pago invalido.' }, 400)
+      return jsonResponse(req, { error: 'INVALID_PAYMENT_AMOUNT', message: 'Monto de pago invalido.' }, 400)
     }
     const preference = {
       items: [{ id: isCpsTomo ? `cps-${cpsPath}-${cpsTomoNo}-${alumnoId}` : `${planCode}-${alumnoId}`, title: itemTitle, quantity: 1, unit_price: itemAmount, currency_id: 'CLP' }],
@@ -134,7 +173,7 @@ Deno.serve(async (req) => {
       }
     }
     if (!response.ok) {
-      return jsonResponse(
+      return jsonResponse(req, 
         {
           error: 'MERCADOPAGO_PREFERENCE_ERROR',
           message: safeMessage(data),
@@ -143,7 +182,7 @@ Deno.serve(async (req) => {
         502,
       )
     }
-    return jsonResponse({
+    return jsonResponse(req, {
       preferenceId: data.id,
       id: data.id,
       init_point: data.init_point,
@@ -156,7 +195,7 @@ Deno.serve(async (req) => {
       amount: itemAmount,
     })
   } catch (error) {
-    return jsonResponse(
+    return jsonResponse(req, 
       {
         error: 'CREATE_PREFERENCE_ERROR',
         message: error instanceof Error ? error.message : 'Error inesperado creando preferencia.',
