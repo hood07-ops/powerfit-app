@@ -49,8 +49,8 @@ import {
   paymentUnlockKey,
 } from '../packages/payments/src/index.js';
 
-assert.equal(CPS_TOMOS.length, 12, 'Current production schema supports exactly 12 CPS tomos');
-assert.deepEqual(CPS_TOMOS.map((item) => item.tomoNo), Array.from({ length: 12 }, (_, index) => index + 1));
+assert.equal(CPS_TOMOS.length, 15, 'Production schema supports exactly 15 CPS tomos');
+assert.deepEqual(CPS_TOMOS.map((item) => item.tomoNo), Array.from({ length: 15 }, (_, index) => index + 1));
 assert.ok(CPS_TOMOS.every((item) => item.priceClp === CPS_TOMO_PRICE_CLP));
 assert.equal(CPS_TOMO_PRICE_CLP, 5000);
 assert.equal(CPS_STAGES.BOXING.length, 7);
@@ -58,7 +58,10 @@ assert.equal(CPS_STAGES.KICKBOXING.length, 7);
 assert.equal(getCpsStage(CPS_ROUTE_CODES.BOXING, 1)?.label, 'Boxeo Nivel 1');
 assert.equal(getCpsStage(CPS_ROUTE_CODES.KICKBOXING, 7)?.label, 'Negro');
 assert.equal(getCpsTomo(12)?.title, 'Análisis Técnico y Video');
-assert.equal(getCpsTomo(13), null);
+assert.equal(getCpsTomo(13)?.title, 'Programas de Entrenamiento');
+assert.equal(getCpsTomo(14)?.title, 'Errores y Correcciones');
+assert.equal(getCpsTomo(15)?.title, 'Maestría, Coaching y Legado');
+assert.equal(getCpsTomo(16), null);
 
 assert.ok(CPS_DISCIPLINES.includes('boxing'));
 assert.equal(CPS_ROLES.ADMIN, 'admin');
