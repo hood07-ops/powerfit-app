@@ -21,8 +21,34 @@ export default function ChatWidget({ student, idioma = 'es' }) {
     [idioma],
   )
 
-  async function send() {
-    const message = input.trim()
+  const suggestions = idioma === 'en'
+    ? ['How many AI generations do I have?', 'How do I generate a workout?', 'Where do I upload a CPS video?', 'How do I advance in CPS?']
+    : ['¿Cuántas generaciones IA tengo?', '¿Cómo genero una planificación?', '¿Dónde subo un video CPS?', '¿Cómo avanzo en CPS?']
+
+  async function openChatGPT() {
+    const transcript = messages
+      .slice(-8)
+      .map((item) => `${item.role === 'assistant' ? 'Dastan' : 'Usuario'}: ${item.content}`)
+      .join('\n')
+    const context = [
+      'Quiero continuar esta conversación en ChatGPT con Dastan.',
+      'Contexto: estoy usando PowerFit360 / CPS.',
+      student?.id ? `Alumno ID interno: ${student.id}` : 'Usuario público/no autenticado.',
+      'Conversación reciente:',
+      transcript,
+      'Continúa ayudándome desde este punto y no asumas que puedes ejecutar acciones en la app salvo que una herramienta conectada lo permita.',
+    ].join('\n\n')
+
+    try {
+      await navigator.clipboard.writeText(context)
+    } catch {
+      // If clipboard is unavailable, ChatGPT still opens and the user can continue manually.
+    }
+    window.open('https://chatgpt.com/', '_blank', 'noopener,noreferrer')
+  }
+
+  async function sendText(messageText) {
+    const message = String(messageText || '').trim()
     if (!message || sending) return
 
     const nextMessages = [...messages, { role: 'user', content: message }]
@@ -70,6 +96,10 @@ export default function ChatWidget({ student, idioma = 'es' }) {
     }
   }
 
+  async function send() {
+    await sendText(input)
+  }
+
   return (
     <>
       {open && (
@@ -115,8 +145,31 @@ export default function ChatWidget({ student, idioma = 'es' }) {
             )}
           </div>
 
+          <div className="px-3 pt-2 border-t border-zinc-800 bg-black">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {suggestions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  onClick={() => sendText(question)}
+                  disabled={sending}
+                  className="shrink-0 rounded-full border border-zinc-700 bg-zinc-900 px-3 py-2 text-xs text-zinc-200 hover:border-red-500 disabled:opacity-40"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={openChatGPT}
+              className="mb-2 w-full rounded-2xl border border-green-600/70 bg-green-950/40 px-3 py-2 text-sm font-black text-green-300 hover:bg-green-900/50"
+            >
+              {idioma === 'en' ? 'Continue with Dastan in ChatGPT' : 'Continuar con Dastan en ChatGPT'}
+            </button>
+          </div>
+
           <form
-            className="p-3 border-t border-zinc-800 bg-black flex gap-2"
+            className="p-3 bg-black flex gap-2"
             onSubmit={(event) => {
               event.preventDefault()
               send()
