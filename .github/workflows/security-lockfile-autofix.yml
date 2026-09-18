@@ -2,29 +2,43 @@ name: Security Lockfile Autofix
 
 on:
   push:
-    branches: [security/max-hardening]
+    branches:
+      - security/max-hardening
 
 permissions:
   contents: write
 
 jobs:
   fix-lock:
-    if: github.event.head_commit.message != 'security: auto-fix lockfile'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: security/max-hardening
+      - name: Stop after autofix commit
+        id: guard
+        run: |
+          if [ "$(git log -1 --pretty=%s)" = "security: auto-fix lockfile" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.guard.outputs.skip != 'true'
         with:
           node-version: 24
           cache: npm
-      - run: npm ci
+      - name: Install
+        if: steps.guard.outputs.skip != 'true'
+        run: npm ci
       - name: Apply audit-safe lockfile updates
+        if: steps.guard.outputs.skip != 'true'
         run: npm audit fix --package-lock-only
       - name: Verify production audit
+        if: steps.guard.outputs.skip != 'true'
         run: npm audit --omit=dev --audit-level=high
       - name: Commit lockfile
+        if: steps.guard.outputs.skip != 'true'
         run: |
           if git diff --quiet -- package-lock.json; then
             echo "No lockfile changes required"
