@@ -37,6 +37,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: MCP smoke test
+        run: node --experimental-strip-types scripts/test-mcp.mjs
+
       - name: Build root default
         run: npm run build
 
