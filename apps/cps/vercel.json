@@ -1,19 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "redirects": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "query",
-          "key": "checkin",
-          "value": "(?<alumno>[^&]+)"
-        }
-      ],
-      "destination": "/checkin.html?alumno=:alumno",
-      "permanent": false
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
@@ -49,7 +35,7 @@
       ]
     },
     {
-      "source": "/cps.html",
+      "source": "/",
       "headers": [
         {
           "key": "Cache-Control",
@@ -59,15 +45,6 @@
     },
     {
       "source": "/cps-admin.html",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-store, max-age=0"
-        }
-      ]
-    },
-    {
-      "source": "/checkin.html",
       "headers": [
         {
           "key": "Cache-Control",

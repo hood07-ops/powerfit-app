@@ -31,6 +31,9 @@ jobs:
       - name: Validate shared CPS packages
         run: node scripts/validate-cps-packages.mjs
 
+      - name: Security check
+        run: node scripts/security-check.mjs
+
       - name: Lint
         run: npm run lint
 
