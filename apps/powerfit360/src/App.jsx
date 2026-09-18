@@ -13,6 +13,7 @@ import MetodosPage from './pages/MetodosPage'
 import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RutinasPage from './pages/RutinasPage'
+import ChatWidget from './components/ChatWidget'
 
 function Btn({ text, set, disabled, active, show = true }) {
   if (!show) return null
@@ -3688,6 +3689,7 @@ export default function App() {
         onEliminarGeneraciones={eliminarGeneraciones}
         onEliminarAlumno={eliminarAlumno}
       />
+      <ChatWidget student={student} idioma={idioma} />
       <div className="fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
         {POWERFIT_SIGNATURE}
       </div>
