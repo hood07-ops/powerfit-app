@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import OpenAI from "npm:openai";
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { findKnowledgeAnswer } from "./knowledge.ts";
 
 const allowedOrigins = new Set([
   "https://powerfit-app-alpha.vercel.app",
@@ -165,10 +166,15 @@ Deno.serve(async (req: Request) => {
   if (!hourly.allowed) return json(req, { ok:false, error:"RATE_LIMITED" }, 429, { "Retry-After":String(hourly.retry_after_seconds || 3600) });
 
   let reply: string | null = null;
-  let mode = "fallback";
-  let provider = "powerfit-rules";
+  let mode = "knowledge";
+  let provider = "powerfit-knowledge";
 
-  if (apiKey) {
+  const knowledgeHit = findKnowledgeAnswer(message, surface, locale);
+  if (knowledgeHit) {
+    reply = knowledgeHit.reply;
+  }
+
+  if (!reply && apiKey) {
     try {
       const client = new OpenAI({ apiKey, timeout: 20000, maxRetries: 0 });
       const response = await client.responses.create({
@@ -190,7 +196,11 @@ Deno.serve(async (req: Request) => {
     }
   }
 
-  if (!reply) reply = fallbackReply(message, surface, locale);
+  if (!reply) {
+    reply = fallbackReply(message, surface, locale);
+    mode = "fallback";
+    provider = "powerfit-rules";
+  }
 
   return json(req, {
     ok:true,
