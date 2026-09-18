@@ -309,7 +309,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="cps-mobile-safe space-y-6">
       <section className="rounded-3xl border border-red-600 bg-zinc-900 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -339,7 +339,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
             const completed = tomos.filter((tomo) => tomo.access_status === 'TOMO_COMPLETED').length
 
             return (
-              <article key={route.code} className="rounded-3xl border border-zinc-700 bg-black p-4 sm:p-5">
+              <article key={route.code} className="rounded-3xl border border-zinc-700/80 bg-gradient-to-b from-zinc-950 to-black p-4 sm:p-5 shadow-xl shadow-black/20">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-2xl font-black text-white">{ROUTE_LABELS[route.code] || route.name}</h3>
@@ -357,7 +357,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                   <CombatMetric label="Tomos completos" value={`${completed}/${tomos.length}`} />
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
                   {!enrollment && (
                     <button
                       type="button"
@@ -373,7 +373,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                         key={`${route.code}-${stage.stage_order}-${tomo.tomo_no}`}
                         type="button"
                         onClick={() => setSelected({ path: route.code, tomo: tomo.tomo_no })}
-                        className={`rounded-xl border px-3 py-2 text-sm font-black ${
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-sm font-black ${
                           selected.path === route.code && Number(selected.tomo) === Number(tomo.tomo_no)
                             ? 'border-red-500 bg-red-600 text-white'
                             : 'border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-red-500'
@@ -390,7 +390,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
         </div>
       </section>
 
-      <section className="rounded-3xl border border-yellow-500 bg-zinc-900 p-4 sm:p-6">
+      <section className="mobile-safe-section rounded-3xl border border-red-500/30 bg-zinc-900 p-4 sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-sm font-black uppercase text-yellow-400">
