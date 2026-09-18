@@ -28,3 +28,5 @@ export function buildChatPayload({ message, surface = CHAT_SURFACES.WEB, locale 
     ...(alumnoId ? { alumno_id: Number(alumnoId) } : {}),
   }
 }
+
+export * from './chatgpt-tools.js'
