@@ -44,7 +44,7 @@ jobs:
 
       - name: Validate CPS before deploy
         run: |
-          npm run validate:cps
+          node scripts/validate-cps-packages.mjs
           npm run build:cps
 
       - name: Verify Vercel token is configured
