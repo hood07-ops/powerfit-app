@@ -140,6 +140,13 @@ assert.match(cpsAdminHtml, /create_powerfit_final_exam_secure/);
 assert.match(cpsAdminHtml, /score_powerfit_final_exam_secure/);
 assert.match(cpsAdminHtml, /promote_powerfit_combat_stage_secure/);
 
+const finalExamIdempotencyMigration = await readFile(new URL('../supabase/migrations/20260918052000_make_cps_final_exam_idempotent.sql', import.meta.url), 'utf8');
+assert.match(finalExamIdempotencyMigration, /cps_final_exams_one_open_per_stage/);
+assert.match(finalExamIdempotencyMigration, /when unique_violation/);
+assert.match(finalExamIdempotencyMigration, /'reused',true/);
+assert.match(finalExamIdempotencyMigration, /COACH_APPROVAL_PENDING/);
+assert.match(finalExamIdempotencyMigration, /PROMOTION_READY/);
+
 const secureEvaluationMigration = await readFile(new URL('../supabase/migrations/20260917033202_secure_cps_evaluation_writes.sql', import.meta.url), 'utf8');
 assert.match(secureEvaluationMigration, /security definer/i);
 assert.match(secureEvaluationMigration, /set search_path = ''/i);
