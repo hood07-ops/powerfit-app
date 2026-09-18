@@ -3243,7 +3243,12 @@ export default function App() {
   }
 
   if (alumnoCheckIn && !user) {
-    return <LoginPage onLogin={checkUser} />
+    return (
+      <>
+        <LoginPage onLogin={checkUser} />
+        <ChatWidget student={null} idioma={idioma} />
+      </>
+    )
   }
 
   if (alumnoCheckIn && sessionIsAdmin) {
@@ -3260,7 +3265,14 @@ export default function App() {
     )
   }
 
-  if (!user) return <LoginPage onLogin={checkUser} />
+  if (!user) {
+    return (
+      <>
+        <LoginPage onLogin={checkUser} />
+        <ChatWidget student={null} idioma={idioma} />
+      </>
+    )
+  }
 
   const isAdmin = sessionIsAdmin
   const termsFeatureActive = Object.prototype.hasOwnProperty.call(
