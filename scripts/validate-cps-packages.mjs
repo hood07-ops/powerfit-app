@@ -119,6 +119,13 @@ assert.match(tomoExpansionMigration, /Maestría, Coaching y Legado/);
 assert.match(tomoExpansionMigration, /\('BOXING', 7, 15\)/);
 assert.match(tomoExpansionMigration, /\('KICKBOXING', 7, 15\)/);
 
+const questionBankMigration = await readFile(new URL('../supabase/migrations/20260918044500_complete_cps_question_banks.sql', import.meta.url), 'utf8');
+assert.match(questionBankMigration, /generate_series\(1,15\)/);
+assert.match(questionBankMigration, /where n <> 10/);
+assert.match(questionBankMigration, /CPS_QUESTION_BANK_COUNT_INVALID/);
+assert.match(questionBankMigration, /¿Cuáles son los seis bloques de una sesión CPS\?/);
+assert.match(questionBankMigration, /¿Qué funciones cumple el Coach CPS en el proceso de aprendizaje\?/);
+
 const secureEvaluationMigration = await readFile(new URL('../supabase/migrations/20260917033202_secure_cps_evaluation_writes.sql', import.meta.url), 'utf8');
 assert.match(secureEvaluationMigration, /security definer/i);
 assert.match(secureEvaluationMigration, /set search_path = ''/i);
