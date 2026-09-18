@@ -58,8 +58,18 @@ textarea:focus {
 }
 
 @media (max-width: 767px) {
+  :root {
+    --pf-mobile-nav-height: 78px;
+    --pf-mobile-nav-gap: 12px;
+    --pf-mobile-safe-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
   body {
-    padding-bottom: calc(86px + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--pf-mobile-nav-height) + 36px + env(safe-area-inset-bottom));
+  }
+
+  .powerfit-app-shell {
+    padding-bottom: calc(var(--pf-mobile-nav-height) + 44px + env(safe-area-inset-bottom)) !important;
   }
 
   [data-nav-items] {
@@ -71,14 +81,15 @@ textarea:focus {
     z-index: 80;
     left: 10px;
     right: 10px;
-    bottom: max(10px, env(safe-area-inset-bottom));
+    bottom: var(--pf-mobile-safe-bottom);
     display: grid;
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 4px;
-    padding: 8px;
+    min-height: var(--pf-mobile-nav-height);
+    padding: 8px 8px calc(8px + env(safe-area-inset-bottom) * 0.15);
     border: 1px solid rgba(255, 255, 255, 0.10);
     border-radius: 24px;
-    background: rgba(9, 9, 11, 0.96);
+    background: linear-gradient(180deg, rgba(24, 24, 27, 0.98), rgba(9, 9, 11, 0.98));
     box-shadow: 0 18px 60px rgba(0, 0, 0, 0.72), 0 0 0 1px rgba(239, 68, 68, 0.08) inset;
     backdrop-filter: blur(18px);
   }
@@ -89,7 +100,7 @@ textarea:focus {
     border: 0;
     border-radius: 18px;
     background: transparent;
-    color: rgb(212 212 216);
+    color: rgb(161 161 170);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -99,28 +110,80 @@ textarea:focus {
     font-weight: 900;
     line-height: 1;
     letter-spacing: -0.01em;
+    transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
   }
 
   .premium-mobile-nav-button:active {
-    background: rgba(239, 68, 68, 0.14);
-    color: white;
     transform: translateY(1px);
   }
 
-  .premium-nav-dot {
-    width: 9px;
-    height: 9px;
-    border-radius: 999px;
-    background: rgb(239 68 68);
-    box-shadow: 0 0 14px rgba(239, 68, 68, 0.65);
+  .premium-mobile-nav-button.is-active {
+    background: rgba(220, 38, 38, 0.14);
+    color: rgb(248 113 113);
+  }
+
+  .premium-nav-icon {
+    min-height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: currentColor;
+    font-size: 20px;
+    line-height: 1;
+    font-weight: 950;
   }
 
   .premium-nav-more {
-    min-height: 9px;
-    color: rgb(248 113 113);
-    font-size: 14px;
-    line-height: 8px;
+    font-size: 16px;
     letter-spacing: 1px;
+  }
+
+  .premium-mobile-nav-button.is-active::after {
+    content: '';
+    position: absolute;
+    bottom: 5px;
+    width: 22px;
+    height: 3px;
+    border-radius: 999px;
+    background: rgb(239 68 68);
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+  }
+
+  .premium-mobile-nav-button {
+    position: relative;
+  }
+
+  .powerfit-signature {
+    display: none !important;
+  }
+
+  .pf-chat-fab {
+    bottom: calc(var(--pf-mobile-nav-height) + 30px + env(safe-area-inset-bottom)) !important;
+    right: 14px !important;
+  }
+
+  .pf-chat-panel {
+    bottom: calc(var(--pf-mobile-nav-height) + 92px + env(safe-area-inset-bottom)) !important;
+    right: 12px !important;
+    max-height: calc(100dvh - var(--pf-mobile-nav-height) - 120px - env(safe-area-inset-bottom));
+  }
+
+  .cps-mobile-safe,
+  .mobile-safe-section {
+    padding-bottom: 12px;
+    scroll-margin-bottom: calc(var(--pf-mobile-nav-height) + 24px + env(safe-area-inset-bottom));
+  }
+
+  .admin-students-shell {
+    border-color: rgba(239, 68, 68, 0.34) !important;
+    background: linear-gradient(180deg, rgba(24,24,27,.98), rgba(9,9,11,.98)) !important;
+    box-shadow: 0 18px 50px rgba(0,0,0,.34);
+  }
+
+  .admin-student-card {
+    border: 1px solid rgba(255,255,255,.08);
+    background: linear-gradient(180deg, rgba(39,39,42,.9), rgba(24,24,27,.92));
+    box-shadow: 0 12px 30px rgba(0,0,0,.26);
   }
 
   .premium-sheet {

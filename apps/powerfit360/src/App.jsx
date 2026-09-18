@@ -1379,11 +1379,12 @@ function AdminAlumnosPanel({
   registrarPago,
 }) {
   return (
-    <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+    <div className="admin-students-shell bg-zinc-900 border border-red-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
-          <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">
-            ADMINISTRADOR - ALUMNOS
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-red-400">PowerFit 360</p>
+          <h2 className="mt-1 text-3xl sm:text-4xl font-black text-white">
+            Buscar alumno
           </h2>
           <p className="text-zinc-400 mt-2">
             Busca un alumno y abre su ficha para editar datos, revisar asistencia,
@@ -1391,16 +1392,16 @@ function AdminAlumnosPanel({
           </p>
         </div>
 
-        <div className="bg-zinc-800 rounded-2xl p-4 font-black">
-          {alumnosFiltrados.length} / {students.length} alumnos
+        <div className="rounded-2xl border border-red-500/20 bg-red-950/20 px-4 py-3 font-black text-white">
+          <span className="text-red-400">👥</span> {alumnosFiltrados.length} / {students.length} alumnos
         </div>
       </div>
 
       <input
         value={busqueda}
         onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre, correo, teléfono, estado o rol..."
-        className="w-full bg-black p-4 rounded-2xl mb-6"
+        placeholder="Buscar por nombre, correo, teléfono..."
+        className="w-full bg-black border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-red-500"
       />
 
       <div className="space-y-3">
@@ -1411,10 +1412,10 @@ function AdminAlumnosPanel({
           return (
             <div
               key={alumno.id}
-              className="grid lg:grid-cols-6 gap-3 items-start lg:items-center bg-zinc-800 rounded-2xl p-4"
+              className="admin-student-card grid lg:grid-cols-6 gap-4 items-start lg:items-center rounded-2xl p-4 sm:p-5"
             >
               <div className="min-w-0">
-                <p className="text-xl font-black text-yellow-400">
+                <p className="text-xl font-black text-white">
                   {alumno.nombre || '-'}
                 </p>
                 <p className="text-zinc-400 text-sm">
@@ -1448,13 +1449,13 @@ function AdminAlumnosPanel({
               <div className="flex flex-col sm:flex-row lg:flex-wrap gap-2">
                 <button
                   onClick={() => abrirDetalle(alumno)}
-                  className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-xl font-black"
+                  className="bg-red-600 hover:bg-red-700 px-4 py-3 rounded-xl font-black shadow-lg shadow-red-950/30"
                 >
                   Ver ficha
                 </button>
                 <button
                   onClick={() => registrarPago(alumno)}
-                  className="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-xl font-black"
+                  className="border border-zinc-600 bg-zinc-900 hover:border-red-500 hover:bg-zinc-800 px-4 py-3 rounded-xl font-black"
                 >
                   Registrar pago manual
                 </button>
@@ -3312,7 +3313,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+    <div className="powerfit-app-shell min-h-screen bg-black text-white px-3 py-4 sm:p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
       <div className="max-w-7xl mx-auto">
       {pwaUpdate && (
         <div className="mb-3 sm:mb-4 bg-green-600 text-white rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -3702,7 +3703,7 @@ export default function App() {
         onEliminarAlumno={eliminarAlumno}
       />
       <ChatWidget student={student} idioma={idioma} />
-      <div className="fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
+      <div className="powerfit-signature fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
         {POWERFIT_SIGNATURE}
       </div>
       </div>

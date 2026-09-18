@@ -15,6 +15,15 @@ const ADMIN_PRIMARY = [
   { label: 'Entrenar', aliases: ['Entrenos alumnos', 'Student plans'] },
 ]
 
+const NAV_ICON = {
+  Alumnos: '👥',
+  CPS: '◎',
+  QR: '▣',
+  Entrenar: '⚡',
+  Ficha: '◉',
+  Más: '•••',
+}
+
 function normalize(text) {
   return String(text || '').trim().toLowerCase()
 }
@@ -191,6 +200,7 @@ export default function PremiumMobileNav() {
   const [moreOpen, setMoreOpen] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [navButtons, setNavButtons] = useState([])
+  const [activeLabel, setActiveLabel] = useState('')
 
   useEffect(() => {
     let frame = null
@@ -217,10 +227,11 @@ export default function PremiumMobileNav() {
 
   const primary = isAdmin ? ADMIN_PRIMARY : STUDENT_PRIMARY
 
-  function openAliases(aliases) {
+  function openAliases(aliases, label = '') {
     const button = findButton(aliases)
     if (button) {
       button.click()
+      setActiveLabel(label || button.textContent.trim())
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
     setMoreOpen(false)
@@ -231,6 +242,7 @@ export default function PremiumMobileNav() {
     const button = nav ? [...nav.querySelectorAll('button')].find((item) => item.textContent.trim() === text) : null
     if (button) {
       button.click()
+      setActiveLabel(text)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
     setMoreOpen(false)
@@ -241,14 +253,22 @@ export default function PremiumMobileNav() {
   return (
     <>
       <nav className="premium-mobile-nav" aria-label="Navegación principal móvil">
-        {primary.map((item, index) => (
-          <button key={`${item.label}-${index}`} type="button" onClick={() => openAliases(item.aliases)} className="premium-mobile-nav-button">
-            <span className="premium-nav-dot" />
-            <span>{item.label}</span>
-          </button>
-        ))}
-        <button type="button" onClick={() => setMoreOpen(true)} className="premium-mobile-nav-button">
-          <span className="premium-nav-more">•••</span>
+        {primary.map((item, index) => {
+          const active = normalize(activeLabel) === normalize(item.label) || item.aliases.some((alias) => normalize(activeLabel) === normalize(alias))
+          return (
+            <button
+              key={`${item.label}-${index}`}
+              type="button"
+              onClick={() => openAliases(item.aliases, item.label)}
+              className={`premium-mobile-nav-button ${active ? 'is-active' : ''}`}
+            >
+              <span className="premium-nav-icon" aria-hidden="true">{NAV_ICON[item.label] || '•'}</span>
+              <span>{item.label}</span>
+            </button>
+          )
+        })}
+        <button type="button" onClick={() => setMoreOpen(true)} className={`premium-mobile-nav-button ${moreOpen ? 'is-active' : ''}`}>
+          <span className="premium-nav-icon premium-nav-more" aria-hidden="true">{NAV_ICON.Más}</span>
           <span>Más</span>
         </button>
       </nav>
