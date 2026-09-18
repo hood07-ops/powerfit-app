@@ -103,7 +103,7 @@ export default function ChatWidget({ student, idioma = 'es' }) {
   return (
     <>
       {open && (
-        <section className="fixed bottom-24 right-3 sm:right-5 z-[80] w-[calc(100vw-24px)] sm:w-[380px] h-[min(68vh,620px)] bg-zinc-950 border border-red-600/70 rounded-3xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden">
+        <section className="pf-chat-panel fixed bottom-24 right-3 sm:right-5 z-[90] w-[calc(100vw-24px)] sm:w-[380px] h-[min(68vh,620px)] bg-zinc-950 border border-red-600/70 rounded-3xl shadow-2xl shadow-black/60 flex flex-col overflow-hidden">
           <header className="px-4 py-3 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between gap-3">
             <div>
               <p className="font-black text-white">{title}</p>
@@ -196,7 +196,7 @@ export default function ChatWidget({ student, idioma = 'es' }) {
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
-        className="fixed bottom-14 right-3 sm:right-5 z-[80] rounded-full bg-red-600 hover:bg-red-700 border border-red-400 px-5 py-3 font-black shadow-xl shadow-black/50"
+        className="pf-chat-fab fixed bottom-14 right-3 sm:right-5 z-[90] rounded-full bg-red-600 hover:bg-red-700 border border-red-400 px-5 py-3 font-black shadow-xl shadow-black/50"
       >
         {open ? '×' : idioma === 'en' ? 'Chat' : 'Chat'}
       </button>
