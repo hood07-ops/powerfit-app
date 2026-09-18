@@ -1,0 +1,83 @@
+name: Deploy CPS Production
+
+on:
+  workflow_run:
+    workflows: ["PowerFit Quality"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cps-production
+  cancel-in-progress: true
+
+env:
+  VERCEL_ORG_ID: team_qICA5d2OhsoQS24Ax0TqiwL4
+  VERCEL_PROJECT_ID: prj_IQXo3wgynnOiNriteL7Guel7gUcW
+
+jobs:
+  deploy:
+    if: >
+      github.event_name == 'workflow_dispatch' ||
+      (
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'
+      )
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout validated main SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install monorepo dependencies
+        run: npm ci
+
+      - name: Validate CPS before deploy
+        run: |
+          npm run validate:cps
+          npm run build:cps
+
+      - name: Verify Vercel token is configured
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::error::Missing GitHub Actions secret VERCEL_TOKEN"
+            exit 1
+          fi
+
+      - name: Pull CPS production environment
+        working-directory: apps/cps
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest pull --yes --environment=production --token="$VERCEL_TOKEN"
+
+      - name: Build CPS with Vercel
+        working-directory: apps/cps
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: npx --yes vercel@latest build --prod --token="$VERCEL_TOKEN"
+
+      - name: Deploy CPS to production
+        id: deploy
+        working-directory: apps/cps
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          URL=$(npx --yes vercel@latest deploy --prebuilt --prod --token="$VERCEL_TOKEN")
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "CPS production deployed to $URL"
+
+      - name: Smoke test stable CPS alias
+        run: |
+          curl --fail --silent --show-error https://cps-staging.vercel.app/ | grep -E "PowerFit 360 CPS|Combat Performance System"
