@@ -18,6 +18,9 @@ export const CPS_TOMOS = Object.freeze([
   { tomoNo: 10, title: 'Planificación del Entrenamiento', priceClp: CPS_TOMO_PRICE_CLP },
   { tomoNo: 11, title: 'Combate y Competencia', priceClp: CPS_TOMO_PRICE_CLP },
   { tomoNo: 12, title: 'Análisis Técnico y Video', priceClp: CPS_TOMO_PRICE_CLP },
+  { tomoNo: 13, title: 'Programas de Entrenamiento', priceClp: CPS_TOMO_PRICE_CLP },
+  { tomoNo: 14, title: 'Errores y Correcciones', priceClp: CPS_TOMO_PRICE_CLP },
+  { tomoNo: 15, title: 'Maestría, Coaching y Legado', priceClp: CPS_TOMO_PRICE_CLP },
 ]);
 
 export const CPS_STAGES = Object.freeze({
