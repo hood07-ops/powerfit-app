@@ -1,9 +1,10 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+const responseHeaders = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
 }
 
 const PLANS = {
@@ -15,11 +16,28 @@ const PLANS = {
 
 type PlanCode = keyof typeof PLANS
 
-function jsonResponse(body: unknown, status = 200) {
+function jsonResponse(body: unknown, status = 200, extraHeaders: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...responseHeaders, ...extraHeaders },
   })
+}
+
+async function enforceRateLimit(serverDb: any, key: string, limit: number, windowSeconds: number) {
+  const { data, error } = await serverDb.rpc('server_consume_powerfit_rate_limit', {
+    p_bucket_key: key,
+    p_limit: limit,
+    p_window_seconds: windowSeconds,
+  })
+  if (error) throw new Error('RATE_LIMIT_CHECK_FAILED')
+  return data as { allowed?: boolean; retry_after_seconds?: number }
+}
+
+function requestIp(req: Request) {
+  return (req.headers.get('x-forwarded-for') || req.headers.get('cf-connecting-ip') || 'unknown')
+    .split(',')[0]
+    .trim()
+    .slice(0, 80)
 }
 
 function safeErrorMessage(error: unknown) {
@@ -37,8 +55,10 @@ async function paymentIdFromRequest(req: Request) {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: responseHeaders })
   if (req.method !== 'POST') return jsonResponse({ error: 'Metodo no permitido' }, 405)
+  const contentLength = Number(req.headers.get('content-length') || '0')
+  if (contentLength > 32768) return jsonResponse({ error: 'PAYLOAD_TOO_LARGE' }, 413)
 
   const paymentId = String((await paymentIdFromRequest(req)) || '').trim()
 
@@ -52,9 +72,20 @@ Deno.serve(async (req) => {
       return jsonResponse({ error: 'Configuracion webhook incompleta' }, 500)
     }
 
+    const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+    const ipLimit = await enforceRateLimit(supabase, `mp-webhook:ip:${requestIp(req)}`, 120, 60)
+    if (!ipLimit.allowed) {
+      return jsonResponse({ error: 'RATE_LIMITED' }, 429, { 'Retry-After': String(ipLimit.retry_after_seconds || 60) })
+    }
+
     if (!paymentId) {
       console.info('MP_WEBHOOK_IGNORED_NO_PAYMENT_ID')
       return jsonResponse({ received: true, ignored: 'Sin payment id' })
+    }
+
+    const paymentLimit = await enforceRateLimit(supabase, `mp-webhook:payment:${paymentId.slice(0, 120)}`, 10, 600)
+    if (!paymentLimit.allowed) {
+      return jsonResponse({ error: 'RATE_LIMITED' }, 429, { 'Retry-After': String(paymentLimit.retry_after_seconds || 600) })
     }
 
     console.info('MP_WEBHOOK_RECEIVED', { payment_id: paymentId })
@@ -124,7 +155,7 @@ Deno.serve(async (req) => {
     if (isCpsTomo) {
       const pathCode = String(payment.metadata?.path_code || '').trim().toUpperCase()
       const tomoNo = Number(payment.metadata?.tomo_no || 0)
-      if (!['BOXING', 'KICKBOXING'].includes(pathCode) || !Number.isInteger(tomoNo) || tomoNo < 1 || tomoNo > 12) {
+      if (!['BOXING', 'KICKBOXING'].includes(pathCode) || !Number.isInteger(tomoNo) || tomoNo < 1 || tomoNo > 15) {
         console.error('MP_WEBHOOK_INVALID_CPS_TOMO', {
           payment_id: paymentId,
           path_code: pathCode || null,
@@ -133,8 +164,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ error: 'INVALID_CPS_TOMO_PAYMENT' }, 400)
       }
 
-      const supabase = createClient(supabaseUrl, serviceRoleKey)
-      const paidOnRaw = String(payment.date_approved || payment.date_created || '')
+            const paidOnRaw = String(payment.date_approved || payment.date_created || '')
       const paidOn = paidOnRaw
         ? paidOnRaw.slice(0, 10)
         : new Date().toISOString().slice(0, 10)
@@ -199,8 +229,7 @@ Deno.serve(async (req) => {
       ? paidOnRaw.slice(0, 10)
       : new Date().toISOString().slice(0, 10)
 
-    const supabase = createClient(supabaseUrl, serviceRoleKey)
-
+    
     const { data: receipt, error: paymentError } = await supabase.rpc(
       'register_powerfit_mercadopago_payment_secure',
       {
