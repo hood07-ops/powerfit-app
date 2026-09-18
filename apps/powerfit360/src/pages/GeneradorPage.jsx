@@ -13,6 +13,7 @@ const GENERADOR_TEXT = {
   es: {
     title: 'GENERADOR POWERFIT IA',
     available: 'Generaciones disponibles',
+    monthlyIncluded: 'Cada mensualidad pagada incluye 4 generaciones IA',
     visibleThisMonth: 'Planificaciones visibles este mes',
     pricesTitle: 'PRECIOS Y TIPO DE GENERACION',
     session: 'Sesion IA - usa 1 generacion',
@@ -27,6 +28,7 @@ const GENERADOR_TEXT = {
   en: {
     title: 'POWERFIT AI GENERATOR',
     available: 'Available generations',
+    monthlyIncluded: 'Each paid monthly membership includes 4 AI generations',
     visibleThisMonth: 'Plans visible this month',
     pricesTitle: 'PRICES AND GENERATION TYPE',
     session: 'AI session - uses 1 generation',
@@ -1082,6 +1084,9 @@ Vuelta a la calma: dirigida en clase.
           {t.available}: {generacionesDisponibles}
         </p>
 
+        <p className="text-green-400 mt-2 font-bold">
+          {t.monthlyIncluded}
+        </p>
         <p className="text-zinc-400 mt-2">
           {t.visibleThisMonth}: {planificaciones.length}
         </p>
@@ -1093,7 +1098,7 @@ Vuelta a la calma: dirigida en clase.
             {t.pricesTitle}
           </h2>
           <p className="text-zinc-400 mt-2">
-            Precio por generación: las primeras 4 cuestan $2.500 cada una, las siguientes 10 cuestan $5.000 cada una y después cuestan $7.500 cada una. Plan mensual completo: $60.000.
+            Tu mensualidad pagada acredita 4 generaciones IA. Si necesitas más, puedes comprar generaciones adicionales: las primeras 4 cuestan $2.500 cada una, las siguientes 10 cuestan $5.000 cada una y después cuestan $7.500 cada una. El plan mensual ATR completo sigue disponible por $60.000.
           </p>
           <p className="text-sm text-green-300 mt-2 font-black">
             Generaciones compradas aprobadas: {generacionesCompradas}. Precio actual: ${tramoActual.precio.toLocaleString('es-CL')} por 1 generación

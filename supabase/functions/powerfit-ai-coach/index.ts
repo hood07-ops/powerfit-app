@@ -163,6 +163,134 @@ function safeRequestId(value: unknown): string | null {
   return v.length >= 8 && v.length <= 160 ? v : null;
 }
 
+function clampNumber(value: unknown, min: number, max: number, fallback: number) {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+function fallbackExercise(
+  name: string,
+  reps: string | null,
+  duration: number | null,
+  rpe: number | null,
+  rest: number | null,
+  notes: string,
+) {
+  return {
+    exercise_id: null,
+    name,
+    sets: null,
+    reps,
+    duration,
+    distance: null,
+    load: null,
+    percentage_rm: null,
+    rpe,
+    rir: rpe == null ? null : Math.max(1, 10 - rpe),
+    rest,
+    tempo: null,
+    notes,
+  };
+}
+
+function buildFallbackWorkout(configuration: any, adaptiveContext: any) {
+  const objective = String(configuration?.objective || "acondicionamiento general");
+  const level = String(configuration?.level || "intermedio");
+  const modality = String(configuration?.modality || "PowerFit");
+  const duration = clampNumber(configuration?.duration, 35, 90, 60);
+  const action = String(adaptiveContext?.adaptive_decision?.action || "maintain").toLowerCase();
+  const combat = /box|kick|k1|combat/i.test(modality);
+
+  const rpe = action === "deload" || action === "adapt_pain" ? 5 : action === "progress" ? 7 : 6;
+  const intensity = action === "deload" ? "baja-moderada" : action === "progress" ? "moderada-alta" : "moderada";
+  const volume = action === "deload" ? "reducido" : action === "progress" ? "progresivo" : "estable";
+
+  const technicalExercises = combat
+    ? [
+        fallbackExercise("Sombra técnica con guardia y desplazamientos", "3 x 2 min", null, rpe, 60, "Priorizar precisión, base y respiración."),
+        fallbackExercise("Combinaciones técnicas controladas", "4 x 6 repeticiones", null, rpe, 45, "Velocidad submáxima, volver siempre a guardia."),
+      ]
+    : [
+        fallbackExercise("Sentadilla al aire controlada", "3 x 10", null, rpe, 45, "Rodillas alineadas y tronco estable."),
+        fallbackExercise("Empuje horizontal adaptado", "3 x 8-12", null, rpe, 45, "Usar variante que permita técnica limpia."),
+      ];
+
+  return {
+    name: `PowerFit — ${objective}`,
+    objective,
+    modality,
+    level,
+    duration,
+    warmup: [
+      fallbackExercise("Movilidad articular general", null, 300, 3, 0, "Tobillos, cadera, columna torácica y hombros."),
+      fallbackExercise("Activación cardiovascular suave", null, 300, 4, 30, "Subir temperatura sin fatiga."),
+      fallbackExercise("Activación de core y estabilidad", "2 x 8 por lado", null, 4, 30, "Movimiento lento y controlado."),
+    ],
+    blocks: [
+      {
+        id: "fallback-technique",
+        type: "technical",
+        name: combat ? "Técnica de combate" : "Técnica y control",
+        objective: "Calidad de movimiento",
+        duration: Math.round(duration * 0.25),
+        rest: 60,
+        intensity,
+        instructions: "Detener la serie si se pierde la técnica. No entrenar al fallo.",
+        exercises: technicalExercises,
+      },
+      {
+        id: "fallback-strength",
+        type: "strength",
+        name: "Fuerza funcional",
+        objective: "Fuerza general con autorregulación",
+        duration: Math.round(duration * 0.30),
+        rest: 75,
+        intensity,
+        instructions: "Trabajar por RPE. No inventar kilos si no existe RM validado.",
+        exercises: [
+          fallbackExercise("Patrón de sentadilla", "3 x 8-10", null, rpe, 75, "Carga externa opcional solo si la técnica es estable."),
+          fallbackExercise("Bisagra de cadera", "3 x 8-10", null, rpe, 75, "Mantener columna neutra."),
+          fallbackExercise("Tracción horizontal", "3 x 10-12", null, rpe, 60, "Escápulas controladas."),
+        ],
+      },
+      {
+        id: "fallback-conditioning",
+        type: "conditioning",
+        name: "Acondicionamiento",
+        objective: "Capacidad de trabajo sin degradar técnica",
+        duration: Math.round(duration * 0.25),
+        rest: 60,
+        intensity,
+        instructions: action === "deload" ? "Ritmo conversacional y volumen reducido." : "Ritmo sostenible; mantener técnica.",
+        exercises: [
+          fallbackExercise(combat ? "Sombra continua" : "Trabajo cíclico suave", null, 180, rpe, 60, "Mantener respiración controlada."),
+          fallbackExercise("Step-ups o desplazamientos", "3 x 12", null, rpe, 45, "Cadencia estable."),
+          fallbackExercise("Core anti-rotación", "3 x 8 por lado", null, rpe, 45, "Evitar compensaciones."),
+        ],
+      },
+    ],
+    cooldown: [
+      fallbackExercise("Vuelta a la calma", null, 300, 2, 0, "Respiración nasal y movilidad suave."),
+    ],
+    estimatedLoad: {
+      level: action,
+      volume,
+      intensity,
+      notes: "Carga autorregulada con RPE/RIR. Sin RM validado no se asignan kilos.",
+    },
+    coachNotes: [
+      "Motor interno PowerFit activado para mantener continuidad del servicio.",
+      action === "adapt_pain"
+        ? "Evitar cualquier ejercicio que aumente dolor y derivar a evaluación profesional si persiste."
+        : "Ajustar una variable a la vez según respuesta del atleta.",
+    ],
+    warnings: [
+      "Plan generado con el motor interno de contingencia PowerFit.",
+      "Interrumpir el entrenamiento ante dolor agudo, mareos o síntomas inusuales.",
+    ],
+  };
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   if (req.method !== "POST") return json(req, { ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
@@ -229,7 +357,6 @@ Deno.serve(async (req: Request) => {
 
   const requestId = safeRequestId(body?.request_id ?? body?.requestId);
   if (!requestId) return json(req, { ok: false, error: "REQUEST_ID_REQUIRED" }, 400);
-  if (!apiKey) return json(req, { ok: false, error: "MISSING_OPENAI_API_KEY" }, 503);
 
   let processingToken: string | null = null;
   let providerResponseId: string | null = null;
@@ -303,27 +430,49 @@ Deno.serve(async (req: Request) => {
       },
     };
 
-    const client = new OpenAI({ apiKey, timeout: 25000, maxRetries: 0 });
     const started = Date.now();
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      instructions: SYSTEM_PROMPT,
-      input: JSON.stringify(payload),
-      max_output_tokens: 2200,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "powerfit_workout",
-          strict: true,
-          schema: WORKOUT_SCHEMA,
-        },
-      },
-    });
+    let workout: any;
+    let provider = "openai";
+    let model = "gpt-4.1-mini";
+    let mode = "live";
+    let fallbackReason: string | null = null;
 
-    providerResponseId = response.id;
-    if (!response.output_text) throw Object.assign(new Error("EMPTY_AI_RESPONSE"), { code: "EMPTY_AI_RESPONSE" });
+    if (apiKey) {
+      try {
+        const client = new OpenAI({ apiKey, timeout: 25000, maxRetries: 0 });
+        const response = await client.responses.create({
+          model,
+          instructions: SYSTEM_PROMPT,
+          input: JSON.stringify(payload),
+          max_output_tokens: 2200,
+          text: {
+            format: {
+              type: "json_schema",
+              name: "powerfit_workout",
+              strict: true,
+              schema: WORKOUT_SCHEMA,
+            },
+          },
+        });
 
-    const workout = JSON.parse(response.output_text);
+        providerResponseId = response.id;
+        if (!response.output_text) throw Object.assign(new Error("EMPTY_AI_RESPONSE"), { code: "EMPTY_AI_RESPONSE" });
+        workout = JSON.parse(response.output_text);
+      } catch (providerError) {
+        fallbackReason = String((providerError as any)?.code || (providerError as any)?.status || "provider_unavailable").slice(0, 120);
+      }
+    } else {
+      fallbackReason = "provider_key_unavailable";
+    }
+
+    if (!workout) {
+      workout = buildFallbackWorkout(configuration, adaptiveContext);
+      provider = "powerfit-rules";
+      model = "fallback-v1";
+      mode = "fallback";
+      providerResponseId = `fallback-${requestId}`;
+    }
+
     const contextSummary = {
       context_version: adaptiveContext?.context_version ?? null,
       adaptive_decision: adaptiveContext?.adaptive_decision ?? null,
@@ -342,8 +491,8 @@ Deno.serve(async (req: Request) => {
       p_plan_objective: String(workout?.objective || configuration?.objective || "PowerFit AI").slice(0, 300),
       p_plan_level: String(workout?.level || configuration?.level || "intermedio").slice(0, 120),
       p_plan_content: JSON.stringify(workout, null, 2),
-      p_provider: "openai",
-      p_model: "gpt-4.1-mini",
+      p_provider: provider,
+      p_model: model,
       p_warnings: Array.isArray(workout?.warnings) ? workout.warnings : [],
       p_adaptive_action: adaptiveContext?.adaptive_decision?.action ?? null,
       p_context_version: adaptiveContext?.context_version ?? null,
@@ -382,9 +531,10 @@ Deno.serve(async (req: Request) => {
       ok: true,
       workout,
       result: workout,
-      provider: "openai",
-      model: "gpt-4.1-mini",
-      mode: "live",
+      provider,
+      model,
+      mode,
+      fallback_reason: fallbackReason,
       elapsed_ms: Date.now() - started,
       request_id: requestId,
       response_id: providerResponseId,
