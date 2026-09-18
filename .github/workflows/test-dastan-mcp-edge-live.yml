@@ -1,0 +1,42 @@
+name: Dastan MCP Edge Live Test
+
+on:
+  push:
+    branches:
+      - test/dastan-mcp-edge-live
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: MCP initialize
+        run: |
+          RESPONSE=$(curl --fail-with-body -sS -X POST \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            'https://sabsmurhriohwmczaktn.supabase.co/functions/v1/dastan-mcp' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"github-live-test","version":"1.0.0"}}}')
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q 'powerfit-cps-dastan'
+      - name: MCP tools list
+        run: |
+          RESPONSE=$(curl --fail-with-body -sS -X POST \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            'https://sabsmurhriohwmczaktn.supabase.co/functions/v1/dastan-mcp' \
+            --data '{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}')
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q 'search_app_help'
+          echo "$RESPONSE" | grep -q 'get_cps_overview'
+      - name: MCP tool call
+        run: |
+          RESPONSE=$(curl --fail-with-body -sS -X POST \
+            -H 'Content-Type: application/json' \
+            -H 'Accept: application/json, text/event-stream' \
+            'https://sabsmurhriohwmczaktn.supabase.co/functions/v1/dastan-mcp' \
+            --data '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search_app_help","arguments":{"query":"cuantas generaciones incluye la mensualidad","surface":"powerfit360","language":"es"}}}')
+          echo "$RESPONSE"
+          echo "$RESPONSE" | grep -q '4 generaciones'
