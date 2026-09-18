@@ -126,6 +126,20 @@ assert.match(questionBankMigration, /CPS_QUESTION_BANK_COUNT_INVALID/);
 assert.match(questionBankMigration, /¿Cuáles son los seis bloques de una sesión CPS\?/);
 assert.match(questionBankMigration, /¿Qué funciones cumple el Coach CPS en el proceso de aprendizaje\?/);
 
+const graduationMigration = await readFile(new URL('../supabase/migrations/20260918050000_fix_cps_graduation_flow.sql', import.meta.url), 'utf8');
+assert.match(graduationMigration, /finalize_powerfit_tomo_test_secure.*security definer/is);
+assert.match(graduationMigration, /get_powerfit_final_exam_eligibility_secure.*security definer/is);
+assert.match(graduationMigration, /trg_cps_sync_tomo_access_after_test/);
+assert.match(graduationMigration, /TOMO_COMPLETED/);
+
+const cpsAdminHtml = await readFile(new URL('../apps/cps/cps-admin.html', import.meta.url), 'utf8');
+assert.match(cpsAdminHtml, /Evaluar tomo/);
+assert.match(cpsAdminHtml, /Examen final \/ Promoción/);
+assert.match(cpsAdminHtml, /finalize_powerfit_tomo_test_secure/);
+assert.match(cpsAdminHtml, /create_powerfit_final_exam_secure/);
+assert.match(cpsAdminHtml, /score_powerfit_final_exam_secure/);
+assert.match(cpsAdminHtml, /promote_powerfit_combat_stage_secure/);
+
 const secureEvaluationMigration = await readFile(new URL('../supabase/migrations/20260917033202_secure_cps_evaluation_writes.sql', import.meta.url), 'utf8');
 assert.match(secureEvaluationMigration, /security definer/i);
 assert.match(secureEvaluationMigration, /set search_path = ''/i);
