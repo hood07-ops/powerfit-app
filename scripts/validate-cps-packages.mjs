@@ -111,6 +111,14 @@ assert.match(downloadEndpoint, /new URLSearchParams\(raw\)/);
 assert.match(downloadEndpoint, /Content-Disposition/);
 assert.match(downloadEndpoint, /MAX_CONTENT_BYTES/);
 
+const tomoExpansionMigration = await readFile(new URL('../supabase/migrations/20260918043000_expand_cps_to_15_tomos.sql', import.meta.url), 'utf8');
+assert.match(tomoExpansionMigration, /tomo_no >= 1 and tomo_no <= 15/);
+assert.match(tomoExpansionMigration, /Programas de Entrenamiento/);
+assert.match(tomoExpansionMigration, /Errores y Correcciones/);
+assert.match(tomoExpansionMigration, /Maestría, Coaching y Legado/);
+assert.match(tomoExpansionMigration, /\('BOXING', 7, 15\)/);
+assert.match(tomoExpansionMigration, /\('KICKBOXING', 7, 15\)/);
+
 const secureEvaluationMigration = await readFile(new URL('../supabase/migrations/20260917033202_secure_cps_evaluation_writes.sql', import.meta.url), 'utf8');
 assert.match(secureEvaluationMigration, /security definer/i);
 assert.match(secureEvaluationMigration, /set search_path = ''/i);
