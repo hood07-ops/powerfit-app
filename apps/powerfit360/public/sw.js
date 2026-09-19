@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'powerfit-360-v2026-09-04-hotfix-02'
+﻿const CACHE_VERSION = 'powerfit-360-v2026-09-19-mobile-ui-01'
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',

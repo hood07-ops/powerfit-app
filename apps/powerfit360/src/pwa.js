@@ -6,7 +6,8 @@ export function registerPowerFitPwa() {
 
   window.addEventListener('load', async () => {
     try {
-      const registration = await navigator.serviceWorker.register('/sw.js')
+      const registration = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+      await registration.update().catch(() => null)
 
       registration.addEventListener('updatefound', () => {
         const worker = registration.installing
@@ -24,6 +25,17 @@ export function registerPowerFitPwa() {
         window.__powerfitRefreshing = true
         window.location.reload()
       })
+
+      const checkForUpdate = () => {
+        registration.update().catch(() => null)
+      }
+
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') checkForUpdate()
+      })
+      window.addEventListener('focus', checkForUpdate)
+
+      window.setInterval(checkForUpdate, 30 * 60 * 1000)
     } catch (error) {
       console.warn('No se pudo registrar PowerFit PWA', error)
     }
