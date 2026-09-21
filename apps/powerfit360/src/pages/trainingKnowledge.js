@@ -83,7 +83,7 @@ export const POWERFIT_FOUNDATION_METHODS = [
 
 const OBJETIVO_NOTAS = {
   fighter: [
-    'Transferencia a combate: fuerza util, golpeo, cambios de nivel, footwork y recuperacion entre acciones explosivas.',
+    'Transferencia a combate: fuerza util, golpeo, cambios de nivel, desplazamientos y recuperacion entre acciones explosivas.',
     'Prioridad tecnica: secuencia suelo-cadera-tronco-hombro-puno, guardia estable y rotacion sin perder eje.',
   ],
   tenis: [
