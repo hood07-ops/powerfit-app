@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarPlanMensual } from './workoutSystem'
+import { generarSemanaTecnica, TECHNICAL_SPORTS, WEEKLY_LEVELS, WEEKLY_GOALS } from './technicalPlanningSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
 const TRAMOS_GENERACION = [
@@ -19,6 +20,8 @@ const GENERADOR_TEXT = {
     session: 'Sesion IA - usa 1 generacion',
     monthly: 'Plan mensual ATR - $60.000',
     generateMonthly: 'GENERAR PLAN MENSUAL',
+    generateWeekly: 'GENERAR SEMANA TÉCNICA',
+    weekly: 'Semana técnica sin OpenAI - usa 1 generación',
     generateOne: 'GENERAR 1 PLANIFICACION',
     generating: 'GENERANDO...',
     noAvailable: 'SIN PLANIFICACIONES DISPONIBLES',
@@ -34,6 +37,8 @@ const GENERADOR_TEXT = {
     session: 'AI session - uses 1 generation',
     monthly: 'Monthly ATR plan - $60,000',
     generateMonthly: 'GENERATE MONTHLY PLAN',
+    generateWeekly: 'GENERATE TECHNICAL WEEK',
+    weekly: 'Technical week without OpenAI - uses 1 generation',
     generateOne: 'GENERATE 1 PLAN',
     generating: 'GENERATING...',
     noAvailable: 'NO PLANS AVAILABLE',
@@ -620,6 +625,10 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
+  const [deporteTecnico, setDeporteTecnico] = useState('boxeo')
+  const [objetivoTactico, setObjetivoTactico] = useState('control_distancia')
+  const [sesionesSemana, setSesionesSemana] = useState(5)
+  const [duracionSesion, setDuracionSesion] = useState(60)
   const [usarCicloMenstrual, setUsarCicloMenstrual] = useState(false)
   const [faseMenstrual, setFaseMenstrual] = useState('folicular')
   const [rms, setRms] = useState([])
@@ -903,6 +912,30 @@ Vuelta a la calma: dirigida en clase.
 
         saveData = result.data
         saveError = result.error
+      } else if (tipoPlan === 'semanal') {
+        const planSemanal = generarSemanaTecnica({
+          sport: deporteTecnico,
+          level: nivel,
+          goalId: objetivoTactico,
+          sessionsCount: sesionesSemana,
+          duration: duracionSesion,
+          athleteName: student?.nombre || '',
+          athleteId: student?.id || '',
+          recentPlans: planificaciones,
+        })
+
+        contenidoGenerado = corregirNombresPowerFit(planSemanal.contenido)
+
+        const result = await supabase.rpc('save_powerfit_manual_plan_with_generation_secure', {
+          p_alumno_id: student.id,
+          p_objetivo: `Semana técnica - ${planSemanal.meta.goalLabel}`,
+          p_nivel: nivel,
+          p_contenido: contenidoGenerado,
+          p_source_ref: 'technical-week-v1',
+        })
+
+        saveData = result.data
+        saveError = result.error
       } else {
         const requestId = crearPowerFitAiRequestId(student.id)
 
@@ -1001,7 +1034,9 @@ Vuelta a la calma: dirigida en clase.
       setMensaje(
         tipoPlan === 'mensual'
           ? 'Plan mensual generado, guardado y descargado en Excel. Se usó 1 crédito mensual aprobado.'
-          : '1 planificación generada, guardada y descargada.',
+          : tipoPlan === 'semanal'
+            ? 'Semana técnica generada con el motor interno PowerFit, guardada y descargada. No dependió de OpenAI.'
+            : '1 planificación generada, guardada y descargada.',
       )
 
       await cargarEstadoGenerador()
@@ -1139,7 +1174,7 @@ Vuelta a la calma: dirigida en clase.
           ))}
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid sm:grid-cols-3 gap-3">
           <button
             onClick={() => setTipoPlan('sesion')}
             className={`p-4 rounded-2xl font-black ${
@@ -1156,6 +1191,15 @@ Vuelta a la calma: dirigida en clase.
             }`}
           >
             {t.monthly}
+          </button>
+
+          <button
+            onClick={() => setTipoPlan('semanal')}
+            className={`p-4 rounded-2xl font-black ${
+              tipoPlan === 'semanal' ? 'bg-yellow-500 text-black' : 'bg-zinc-800'
+            }`}
+          >
+            {t.weekly}
           </button>
         </div>
       </div>
@@ -1263,40 +1307,72 @@ Vuelta a la calma: dirigida en clase.
         </div>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4">
-        <select
-          value={objetivo}
-          onChange={(e) => setObjetivo(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
-          <option value="fighter">Fighter</option>
-          <option value="tenis">Tenis</option>
-          <option value="fuerza">Fuerza</option>
-          <option value="perdida_grasa">Pérdida grasa</option>
-          <option value="cardio">Cardio</option>
-          <option value="casa_principiante">Casa principiante / sin materiales</option>
-        </select>
-
-        <select
-          value={nivel}
-          onChange={(e) => setNivel(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
-          <option value="basico">Básico</option>
-          <option value="intermedio">Intermedio</option>
-          <option value="avanzado">Avanzado</option>
-        </select>
-
-        <select
-          value={faseATR}
-          onChange={(e) => setFaseATR(e.target.value)}
-          className="bg-zinc-800 p-4 rounded-2xl"
-        >
-          <option value="acumulacion">ATR Acumulación</option>
-          <option value="transformacion">ATR Transformación</option>
-          <option value="realizacion">ATR Realización</option>
-        </select>
-      </div>
+      {tipoPlan === 'semanal' ? (
+        <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
+          <div>
+            <h2 className="text-2xl font-black text-yellow-400">PLANIFICACIÓN TÉCNICA SEMANAL</h2>
+            <p className="text-zinc-400 mt-2">
+              Motor interno PowerFit: organiza ataque, defensa, contraataque, desplazamiento e integración sin depender de OpenAI.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-3">
+            <select value={deporteTecnico} onChange={(e) => setDeporteTecnico(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
+              {TECHNICAL_SPORTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <select value={nivel} onChange={(e) => setNivel(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
+              {WEEKLY_LEVELS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <select value={objetivoTactico} onChange={(e) => setObjetivoTactico(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
+              {WEEKLY_GOALS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <select value={sesionesSemana} onChange={(e) => setSesionesSemana(Number(e.target.value))} className="bg-zinc-800 p-4 rounded-2xl">
+              {[3,4,5,6].map((value) => <option key={value} value={value}>{value} sesiones</option>)}
+            </select>
+            <select value={duracionSesion} onChange={(e) => setDuracionSesion(Number(e.target.value))} className="bg-zinc-800 p-4 rounded-2xl">
+              {[45,60,75,90].map((value) => <option key={value} value={value}>{value} min por sesión</option>)}
+            </select>
+          </div>
+          <p className="text-sm text-yellow-200 font-bold">
+            Nomenclatura oficial: Recto izquierda (jab), Recto derecha (cross), Cruzado, Gancho al mentón, Gancho al estómago, Drill y Sparring condicionado.
+          </p>
+        </div>
+      ) : (
+              <div className="grid md:grid-cols-3 gap-4">
+                <select
+                  value={objetivo}
+                  onChange={(e) => setObjetivo(e.target.value)}
+                  className="bg-zinc-800 p-4 rounded-2xl"
+                >
+                  <option value="fighter">Fighter</option>
+                  <option value="tenis">Tenis</option>
+                  <option value="fuerza">Fuerza</option>
+                  <option value="perdida_grasa">Pérdida grasa</option>
+                  <option value="cardio">Cardio</option>
+                  <option value="casa_principiante">Casa principiante / sin materiales</option>
+                </select>
+        
+                <select
+                  value={nivel}
+                  onChange={(e) => setNivel(e.target.value)}
+                  className="bg-zinc-800 p-4 rounded-2xl"
+                >
+                  <option value="basico">Básico</option>
+                  <option value="intermedio">Intermedio</option>
+                  <option value="avanzado">Avanzado</option>
+                </select>
+        
+                <select
+                  value={faseATR}
+                  onChange={(e) => setFaseATR(e.target.value)}
+                  className="bg-zinc-800 p-4 rounded-2xl"
+                >
+                  <option value="acumulacion">ATR Acumulación</option>
+                  <option value="transformacion">ATR Transformación</option>
+                  <option value="realizacion">ATR Realización</option>
+                </select>
+              </div>
+        
+      )}
 
       {generacionBloqueada && (
         <div className="bg-red-950 border border-red-600 p-5 rounded-2xl font-black text-red-300">
@@ -1321,7 +1397,9 @@ Vuelta a la calma: dirigida en clase.
             ? t.noAvailable
             : tipoPlan === 'mensual'
               ? t.generateMonthly
-              : t.generateOne}
+              : tipoPlan === 'semanal'
+                ? t.generateWeekly
+                : t.generateOne}
       </button>
 
       <button
