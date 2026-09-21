@@ -161,13 +161,13 @@ const EXERCISES = {
     ],
     boxeo: [
       'Golpe recto con banda elastica',
-      'Cross con rotacion de cadera',
-      'Slip + paso lateral + golpe',
+      'Recto derecha (cross) con rotación de cadera',
+      'Esquiva + paso lateral + golpe',
       'Flexoextension con salto lateral',
     ],
     tenis: [
       'Split step + salida diagonal',
-      'Swing shadow con banda',
+      'Sombra técnica con banda',
       'Lanzamiento lateral tipo drive',
       'Freno lateral + salida cruzada',
     ],
