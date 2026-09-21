@@ -149,10 +149,10 @@ function permitePliometría(faseATR) {
 function ejercicioReactivoSinPliometría(objetivo) {
   const prePliometría = {
     fighter: [
-      'footwork técnico en guardia + frenado estable',
-      'slip + counter lento con control de eje',
+      'desplazamientos técnicos en guardia + frenado estable',
+      'esquiva + contraataque lento con control de eje',
       'paso lateral + retorno a guardia sin salto',
-      'band jab cross técnico con fase concéntrica rapida',
+      'banda: recto izquierda (jab) + recto derecha (cross) con fase concéntrica rápida',
     ],
     tenis: [
       'split step técnico sin rebote + primer paso',
@@ -313,9 +313,9 @@ function focoDeportivo(objetivo) {
 
   if (objetivo === 'fighter') {
     return [
-      'Motor transversal: golpeo, cambio de nivel, desplazamiento y potencia rotaciónal.',
+      'Motor transversal: golpeo, cambio de nivel, desplazamiento y potencia rotacional.',
       'Transferencia: efecto serape, cadena cruzada, oblicuo-serrato y fase concéntrica explosiva.',
-      'Ejemplos: band jab cross, band hook, med ball rotational throw, slip + counter, footwork.',
+      'Ejemplos: banda: recto izquierda + recto derecha, cruzado con banda, lanzamiento rotacional de balón medicinal, esquiva + contraataque y desplazamientos.',
     ]
   }
 
@@ -347,12 +347,12 @@ function seleccionDeportivaMensual(objetivo, usarPliometría) {
 
   if (objetivo === 'fighter') {
     return {
-      activación: 'footwork drill + movilidad toracica + guardia activa',
-      motor: 'band jab cross + cross-body chop oblicuo-serrato',
+      activación: 'drill de desplazamientos + movilidad torácica + guardia activa',
+      motor: 'banda: recto izquierda + recto derecha + corte diagonal oblicuo-serrato',
       transferencia: usarPliometría
         ? 'lateral bound + fighting stance stick + med ball rotational throw'
         : 'paso lateral + retorno a guardia sin salto + med ball rotational throw técnico',
-      final: 'shuttle run corto + heavy bag técnico',
+      final: 'desplazamiento corto de ida y vuelta + saco técnico',
     }
   }
 
@@ -528,13 +528,13 @@ export function generarPlanMensual({
         foco: 'empuje, traccion, serrato, escapula y cadena cruzada sin trabajo de volumen estetico',
         activación: 'scap push up + movilidad toracica + patrón de golpeo/raqueta sin carga',
         motor: objetivo === 'fighter'
-          ? 'elastic band hook rotation + slip counter técnico'
+          ? 'cruzado con banda elástica + esquiva y contraataque técnico'
           : objetivo === 'tenis'
             ? 'elastic band backhand pattern + crossover step'
             : 'pallof press + diagonal chop + bear crawl técnico',
         fuerza: fuerzaMensual({ objetivo, dia: 2, porcentaje, rms, nivelCfg }),
         transferencia: objetivo === 'fighter'
-          ? '10 band jab cross + 8 med ball rotational throw por lado'
+          ? '10 recto izquierda + recto derecha con banda + 8 lanzamientos rotacionales de balón medicinal por lado'
           : objetivo === 'tenis'
             ? '10 band forehand/backhand + 8 med ball scoop toss por lado'
             : '10 pallof press + 8 medicine ball slam',
