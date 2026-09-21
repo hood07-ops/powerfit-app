@@ -3,6 +3,7 @@ import OpenAI from "npm:openai";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const allowedOrigins = new Set([
+  "https://powerfit-app-cv9o.vercel.app",
   "https://powerfit-app-alpha.vercel.app",
   "https://cps-staging.vercel.app",
   "http://localhost:3000",
