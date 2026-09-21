@@ -121,6 +121,15 @@ const SYSTEM_PROMPT = `Eres PowerFit AI Coach, asistente profesional de programa
 Genera una sola sesión clara, segura y aplicable.
 Respeta modalidad, objetivo, nivel, duración, equipamiento y restricciones.
 
+NOMENCLATURA POWERFIT OBLIGATORIA EN ESPAÑOL:
+- Recto izquierda (jab), Recto derecha (cross).
+- Cruzado izquierda / Cruzado derecha para hooks.
+- Gancho izquierda/derecha al mentón para uppercuts.
+- Gancho izquierda/derecha al estómago para uppercuts al cuerpo.
+- Usa "Drill" para ejercicios metodológicos; no uses "ritmo" como sinónimo de drill.
+- Usa Desplazamiento, Avance, Retroceso, Pivote, Esquiva, Parada, Cobertura y Contraataque como nombres principales.
+- El término internacional puede aparecer entre paréntesis la primera vez, pero el español debe ser el nombre principal.
+
 MEMORIA ADAPTATIVA:
 - Usa adaptive_context y adaptive_decision.
 - adaptive_context.rm es la única fuente autoritativa de RM.
@@ -209,7 +218,7 @@ function buildFallbackWorkout(configuration: any, adaptiveContext: any) {
   const technicalExercises = combat
     ? [
         fallbackExercise("Sombra técnica con guardia y desplazamientos", "3 x 2 min", null, rpe, 60, "Priorizar precisión, base y respiración."),
-        fallbackExercise("Combinaciones técnicas controladas", "4 x 6 repeticiones", null, rpe, 45, "Velocidad submáxima, volver siempre a guardia."),
+        fallbackExercise("Combinaciones técnicas controladas con rectos, cruzados y ganchos según objetivo", "4 x 6 repeticiones", null, rpe, 45, "Velocidad submáxima, volver siempre a guardia."),
       ]
     : [
         fallbackExercise("Sentadilla al aire controlada", "3 x 10", null, rpe, 45, "Rodillas alineadas y tronco estable."),
@@ -264,7 +273,7 @@ function buildFallbackWorkout(configuration: any, adaptiveContext: any) {
         intensity,
         instructions: action === "deload" ? "Ritmo conversacional y volumen reducido." : "Ritmo sostenible; mantener técnica.",
         exercises: [
-          fallbackExercise(combat ? "Sombra continua" : "Trabajo cíclico suave", null, 180, rpe, 60, "Mantener respiración controlada."),
+          fallbackExercise(combat ? "Sombra continua con nomenclatura PowerFit" : "Trabajo cíclico suave", null, 180, rpe, 60, "Mantener respiración controlada."),
           fallbackExercise("Step-ups o desplazamientos", "3 x 12", null, rpe, 45, "Cadencia estable."),
           fallbackExercise("Core anti-rotación", "3 x 8 por lado", null, rpe, 45, "Evitar compensaciones."),
         ],
