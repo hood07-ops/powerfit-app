@@ -155,7 +155,7 @@ Deno.serve(async (req) => {
     if (isCpsTomo) {
       const pathCode = String(payment.metadata?.path_code || '').trim().toUpperCase()
       const tomoNo = Number(payment.metadata?.tomo_no || 0)
-      if (!['BOXING', 'KICKBOXING'].includes(pathCode) || !Number.isInteger(tomoNo) || tomoNo < 1 || tomoNo > 15) {
+      if (!['BOXING', 'KICKBOXING'].includes(pathCode) || !Number.isInteger(tomoNo) || tomoNo < 1 || tomoNo > 17) {
         console.error('MP_WEBHOOK_INVALID_CPS_TOMO', {
           payment_id: paymentId,
           path_code: pathCode || null,
