@@ -142,7 +142,8 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
   const [selected, setSelected] = useState({ path: 'BOXING', tomo: 1 })
   const [detail, setDetail] = useState(null)
   const [uploadingCard, setUploadingCard] = useState(null)
-  const [grantReason, setGrantReason] = useState('Acceso administrativo CPS')
+  const [eligibility, setEligibility] = useState(null)
+  const [eligibilityLoading, setEligibilityLoading] = useState(false)
 
   const routes = home?.routes?.length ? home.routes : FALLBACK_ROUTES
   const selectedRoute = routes.find((route) => route.code === selected.path) || routes[0]
@@ -182,6 +183,28 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
     setDetail(data)
   }, [])
 
+  const loadEligibility = useCallback(async function loadEligibility(pathCode, tomoNo) {
+    setEligibilityLoading(true)
+    const { data, error: rpcError } = await supabase.rpc(
+      'get_powerfit_tomo_purchase_eligibility_secure',
+      {
+        p_path_code: pathCode,
+        p_tomo_no: Number(tomoNo),
+      },
+    )
+
+    if (rpcError) {
+      setEligibility({
+        eligible: false,
+        reason: 'ELIGIBILITY_UNAVAILABLE',
+        message: 'No se pudo verificar todavía la progresión de este tomo.',
+      })
+    } else {
+      setEligibility(data)
+    }
+    setEligibilityLoading(false)
+  }, [])
+
   useEffect(() => {
     const timer = window.setTimeout(() => {
       loadHome()
@@ -192,9 +215,10 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       loadDetail(selected.path, selected.tomo)
+      loadEligibility(selected.path, selected.tomo)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [loadDetail, selected.path, selected.tomo])
+  }, [loadDetail, loadEligibility, selected.path, selected.tomo])
 
   async function enroll(pathCode) {
     const { error: rpcError } = await supabase.rpc('enroll_powerfit_combat_path_secure', {
@@ -209,32 +233,11 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
     }
 
     await loadHome()
-  }
-
-  async function grantAccess(pathCode, tomoNo) {
-    if (!student?.id || !isAdmin) return
-    const reason = window.prompt('Motivo obligatorio para otorgar acceso:', grantReason)
-    if (!reason?.trim()) return
-    setGrantReason(reason)
-
-    const { error: rpcError } = await supabase.rpc('grant_powerfit_tomo_access_secure', {
-      p_alumno_id: student.id,
-      p_path_code: pathCode,
-      p_tomo_no: Number(tomoNo),
-      p_reason: reason,
-    })
-
-    if (rpcError) {
-      window.alert(`No se pudo otorgar acceso: ${rpcError.message}`)
-      return
-    }
-
-    await loadHome()
-    await loadDetail(pathCode, tomoNo)
+    await loadEligibility(pathCode, selected.tomo)
   }
 
   async function buyTomo(pathCode, tomoNo) {
-    if (!student?.id) return
+    if (!student?.id || eligibilityLoading || !eligibility?.eligible) return
     const popup = window.open('', '_blank', 'noopener,noreferrer')
 
     try {
@@ -463,26 +466,61 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
           </div>
           <div className="flex flex-wrap gap-2">
             <Badge status={detail?.access_status || 'LOCKED'}>{detail?.access_status || 'LOCKED'}</Badge>
-            {detail?.access_status === 'LOCKED' && (
+            {detail?.access_status === 'LOCKED' && eligibility?.eligible && (
               <button
                 type="button"
                 onClick={() => buyTomo(selected.path, selected.tomo)}
-                className="rounded-xl bg-green-600 px-4 py-2 font-black text-white hover:bg-green-700"
+                disabled={eligibilityLoading}
+                className="rounded-xl bg-green-600 px-4 py-2 font-black text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Comprar tomo {clp(detail?.tomo?.school_price_clp || detail?.tomo?.price_clp || 5000)}
-              </button>
-            )}
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={() => grantAccess(selected.path, selected.tomo)}
-                className="rounded-xl bg-yellow-500 px-4 py-2 font-black text-black hover:bg-yellow-400"
-              >
-                Otorgar acceso
+                Comprar y desbloquear {clp(detail?.tomo?.school_price_clp || detail?.tomo?.price_clp || 5000)}
               </button>
             )}
           </div>
         </div>
+
+        {detail?.access_status === 'LOCKED' && (
+          <div className="mt-5 rounded-2xl border border-zinc-700 bg-black p-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Requisitos de acceso</p>
+                <p className={`mt-1 font-black ${
+                  eligibility?.eligible ? 'text-green-400' : 'text-yellow-300'
+                }`}>
+                  {eligibilityLoading
+                    ? 'Verificando progresión...'
+                    : eligibility?.message || 'Verificando requisitos del tomo.'}
+                </p>
+              </div>
+              {!eligibilityLoading && (
+                <Badge status={eligibility?.eligible ? 'UNLOCKED' : 'LOCKED'}>
+                  {eligibility?.eligible ? 'Habilitado para comprar' : 'Aún no habilitado'}
+                </Badge>
+              )}
+            </div>
+
+            {!eligibilityLoading && eligibility && (
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <CombatMetric
+                  label="Tiempo"
+                  value={`${eligibility.elapsed_months ?? 0}/${eligibility.required_months ?? 0} meses`}
+                />
+                <CombatMetric
+                  label="Asistencia"
+                  value={`${eligibility.attendance_count ?? 0}/${eligibility.attendance_required ?? 0}`}
+                />
+                <CombatMetric
+                  label="Tomos previos"
+                  value={eligibility.prior_tomos_pending > 0 ? `${eligibility.prior_tomos_pending} pendientes` : 'OK'}
+                />
+                <CombatMetric
+                  label="Estado"
+                  value={eligibility.eligible ? 'Cumple' : 'Pendiente'}
+                />
+              </div>
+            )}
+          </div>
+        )}
 
         {(detail?.access_status !== 'LOCKED' || isAdmin) && detail?.tomo?.study_content && (
           <div className="mt-6 rounded-2xl border border-yellow-500/40 bg-black p-4 sm:p-5">
