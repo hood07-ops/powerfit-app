@@ -244,3 +244,124 @@ revoke execute on function public.grant_powerfit_tomo_access_secure(bigint,text,
 from authenticated,public,anon;
 grant execute on function public.grant_powerfit_tomo_access_secure(bigint,text,smallint,text)
 to service_role;
+
+
+create or replace function public.get_powerfit_final_exam_eligibility_secure(
+  p_alumno_id bigint,
+  p_path_code text
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path=public
+as $$
+declare
+  v_path text:=upper(trim(coalesce(p_path_code,'')));
+  v_enrollment public.cps_student_enrollments%rowtype;
+  v_stage public.cps_stages%rowtype;
+  v_stage_start date;
+  v_months integer:=0;
+  v_attendance integer:=0;
+  v_attendance_required integer:=0;
+  v_tomos_total integer:=0;
+  v_tomos_completed integer:=0;
+  v_open_critical integer:=0;
+  v_eligible boolean:=false;
+begin
+  if auth.uid() is null then raise exception 'AUTH_REQUIRED' using errcode='42501'; end if;
+  if not public.cps_can_read_student(p_alumno_id) then raise exception 'FORBIDDEN' using errcode='42501'; end if;
+
+  select * into v_enrollment
+  from public.cps_student_enrollments
+  where alumno_id=p_alumno_id and route_code=v_path and status='ACTIVE';
+
+  if not found then
+    return jsonb_build_object('eligible',false,'reason','NOT_ENROLLED');
+  end if;
+
+  select * into v_stage
+  from public.cps_stages
+  where route_code=v_enrollment.route_code
+    and stage_order=v_enrollment.current_stage_order;
+
+  select coalesce(
+    (select max(p.promoted_at::date)
+     from public.cps_promotions p
+     where p.alumno_id=p_alumno_id
+       and p.route_code=v_path
+       and p.new_stage_order=v_enrollment.current_stage_order),
+    v_enrollment.enrolled_at
+  ) into v_stage_start;
+
+  v_months:=greatest(
+    0,
+    extract(year from age(current_date,v_stage_start))::int*12
+    + extract(month from age(current_date,v_stage_start))::int
+  );
+
+  select count(distinct (a.fecha at time zone 'Pacific/Easter')::date)
+  into v_attendance
+  from public.asistencias a
+  where a.alumno_id=p_alumno_id
+    and (a.fecha at time zone 'Pacific/Easter')::date between v_stage_start and current_date;
+
+  v_attendance_required:=v_stage.minimum_months*8;
+
+  select count(*) into v_tomos_total
+  from public.cps_stage_tomos
+  where route_code=v_enrollment.route_code
+    and stage_order=v_enrollment.current_stage_order
+    and required=true;
+
+  select count(*) into v_tomos_completed
+  from public.cps_stage_tomos st
+  join public.cps_tomo_access ta
+    on ta.alumno_id=p_alumno_id
+   and ta.route_code=st.route_code
+   and ta.tomo_no=st.tomo_no
+   and ta.status='TOMO_COMPLETED'
+  where st.route_code=v_enrollment.route_code
+    and st.stage_order=v_enrollment.current_stage_order
+    and st.required=true;
+
+  select count(*) into v_open_critical
+  from public.cps_card_progress cp
+  join public.cps_cards c on c.id=cp.card_id
+  where cp.alumno_id=p_alumno_id
+    and cp.route_code=v_path
+    and c.level_order=v_enrollment.current_stage_order
+    and c.critical=true
+    and cp.status not in ('COMPLETED','LIVE_APPROVED');
+
+  v_eligible:=
+    v_months>=v_stage.minimum_months
+    and v_attendance>=v_attendance_required
+    and v_tomos_completed=v_tomos_total
+    and v_open_critical=0;
+
+  return jsonb_build_object(
+    'eligible',v_eligible,
+    'stage_start',v_stage_start,
+    'months_in_stage',v_months,
+    'minimum_months',v_stage.minimum_months,
+    'attendance_count',v_attendance,
+    'attendance_required',v_attendance_required,
+    'tomos_completed',v_tomos_completed,
+    'tomos_required',v_tomos_total,
+    'open_critical_fail',v_open_critical,
+    'message',case
+      when v_months<v_stage.minimum_months then 'AÚN NO CUMPLE TIEMPO MÍNIMO'
+      when v_attendance<v_attendance_required then 'AÚN NO CUMPLE ASISTENCIA MÍNIMA'
+      when v_tomos_completed<v_tomos_total then 'AÚN FALTAN TOMOS OBLIGATORIOS'
+      when v_open_critical>0 then 'AÚN HAY EVALUACIONES CRÍTICAS PENDIENTES'
+      else 'HABILITADO PARA EXAMEN FINAL'
+    end
+  );
+end;
+$$;
+
+revoke all on function public.get_powerfit_final_exam_eligibility_secure(bigint,text)
+from public,anon;
+grant execute on function public.get_powerfit_final_exam_eligibility_secure(bigint,text)
+to authenticated,service_role;
