@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarPlanMensual } from './workoutSystem'
-import { generarSemanaTecnica, TECHNICAL_SPORTS, WEEKLY_LEVELS, WEEKLY_GOALS } from './technicalPlanningSystem'
+import { generarSemanaTecnica, TECHNICAL_SPORTS, WEEKLY_LEVELS, COMBAT_STAGES, goalsForCombatStage } from './technicalPlanningSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
 const TRAMOS_GENERACION = [
@@ -627,6 +627,7 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [faseATR, setFaseATR] = useState('acumulacion')
   const [deporteTecnico, setDeporteTecnico] = useState('boxeo')
   const [objetivoTactico, setObjetivoTactico] = useState('control_distancia')
+  const [gradoNivelTecnico, setGradoNivelTecnico] = useState('boxing_1')
   const [sesionesSemana, setSesionesSemana] = useState(5)
   const [duracionSesion, setDuracionSesion] = useState(60)
   const [usarCicloMenstrual, setUsarCicloMenstrual] = useState(false)
@@ -646,6 +647,8 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
   const t = GENERADOR_TEXT[idioma] || GENERADOR_TEXT.es
+  const gradosNivelesTecnicos = COMBAT_STAGES[deporteTecnico] || COMBAT_STAGES.boxeo
+  const objetivosTacticosDisponibles = goalsForCombatStage(deporteTecnico, gradoNivelTecnico)
 
   const tramoActual =
     TRAMOS_GENERACION.find(
@@ -917,6 +920,7 @@ Vuelta a la calma: dirigida en clase.
           sport: deporteTecnico,
           level: nivel,
           goalId: objetivoTactico,
+          stageId: gradoNivelTecnico,
           sessionsCount: sesionesSemana,
           duration: duracionSesion,
           athleteName: student?.nombre || '',
@@ -1316,14 +1320,36 @@ Vuelta a la calma: dirigida en clase.
             </p>
           </div>
           <div className="grid md:grid-cols-2 xl:grid-cols-5 gap-3">
-            <select value={deporteTecnico} onChange={(e) => setDeporteTecnico(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
+            <select
+              value={deporteTecnico}
+              onChange={(e) => {
+                const nextSport = e.target.value
+                const firstStage = (COMBAT_STAGES[nextSport] || COMBAT_STAGES.boxeo)[0]
+                setDeporteTecnico(nextSport)
+                setGradoNivelTecnico(firstStage?.value || 'boxing_1')
+                setObjetivoTactico('control_distancia')
+              }}
+              className="bg-zinc-800 p-4 rounded-2xl"
+            >
               {TECHNICAL_SPORTS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+            <select
+              value={gradoNivelTecnico}
+              onChange={(e) => {
+                const nextStage = e.target.value
+                setGradoNivelTecnico(nextStage)
+                const firstGoal = goalsForCombatStage(deporteTecnico, nextStage)[0]
+                if (firstGoal) setObjetivoTactico(firstGoal.value)
+              }}
+              className="bg-zinc-800 p-4 rounded-2xl"
+            >
+              {gradosNivelesTecnicos.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
             <select value={nivel} onChange={(e) => setNivel(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
               {WEEKLY_LEVELS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
             <select value={objetivoTactico} onChange={(e) => setObjetivoTactico(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
-              {WEEKLY_GOALS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              {objetivosTacticosDisponibles.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
             <select value={sesionesSemana} onChange={(e) => setSesionesSemana(Number(e.target.value))} className="bg-zinc-800 p-4 rounded-2xl">
               {[3,4,5,6].map((value) => <option key={value} value={value}>{value} sesiones</option>)}
