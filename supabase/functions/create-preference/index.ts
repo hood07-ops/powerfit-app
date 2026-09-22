@@ -101,7 +101,7 @@ Deno.serve(async (req) => {
     const plan = PLANS[planCode]
     const isCpsTomo = paymentType === 'cps_tomo'
     if (!alumnoId || (!isCpsTomo && !plan)) return jsonResponse(req, { error: 'INVALID_PAYMENT_DATA', message: 'Datos de pago invalidos' }, 400)
-    if (isCpsTomo && (!['BOXING', 'KICKBOXING'].includes(cpsPath) || !Number.isInteger(cpsTomoNo) || cpsTomoNo < 1 || cpsTomoNo > 15)) {
+    if (isCpsTomo && (!['BOXING', 'KICKBOXING'].includes(cpsPath) || !Number.isInteger(cpsTomoNo) || cpsTomoNo < 1 || cpsTomoNo > 17)) {
       return jsonResponse(req, { error: 'INVALID_CPS_TOMO_PAYMENT', message: 'Datos CPS invalidos.' }, 400)
     }
     const serverDb = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
