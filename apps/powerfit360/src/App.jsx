@@ -1082,6 +1082,7 @@ function AdminAlumnoModal({
   onEnviarPago,
   onEliminarGeneraciones,
   onEliminarAlumno,
+  onReintegrarAlumno,
 }) {
   const [fechaPago, setFechaPago] = useState(fechaHoy())
   const [planPago, setPlanPago] = useState('monthly')
