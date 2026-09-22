@@ -362,32 +362,85 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                   <CombatMetric label="Tomos completos" value={`${completed}/${tomos.length}`} />
                 </div>
 
-                <div className="mt-4 flex gap-2 overflow-x-auto pb-1 sm:flex-wrap">
-                  {!enrollment && (
-                    <button
-                      type="button"
-                      onClick={() => enroll(route.code)}
-                      className="rounded-2xl bg-red-600 px-4 py-3 font-black text-white hover:bg-red-700"
+                {!enrollment && (
+                  <button
+                    type="button"
+                    onClick={() => enroll(route.code)}
+                    className="mt-4 w-full rounded-2xl bg-red-600 px-4 py-3 font-black text-white hover:bg-red-700"
+                  >
+                    Matricular ruta
+                  </button>
+                )}
+
+                <div className="mt-5 space-y-5">
+                  {route.stages?.map((stage) => (
+                    <div
+                      key={`${route.code}-stage-${stage.stage_order}`}
+                      className="rounded-2xl border border-zinc-800 bg-zinc-950/70 p-3"
                     >
-                      Matricular ruta
-                    </button>
-                  )}
-                  {route.stages?.map((stage) =>
-                    stage.tomos?.map((tomo) => (
-                      <button
-                        key={`${route.code}-${stage.stage_order}-${tomo.tomo_no}`}
-                        type="button"
-                        onClick={() => setSelected({ path: route.code, tomo: tomo.tomo_no })}
-                        className={`shrink-0 rounded-xl border px-3 py-2 text-sm font-black ${
-                          selected.path === route.code && Number(selected.tomo) === Number(tomo.tomo_no)
-                            ? 'border-red-500 bg-red-600 text-white'
-                            : 'border-zinc-700 bg-zinc-900 text-zinc-200 hover:border-red-500'
-                        }`}
-                      >
-                        T{tomo.tomo_no}
-                      </button>
-                    )),
-                  )}
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-black uppercase tracking-wide text-red-400">
+                            {route.uses_belts ? 'Grado' : 'Nivel'}
+                          </p>
+                          <h4 className="text-base font-black text-white">{stage.label}</h4>
+                        </div>
+                        <span className="rounded-lg border border-zinc-700 bg-black px-2 py-1 text-xs font-black text-zinc-400">
+                          {(stage.tomos || []).length} tomo{(stage.tomos || []).length === 1 ? '' : 's'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {(stage.tomos || []).map((tomo) => {
+                          const isSelected =
+                            selected.path === route.code &&
+                            Number(selected.tomo) === Number(tomo.tomo_no)
+                          const tomoStatus = tomo.access_status || 'LOCKED'
+
+                          return (
+                            <button
+                              key={`${route.code}-${stage.stage_order}-${tomo.tomo_no}`}
+                              type="button"
+                              onClick={() => setSelected({ path: route.code, tomo: tomo.tomo_no })}
+                              className={`w-full rounded-2xl border p-3 text-left transition ${
+                                isSelected
+                                  ? 'border-red-500 bg-red-600 text-white'
+                                  : 'border-zinc-700 bg-black text-zinc-200 hover:border-red-500 hover:bg-zinc-900'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className={`text-xs font-black uppercase ${
+                                    isSelected ? 'text-red-100' : 'text-red-400'
+                                  }`}>
+                                    Tomo {tomo.tomo_no}
+                                  </p>
+                                  <p className="mt-1 break-words text-sm font-black leading-5 sm:text-base">
+                                    {tomo.title || `Tomo ${tomo.tomo_no}`}
+                                  </p>
+                                </div>
+                                <span className={`shrink-0 rounded-lg border px-2 py-1 text-[10px] font-black uppercase ${
+                                  isSelected
+                                    ? 'border-white/40 bg-white/10 text-white'
+                                    : tomoStatus === 'TOMO_COMPLETED'
+                                      ? 'border-green-500/60 bg-green-950/40 text-green-300'
+                                      : tomoStatus !== 'LOCKED'
+                                        ? 'border-yellow-500/60 bg-yellow-950/40 text-yellow-300'
+                                        : 'border-zinc-700 bg-zinc-900 text-zinc-500'
+                                }`}>
+                                  {tomoStatus === 'TOMO_COMPLETED'
+                                    ? 'Completo'
+                                    : tomoStatus !== 'LOCKED'
+                                      ? 'Desbloqueado'
+                                      : 'Bloqueado'}
+                                </span>
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </article>
             )
