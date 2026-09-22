@@ -19,6 +19,11 @@ const FALLBACK_TOMOS = [
   [10, 'Planificación del Entrenamiento'],
   [11, 'Combate y Competencia'],
   [12, 'Análisis Técnico y Video'],
+  [13, 'Programas de Entrenamiento'],
+  [14, 'Errores y Correcciones'],
+  [15, 'Maestría, Coaching y Legado'],
+  [16, 'Tomo Especial de Boxeo — Integración Táctica y Planificación por Objetivos'],
+  [17, 'Kickboxing Negro 1er Dan — Integración Táctica y Planificación por Objetivos'],
 ]
 
 const FALLBACK_ROUTES = [
@@ -33,7 +38,7 @@ const FALLBACK_ROUTES = [
       { stage_order: 4, label: 'Boxeo Nivel 4', minimum_months: 6, minimum_exam_score: 80, tomos: [4] },
       { stage_order: 5, label: 'Boxeo Nivel 5', minimum_months: 7, minimum_exam_score: 82, tomos: [6, 7] },
       { stage_order: 6, label: 'Boxeo Nivel 6', minimum_months: 8, minimum_exam_score: 85, tomos: [8, 9, 10] },
-      { stage_order: 7, label: 'Boxeo Nivel 7', minimum_months: 8, minimum_exam_score: 85, tomos: [11, 12] },
+      { stage_order: 7, label: 'Boxeo Nivel 7', minimum_months: 8, minimum_exam_score: 85, tomos: [11, 12, 13, 14, 15, 16] },
     ],
   },
   {
@@ -47,7 +52,7 @@ const FALLBACK_ROUTES = [
       { stage_order: 4, label: 'Azul', minimum_months: 6, minimum_exam_score: 80, tomos: [4, 5] },
       { stage_order: 5, label: 'Café', minimum_months: 7, minimum_exam_score: 82, tomos: [6, 7] },
       { stage_order: 6, label: 'Café-Negro', minimum_months: 8, minimum_exam_score: 85, tomos: [8, 9, 10] },
-      { stage_order: 7, label: 'Negro', minimum_months: 8, minimum_exam_score: 85, tomos: [11, 12] },
+      { stage_order: 7, label: 'Negro 1er Dan', minimum_months: 8, minimum_exam_score: 85, tomos: [11, 12, 13, 14, 15, 17] },
     ],
   },
 ].map((route) => ({
@@ -316,7 +321,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
             <p className="text-sm font-black uppercase text-red-400">PowerFit 360 CPS</p>
             <h2 className="text-3xl font-black text-white sm:text-4xl">Mi Camino de Combate</h2>
             <p className="mt-2 max-w-3xl text-sm font-bold text-zinc-300">
-              Dos caminos independientes: Boxeo Nivel 1-7 y Kickboxing Blanco a Negro. El pago desbloquea tomos; la promoción siempre requiere evaluación y aprobación del coach.
+              Dos caminos independientes: Boxeo Nivel 1-7 y Kickboxing Blanco a Negro 1er Dan. El pago desbloquea tomos; la promoción siempre requiere evaluación y aprobación del coach.
             </p>
           </div>
           <Badge status="UNLOCKED">Tomo escuela {clp(home?.price_school_member_clp || 5000)}</Badge>
@@ -344,7 +349,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                   <div>
                     <h3 className="text-2xl font-black text-white">{ROUTE_LABELS[route.code] || route.name}</h3>
                     <p className="text-sm font-bold text-zinc-400">
-                      {route.uses_belts ? 'Grados Blanco → Negro' : 'Boxeo Nivel 1 → 7, sin colores'}
+                      {route.uses_belts ? 'Grados Blanco → Negro 1er Dan' : 'Boxeo Nivel 1 → 7 + Tomo Especial final'}
                     </p>
                   </div>
                   <Badge status={enrollment?.status || 'LOCKED'}>{enrollment?.status || 'No matriculado'}</Badge>
@@ -425,6 +430,15 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
             )}
           </div>
         </div>
+
+        {(detail?.access_status !== 'LOCKED' || isAdmin) && detail?.tomo?.study_content && (
+          <div className="mt-6 rounded-2xl border border-yellow-500/40 bg-black p-4 sm:p-5">
+            <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Contenido de estudio</p>
+            <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-zinc-200">
+              {detail.tomo.study_content}
+            </pre>
+          </div>
+        )}
 
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
           <div className="rounded-2xl border border-zinc-800 bg-black p-4">
