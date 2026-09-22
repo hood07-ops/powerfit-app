@@ -327,6 +327,11 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userError } = await userDb.auth.getUser();
   if (userError || !userData?.user?.id) return json(req, { ok: false, error: "UNAUTHORIZED" }, 401);
 
+  const { data: effectiveRole, error: roleError } = await userDb.rpc("get_powerfit_effective_role");
+  if (roleError || String(effectiveRole || "").toLowerCase() !== "admin") {
+    return json(req, { ok: false, error: "ADMIN_REQUIRED" }, 403);
+  }
+
   const shortLimit = await enforceRateLimit(serverDb, `ai-coach:user:${userData.user.id}`, 6, 60);
   if (!shortLimit.allowed) {
     return json(req, { ok: false, error: "RATE_LIMITED" }, 429, { "Retry-After": String(shortLimit.retry_after_seconds || 60) });
