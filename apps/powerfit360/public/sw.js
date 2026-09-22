@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'powerfit-360-v2026-09-21-weekly-tech-01'
+﻿const CACHE_VERSION = 'powerfit-360-v2026-09-22-tactical-tomes-01'
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
