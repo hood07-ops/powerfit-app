@@ -4,6 +4,88 @@ export const TECHNICAL_SPORTS = [
   { value: 'k1', label: 'K1' },
 ]
 
+
+export const COMBAT_STAGES = {
+  boxeo: [
+    { value: 'boxing_1', label: 'Boxeo Nivel 1', order: 1 },
+    { value: 'boxing_2', label: 'Boxeo Nivel 2', order: 2 },
+    { value: 'boxing_3', label: 'Boxeo Nivel 3', order: 3 },
+    { value: 'boxing_4', label: 'Boxeo Nivel 4', order: 4 },
+    { value: 'boxing_5', label: 'Boxeo Nivel 5', order: 5 },
+    { value: 'boxing_6', label: 'Boxeo Nivel 6', order: 6 },
+    { value: 'boxing_7', label: 'Boxeo Nivel 7', order: 7 },
+  ],
+  kickboxing: [
+    { value: 'kick_blanco', label: 'Kickboxing Blanco', order: 1 },
+    { value: 'kick_naranjo', label: 'Kickboxing Naranjo', order: 2 },
+    { value: 'kick_verde', label: 'Kickboxing Verde', order: 3 },
+    { value: 'kick_azul', label: 'Kickboxing Azul', order: 4 },
+    { value: 'kick_cafe', label: 'Kickboxing Café', order: 5 },
+    { value: 'kick_cafe_negro', label: 'Kickboxing Café-Negro', order: 6 },
+    { value: 'kick_negro', label: 'Kickboxing Negro', order: 7 },
+  ],
+  k1: [
+    { value: 'k1_blanco', label: 'K1 Blanco', order: 1 },
+    { value: 'k1_naranjo', label: 'K1 Naranjo', order: 2 },
+    { value: 'k1_verde', label: 'K1 Verde', order: 3 },
+    { value: 'k1_azul', label: 'K1 Azul', order: 4 },
+    { value: 'k1_cafe', label: 'K1 Café', order: 5 },
+    { value: 'k1_cafe_negro', label: 'K1 Café-Negro', order: 6 },
+    { value: 'k1_negro', label: 'K1 Negro', order: 7 },
+  ],
+}
+
+// Currículo interno del generador. No se presenta al alumno en Mi Camino.
+// Cada grado/nivel acumula los objetivos anteriores y habilita mayor complejidad.
+const STAGE_CURRICULUM = {
+  boxing_1: { goals: ['control_distancia', 'entrar_salir', 'iniciar_ataque'], skills: ['jab', 'cross', 'step_forward', 'step_back'] },
+  boxing_2: { goals: ['combinar', 'defender_rectos'], skills: ['lead_hook', 'rear_hook', 'parry', 'slip_left', 'slip_right'] },
+  boxing_3: { goals: ['defender_combinacion', 'contra_recto_izq'], skills: ['cover', 'lead_uppercut', 'rear_uppercut', 'pivot_left', 'pivot_right'] },
+  boxing_4: { goals: ['contra_despues_defensa', 'crear_angulo'], skills: ['angle', 'jab_body', 'cross_body', 'lead_body_hook', 'rear_body_hook'] },
+  boxing_5: { goals: ['salir_presion', 'ataque_defensa_salida'], skills: ['lead_body_uppercut', 'rear_body_uppercut', 'step_left', 'step_right'] },
+  boxing_6: { goals: ['provocar_defender_contra'], skills: [] },
+  boxing_7: { goals: ['control_distancia', 'entrar_salir', 'combinar', 'contra_despues_defensa', 'crear_angulo', 'salir_presion', 'ataque_defensa_salida', 'provocar_defender_contra'], skills: [] },
+
+  kick_blanco: { goals: ['control_distancia', 'entrar_salir', 'iniciar_ataque'], skills: ['jab', 'cross', 'step_forward', 'step_back', 'teep'] },
+  kick_naranjo: { goals: ['combinar', 'defender_rectos'], skills: ['lead_hook', 'rear_hook', 'low_kick_left', 'low_kick_right', 'parry'] },
+  kick_verde: { goals: ['defender_combinacion', 'contra_recto_izq'], skills: ['middle_kick_left', 'middle_kick_right', 'slip_left', 'slip_right', 'cover'] },
+  kick_azul: { goals: ['contra_despues_defensa', 'crear_angulo'], skills: ['high_kick_left', 'high_kick_right', 'pivot_left', 'pivot_right', 'angle'] },
+  kick_cafe: { goals: ['salir_presion', 'ataque_defensa_salida'], skills: ['knee_front', 'step_left', 'step_right'] },
+  kick_cafe_negro: { goals: ['provocar_defender_contra'], skills: [] },
+  kick_negro: { goals: ['control_distancia', 'entrar_salir', 'combinar', 'contra_despues_defensa', 'crear_angulo', 'salir_presion', 'ataque_defensa_salida', 'provocar_defender_contra'], skills: [] },
+
+  k1_blanco: { goals: ['control_distancia', 'entrar_salir', 'iniciar_ataque'], skills: ['jab', 'cross', 'step_forward', 'step_back', 'teep'] },
+  k1_naranjo: { goals: ['combinar', 'defender_rectos'], skills: ['lead_hook', 'rear_hook', 'low_kick_left', 'low_kick_right', 'parry'] },
+  k1_verde: { goals: ['defender_combinacion', 'contra_recto_izq'], skills: ['middle_kick_left', 'middle_kick_right', 'slip_left', 'slip_right', 'cover'] },
+  k1_azul: { goals: ['contra_despues_defensa', 'crear_angulo'], skills: ['high_kick_left', 'high_kick_right', 'pivot_left', 'pivot_right', 'angle'] },
+  k1_cafe: { goals: ['salir_presion', 'ataque_defensa_salida'], skills: ['knee_front', 'step_left', 'step_right'] },
+  k1_cafe_negro: { goals: ['provocar_defender_contra'], skills: [] },
+  k1_negro: { goals: ['control_distancia', 'entrar_salir', 'combinar', 'contra_despues_defensa', 'crear_angulo', 'salir_presion', 'ataque_defensa_salida', 'provocar_defender_contra'], skills: [] },
+}
+
+function stageOrder(stageId, sport) {
+  const list = COMBAT_STAGES[sport] || COMBAT_STAGES.boxeo
+  return list.find((item) => item.value === stageId)?.order || 1
+}
+
+function accumulatedCurriculum(stageId, sport) {
+  const list = COMBAT_STAGES[sport] || COMBAT_STAGES.boxeo
+  const maxOrder = stageOrder(stageId, sport)
+  const goals = new Set()
+  const skills = new Set()
+  list.filter((stage) => stage.order <= maxOrder).forEach((stage) => {
+    const item = STAGE_CURRICULUM[stage.value]
+    ;(item?.goals || []).forEach((goal) => goals.add(goal))
+    ;(item?.skills || []).forEach((skill) => skills.add(skill))
+  })
+  return { goals: [...goals], skills: [...skills] }
+}
+
+export function goalsForCombatStage(sport, stageId) {
+  const allowed = accumulatedCurriculum(stageId, sport).goals
+  return WEEKLY_GOALS.filter((goal) => allowed.includes(goal.value))
+}
+
 export const WEEKLY_LEVELS = [
   { value: 'basico', label: 'Básico' },
   { value: 'intermedio', label: 'Intermedio' },
@@ -279,20 +361,30 @@ export function generarSemanaTecnica({
   athleteName = '',
   athleteId = '',
   recentPlans = [],
+  stageId = null,
 }) {
-  const goal = GOAL_LIBRARY[goalId] || GOAL_LIBRARY.control_distancia
+  const curriculum = accumulatedCurriculum(
+    stageId || (COMBAT_STAGES[sport] || COMBAT_STAGES.boxeo)[0]?.value,
+    sport,
+  )
+  const safeGoalId = curriculum.goals.includes(goalId)
+    ? goalId
+    : curriculum.goals[0] || 'control_distancia'
+  const goal = GOAL_LIBRARY[safeGoalId] || GOAL_LIBRARY.control_distancia
   const roles = ROLES_BY_COUNT[Number(sessionsCount)] || ROLES_BY_COUNT[5]
-  const skills = goal[sportKey(sport)] || goal.boxing
+  const goalSkills = goal[sportKey(sport)] || goal.boxing
+  const skills = goalSkills.filter((skill) => curriculum.skills.includes(skill))
+  const effectiveSkills = skills.length >= 2 ? skills : goalSkills
   const recentText = (recentPlans || []).slice(0, 6).map((plan) => String(plan?.contenido || '')).join(' ')
   const baseSeed = seedNumber(`${athleteId}|${sport}|${goalId}|${new Date().toISOString().slice(0, 10)}`)
   const repeatPenalty = recentText.includes(goal.sparring) ? 1 : 0
   const seed = baseSeed + repeatPenalty
 
   const sessions = roles.map((role, index) =>
-    buildSession({ index, role, skills: rotate(skills, repeatPenalty), goal, level, duration, seed }),
+    buildSession({ index, role, skills: rotate(effectiveSkills, repeatPenalty), goal, level, duration, seed }),
   )
 
-  const goalLabel = WEEKLY_GOALS.find((item) => item.value === goalId)?.label || goalId
+  const goalLabel = WEEKLY_GOALS.find((item) => item.value === safeGoalId)?.label || safeGoalId
   const sportLabel = TECHNICAL_SPORTS.find((item) => item.value === sport)?.label || sport
   const levelLabel = WEEKLY_LEVELS.find((item) => item.value === level)?.label || level
 
@@ -358,7 +450,8 @@ export function generarSemanaTecnica({
     meta: {
       sport,
       level,
-      goalId,
+      goalId: safeGoalId,
+      stageId,
       goalLabel,
       dominantAxis: goal.dominant,
       secondaryAxes: goal.secondary,
