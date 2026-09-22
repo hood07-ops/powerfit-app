@@ -1313,7 +1313,13 @@ function AdminAlumnoModal({
                 onClick={() => onEliminarAlumno(alumno)}
                 className="bg-red-600 hover:bg-red-700 p-3 rounded-xl font-black"
               >
-                Eliminar alumno
+                Retirar por morosidad
+              </button>
+              <button
+                onClick={() => onReintegrarAlumno?.(alumno)}
+                className="bg-zinc-700 hover:bg-zinc-600 p-3 rounded-xl font-black"
+              >
+                Reintegrar progreso (60 días)
               </button>
             </div>
 
@@ -2806,7 +2812,9 @@ export default function App() {
     )
 
     const alumnosData = directoryError ? [] : directoryData?.students || []
-    const alumnosNormalizados = alumnosData.map(alumnoConEstadoAutomatico)
+    const alumnosNormalizados = alumnosData
+      .map(alumnoConEstadoAutomatico)
+      .filter((alumno) => !['RETIRADO_MOROSIDAD', 'ELIMINADO'].includes(String(alumno.estado_powerfit || '').toUpperCase()))
 
     setStudents(alumnosNormalizados)
     setAlumnoDetalle((actual) => {
@@ -3102,27 +3110,56 @@ export default function App() {
 
   async function eliminarAlumno(alumno) {
     const confirmado = window.confirm(
-      `Eliminar definitivamente a ${alumno.nombre || 'este alumno'}? Solo se borrara si no tiene historial.`
+      `Retirar a ${alumno.nombre || 'este alumno'} por morosidad? Se eliminarán sus datos deportivos y se conservará solo un punto de reintegro por 60 días.`
     )
 
     if (!confirmado) return
 
-    const { error } = await supabase.rpc('hard_delete_powerfit_student_if_empty', {
-      p_alumno_id: alumno.id,
-      p_reason: 'Eliminacion solicitada desde panel administrativo PowerFit 360',
-    })
+    const { data, error } = await supabase.rpc(
+      'retire_powerfit_student_for_nonpayment_secure',
+      {
+        p_alumno_id: alumno.id,
+      },
+    )
 
     if (error) {
-      const tieneHistorial = String(error.message || '').includes('STUDENT_HAS_HISTORY')
+      const noMoroso = String(error.message || '').includes('STUDENT_NOT_DELINQUENT')
       window.alert(
-        tieneHistorial
-          ? 'Este alumno tiene historial y no puede eliminarse fisicamente. Sus datos deportivos se conservaran.'
-          : `No se pudo eliminar el alumno: ${error.message}`
+        noMoroso
+          ? 'Solo se puede usar este retiro cuando el alumno está Moroso o Pendiente.'
+          : `No se pudo retirar al alumno: ${error.message}`,
       )
       return
     }
 
+    window.alert(
+      `Alumno retirado. El punto de reintegro se conservará hasta ${new Date(data?.retained_until || Date.now()).toLocaleDateString('es-CL')}.`,
+    )
     setAlumnoDetalle(null)
+    await cargarUsuario()
+  }
+
+  async function reintegrarAlumno(alumno) {
+    if (!alumno?.id) return
+
+    const { error } = await supabase.rpc(
+      'restore_powerfit_student_from_retention_secure',
+      {
+        p_alumno_id: alumno.id,
+      },
+    )
+
+    if (error) {
+      const sinCheckpoint = String(error.message || '').includes('NO_ACTIVE_REJOIN_CHECKPOINT')
+      window.alert(
+        sinCheckpoint
+          ? 'No existe un punto de reintegro vigente. Si pasaron más de 60 días, activa manualmente su nivel o grado desde Graduaciones.'
+          : `No se pudo reintegrar el progreso: ${error.message}`,
+      )
+      return
+    }
+
+    window.alert('Progreso CPS reintegrado desde el último punto guardado.')
     await cargarUsuario()
   }
 
@@ -3701,6 +3738,7 @@ export default function App() {
         onEnviarPago={abrirPagoAlumno}
         onEliminarGeneraciones={eliminarGeneraciones}
         onEliminarAlumno={eliminarAlumno}
+          onReintegrarAlumno={reintegrarAlumno}
       />
       <ChatWidget student={student} idioma={idioma} />
       <div className="powerfit-signature fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
