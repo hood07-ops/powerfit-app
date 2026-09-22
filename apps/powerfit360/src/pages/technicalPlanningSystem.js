@@ -22,7 +22,7 @@ export const COMBAT_STAGES = {
     { value: 'kick_azul', label: 'Kickboxing Azul', order: 4 },
     { value: 'kick_cafe', label: 'Kickboxing Café', order: 5 },
     { value: 'kick_cafe_negro', label: 'Kickboxing Café-Negro', order: 6 },
-    { value: 'kick_negro', label: 'Kickboxing Negro', order: 7 },
+    { value: 'kick_negro', label: 'Kickboxing Negro 1er Dan', order: 7 },
   ],
   k1: [
     { value: 'k1_blanco', label: 'K1 Blanco', order: 1 },
