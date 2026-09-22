@@ -2598,7 +2598,7 @@ export default function App() {
 
   function canOpenSection(sectionName, adminStatus) {
     if (!editionAllows(sectionName)) return false
-    if (['Admin', 'Entrenamientos', 'Graduaciones', 'RegistroCompras', 'Reportes', 'Marca'].includes(sectionName)) {
+    if (['Admin', 'Entrenamientos', 'Graduaciones', 'RegistroCompras', 'Reportes', 'Marca', 'Generador'].includes(sectionName)) {
       return adminStatus
     }
 
@@ -3391,7 +3391,7 @@ export default function App() {
           <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
           <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} set={() => setSection('XPRangos')} />
           <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} set={() => setSection('Metodos')} />
-          <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} set={() => setSection('Generador')} />
+          {isAdmin && <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} set={() => setSection('Generador')} />}
           <Btn show={editionAllows('Constructor')} text={t.workoutBuilder} active={visibleSection === 'Constructor'} set={() => setSection('Constructor')} />
           <Btn show={editionAllows('Rutinas')} text={t.routines} active={visibleSection === 'Rutinas'} set={() => setSection('Rutinas')} />
           <Btn show={editionAllows('Premium')} text={t.premium} active={visibleSection === 'Premium'} set={() => setSection('Premium')} />
@@ -3513,7 +3513,7 @@ export default function App() {
 
       {editionAllows('Metodos') && visibleSection === 'Metodos' && <MetodosPage idioma={idioma} />}
 
-      {editionAllows('Generador') && visibleSection === 'Generador' && (
+      {editionAllows('Generador') && visibleSection === 'Generador' && isAdmin && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
