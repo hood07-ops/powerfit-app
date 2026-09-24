@@ -3203,7 +3203,7 @@ export default function App() {
       const isOwnPayment = String(alumno.id) === String(student?.id)
 
       if (isAdmin && !isOwnPayment) {
-        const shareText = `Pago PowerFit 360 · ${selectedPlan.name} · ${formatearDinero(selectedPlan.amount)}`
+        const shareText = `Pago PowerFit 360 · ${selectedPlan.name} · ${Number(selectedPlan.amount || 0).toLocaleString('es-CL')}`
         if (navigator.share) {
           try {
             await navigator.share({
