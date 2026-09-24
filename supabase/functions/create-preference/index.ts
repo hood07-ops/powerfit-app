@@ -2,6 +2,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const allowedOrigins = new Set([
   'https://powerfit-app-alpha.vercel.app',
+  'https://powerfit-app-cv9o.vercel.app',
   'https://cps-staging.vercel.app',
   'http://localhost:3000',
   'http://localhost:5173',
@@ -113,17 +114,24 @@ Deno.serve(async (req) => {
     if (!hourlyLimit.allowed) {
       return jsonResponse(req, { error: 'RATE_LIMITED' }, 429, { 'Retry-After': String(hourlyLimit.retry_after_seconds || 3600) })
     }
-    const { data: alumno, error: alumnoError } = await serverDb.from('alumnos').select('id,user_id,nombre').eq('id', alumnoId).maybeSingle()
+    const { data: alumno, error: alumnoError } = await serverDb.from('alumnos').select('id,user_id,nombre,email').eq('id', alumnoId).maybeSingle()
     if (alumnoError || !alumno) return jsonResponse(req, { error: 'STUDENT_NOT_FOUND', message: 'Alumno no encontrado' }, 404)
-    if (String(alumno.user_id || '') !== authUser.id) return jsonResponse(req, { error: 'FORBIDDEN', message: 'No puedes iniciar el pago de este alumno.' }, 403)
-    const nombre = String(alumno.nombre || authUser.email || 'Alumno PowerFit').trim()
+
+    const { data: effectiveRole, error: roleError } = await userDb.rpc('get_powerfit_effective_role')
+    const isAdmin = !roleError && String(effectiveRole || '').toLowerCase() === 'admin'
+    const isOwner = String(alumno.user_id || '') === authUser.id
+    if (!isOwner && !isAdmin) {
+      return jsonResponse(req, { error: 'FORBIDDEN', message: 'No puedes iniciar el pago de este alumno.' }, 403)
+    }
+
+    const nombre = String(alumno.nombre || alumno.email || authUser.email || 'Alumno PowerFit').trim()
     let cpsQuote: Record<string, unknown> | null = null
     if (isCpsTomo) {
       const { data: quote, error: quoteError } = await serverDb.rpc('get_powerfit_cps_payment_quote_server', {
         p_alumno_id: Number(alumnoId),
         p_path_code: cpsPath,
         p_tomo_no: cpsTomoNo,
-        p_user_id: authUser.id,
+        p_user_id: alumno.user_id || authUser.id,
       })
       if (quoteError || !quote) {
         return jsonResponse(req, 
@@ -145,19 +153,19 @@ Deno.serve(async (req) => {
     }
     const preference = {
       items: [{ id: isCpsTomo ? `cps-${cpsPath}-${cpsTomoNo}-${alumnoId}` : `${planCode}-${alumnoId}`, title: itemTitle, quantity: 1, unit_price: itemAmount, currency_id: 'CLP' }],
-      payer: { name: nombre, email: authUser.email },
+      payer: { name: nombre, email: alumno.email || authUser.email },
       external_reference: alumnoId,
       metadata: isCpsTomo
         ? {
           alumno_id: alumnoId,
-          user_id: authUser.id,
+          user_id: alumno.user_id || authUser.id,
           tipo: 'cps_tomo_powerfit',
           path_code: cpsPath,
           tomo_no: cpsTomoNo,
           amount: itemAmount,
           membership_current: Boolean(cpsQuote?.membership_current),
         }
-        : { alumno_id: alumnoId, user_id: authUser.id, tipo: 'membership_powerfit', plan_code: planCode, months: plan.months, amount: plan.amount },
+        : { alumno_id: alumnoId, user_id: alumno.user_id || authUser.id, tipo: 'membership_powerfit', plan_code: planCode, months: plan.months, amount: plan.amount },
       back_urls: { success: `${appUrl}?payment=success`, failure: `${appUrl}?payment=failure`, pending: `${appUrl}?payment=pending` },
       auto_return: 'approved',
       notification_url: webhookUrl,
