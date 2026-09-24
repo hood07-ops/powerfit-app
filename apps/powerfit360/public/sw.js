@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'powerfit-360-v2026-09-22-tactical-tomes-01'
+﻿const CACHE_VERSION = 'powerfit-360-v2026-09-24-mp-checkout-01'
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
@@ -46,6 +46,21 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() => caches.match('/'))
+    )
+    return
+  }
+
+  if (request.destination === 'script' || request.destination === 'style') {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response.ok) {
+            const copy = response.clone()
+            caches.open(CACHE_VERSION).then((cache) => cache.put(request, copy))
+          }
+          return response
+        })
+        .catch(() => caches.match(request))
     )
     return
   }
