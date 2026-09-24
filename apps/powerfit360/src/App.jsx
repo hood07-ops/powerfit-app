@@ -3168,8 +3168,6 @@ export default function App() {
     if (!alumno) return
 
     const selectedPlan = paymentPlanByCode(planCode)
-    const popup = window.open('', '_blank', 'noopener,noreferrer')
-    const paymentUrl = import.meta.env.VITE_PAYMENT_URL
     const paymentPayload = {
       alumno_id: alumno.id,
       user_id: alumno.user_id || user.id,
@@ -3179,74 +3177,61 @@ export default function App() {
       monto: selectedPlan.amount,
       amount: selectedPlan.amount,
     }
-    function cerrarPagoConAviso(mensaje) {
-      popup?.close()
-      if (mensaje) {
-        window.alert(mensaje)
-      }
-    }
 
     if (!paymentPayload.monto || paymentPayload.monto <= 0) {
-      cerrarPagoConAviso('El plan seleccionado no tiene un monto válido.')
+      window.alert('El plan seleccionado no tiene un monto válido.')
       return
     }
 
     try {
-      if (paymentUrl) {
-        const response = await fetch(paymentUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(paymentPayload),
-        })
-        const data = await response.json()
-        const checkoutUrl = data.init_point || data.sandbox_init_point
-
-        if (!response.ok || !checkoutUrl) {
-          cerrarPagoConAviso(data.error || 'No se pudo crear el pago en Mercado Pago. Revisa las credenciales y la función backend.')
-          return
-        }
-
-        if (popup) {
-          popup.location.href = checkoutUrl
-        } else {
-          window.location.href = checkoutUrl
-        }
-        return
-      }
-
       const { data, error } = await supabase.functions.invoke('create-preference', {
         body: paymentPayload,
       })
       const checkoutUrl = data?.init_point || data?.sandbox_init_point
 
-      if (!error && checkoutUrl) {
-        if (popup) {
-          popup.location.href = checkoutUrl
-        } else {
-          window.location.href = checkoutUrl
-        }
-        return
-      }
-
-      if (error) {
-        const context = await error.context?.json?.().catch(() => null)
-        cerrarPagoConAviso(
+      if (error || !checkoutUrl) {
+        const context = await error?.context?.json?.().catch(() => null)
+        window.alert(
           context?.message ||
             context?.error ||
-            error.message ||
-            'No se pudo crear la preferencia de Mercado Pago.'
+            error?.message ||
+            'No se pudo crear el pago de Mercado Pago.',
         )
         return
       }
 
-      cerrarPagoConAviso(
-        'Mercado Pago todavía no está configurado o la función create-preference no está desplegada. Configura MP_ACCESS_TOKEN y despliega la función para abrir Checkout Pro.'
-      )
+      const isOwnPayment = String(alumno.id) === String(student?.id)
+
+      if (isAdmin && !isOwnPayment) {
+        const shareText = `Pago PowerFit 360 · ${selectedPlan.name} · ${formatearDinero(selectedPlan.amount)}`
+        if (navigator.share) {
+          try {
+            await navigator.share({
+              title: 'Link de pago PowerFit 360',
+              text: shareText,
+              url: checkoutUrl,
+            })
+            return
+          } catch (shareError) {
+            if (shareError?.name === 'AbortError') return
+          }
+        }
+
+        try {
+          await navigator.clipboard.writeText(checkoutUrl)
+          window.alert('Link de Mercado Pago copiado. Ya puedes enviárselo al alumno.')
+        } catch {
+          window.prompt('Copia y envía este link de Mercado Pago:', checkoutUrl)
+        }
+        return
+      }
+
+      // En iPhone/Safari evitamos abrir about:blank antes de esperar la respuesta.
+      // Navegar en la misma pestaña es más estable y evita pestañas blancas.
+      window.location.assign(checkoutUrl)
     } catch (error) {
-      cerrarPagoConAviso(
-        `No se pudo iniciar Mercado Pago (${error.message}). Revisa la configuración de Mercado Pago.`
+      window.alert(
+        `No se pudo iniciar Mercado Pago (${error.message}). Intenta nuevamente.`,
       )
     }
   }
