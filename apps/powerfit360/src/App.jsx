@@ -3052,7 +3052,7 @@ export default function App() {
     const safePaymentMethod = String(paymentMethod || 'efectivo').trim().toLowerCase()
     const requestId = `payment-${alumno.id}-${selectedPlan.code}-${safePaymentMethod}-${Date.now()}`
 
-    const { error } = await supabase.rpc(
+    const { data, error } = await supabase.rpc(
       'register_powerfit_payment_with_generation_reset_secure',
       {
         p_client_request_id: requestId,
@@ -3068,11 +3068,36 @@ export default function App() {
     )
 
     if (error) {
-      window.alert(`No se pudo registrar el pago: ${error.message}`)
+      const raw = String(error.message || '')
+      const friendly =
+        raw.includes('payment_received_on cannot be in the future') ||
+        raw.includes('period_start cannot be in the future')
+          ? 'La fecha seleccionada aparece adelantada por diferencia horaria. Revisa la fecha de pago e inténtalo nuevamente.'
+          : raw.includes('PAYMENT_AMOUNT_NOT_ALLOWED')
+            ? 'El monto no coincide con el plan seleccionado.'
+            : raw.includes('ADMIN_REQUIRED') || raw.includes('FORBIDDEN')
+              ? 'Tu sesión no tiene permiso de administrador para registrar este pago.'
+              : raw
+
+      window.alert(`No se pudo registrar el pago: ${friendly}`)
       return
     }
 
     await cargarUsuario()
+
+    const payment = data?.payment || {}
+    const due = payment?.new_due_date || payment?.payment?.new_due_date || null
+    const receipt = payment?.receipt_code || payment?.payment?.receipt_code || null
+
+    window.alert(
+      [
+        'Pago manual registrado correctamente.',
+        due ? `Nueva fecha de vencimiento: ${formatearFecha(due)}` : '',
+        receipt ? `Comprobante: ${receipt}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+    )
   }
 
   async function aprobarSolicitud(solicitud) {
