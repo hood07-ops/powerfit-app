@@ -301,6 +301,77 @@ function buildFallbackWorkout(configuration: any, adaptiveContext: any) {
   };
 }
 
+function formatWorkoutForPlan(workout: any) {
+  const exerciseLine = (exercise: any) => {
+    const parts = [String(exercise?.name || "Ejercicio")];
+    if (exercise?.sets != null) parts.push(`${exercise.sets} series`);
+    if (exercise?.reps) parts.push(`${exercise.reps} reps`);
+    if (exercise?.duration != null) parts.push(`${exercise.duration}s`);
+    if (exercise?.distance != null) parts.push(`${exercise.distance}m`);
+    if (exercise?.load != null) parts.push(`${exercise.load} kg`);
+    if (exercise?.percentage_rm != null) parts.push(`${exercise.percentage_rm}% RM`);
+    if (exercise?.rpe != null) parts.push(`RPE ${exercise.rpe}`);
+    if (exercise?.rir != null) parts.push(`RIR ${exercise.rir}`);
+    if (exercise?.rest != null) parts.push(`descanso ${exercise.rest}s`);
+    if (exercise?.tempo) parts.push(`tempo ${exercise.tempo}`);
+    if (exercise?.notes) parts.push(String(exercise.notes));
+    return `- ${parts.join(" | ")}`;
+  };
+
+  const lines = [
+    "POWERFIT 360",
+    "",
+    String(workout?.name || "Sesión PowerFit AI"),
+    `Objetivo: ${String(workout?.objective || "")}`,
+    `Modalidad: ${String(workout?.modality || "")}`,
+    `Nivel: ${String(workout?.level || "")}`,
+    `Duración: ${String(workout?.duration || "")} min`,
+    "",
+    "CALENTAMIENTO",
+    ...(Array.isArray(workout?.warmup) ? workout.warmup.map(exerciseLine) : []),
+  ];
+
+  (Array.isArray(workout?.blocks) ? workout.blocks : []).forEach((block: any, index: number) => {
+    lines.push(
+      "",
+      `BLOQUE ${index + 1} - ${String(block?.name || block?.type || "Trabajo")}`,
+      block?.objective ? `Objetivo: ${String(block.objective)}` : "",
+      block?.intensity ? `Intensidad: ${String(block.intensity)}` : "",
+      block?.duration != null ? `Duración: ${block.duration} min` : "",
+      block?.rest != null ? `Descanso: ${block.rest}s` : "",
+      block?.instructions ? `Instrucciones: ${String(block.instructions)}` : "",
+      ...(Array.isArray(block?.exercises) ? block.exercises.map(exerciseLine) : []),
+    );
+  });
+
+  lines.push(
+    "",
+    "VUELTA A LA CALMA",
+    ...(Array.isArray(workout?.cooldown) ? workout.cooldown.map(exerciseLine) : []),
+  );
+
+  if (workout?.estimatedLoad) {
+    lines.push(
+      "",
+      "CARGA ESTIMADA",
+      workout.estimatedLoad?.level ? `Nivel: ${String(workout.estimatedLoad.level)}` : "",
+      workout.estimatedLoad?.volume ? `Volumen: ${String(workout.estimatedLoad.volume)}` : "",
+      workout.estimatedLoad?.intensity ? `Intensidad: ${String(workout.estimatedLoad.intensity)}` : "",
+      workout.estimatedLoad?.notes ? `Notas: ${String(workout.estimatedLoad.notes)}` : "",
+    );
+  }
+
+  if (Array.isArray(workout?.coachNotes) && workout.coachNotes.length) {
+    lines.push("", "NOTAS DEL COACH", ...workout.coachNotes.map((note: unknown) => `- ${String(note)}`));
+  }
+
+  if (Array.isArray(workout?.warnings) && workout.warnings.length) {
+    lines.push("", "ADVERTENCIAS", ...workout.warnings.map((warning: unknown) => `- ${String(warning)}`));
+  }
+
+  return lines.filter((line) => line !== "").join("\n");
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders(req) });
   if (req.method !== "POST") return json(req, { ok: false, error: "METHOD_NOT_ALLOWED" }, 405);
@@ -505,7 +576,7 @@ Deno.serve(async (req: Request) => {
       p_result: workout,
       p_plan_objective: String(workout?.objective || configuration?.objective || "PowerFit AI").slice(0, 300),
       p_plan_level: String(workout?.level || configuration?.level || "intermedio").slice(0, 120),
-      p_plan_content: JSON.stringify(workout, null, 2),
+      p_plan_content: formatWorkoutForPlan(workout),
       p_provider: provider,
       p_model: model,
       p_warnings: Array.isArray(workout?.warnings) ? workout.warnings : [],
