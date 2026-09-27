@@ -74,27 +74,34 @@ function escapeHtml(value) {
 }
 
 function descargarWord(contenido, nombreAlumno) {
-  const contenidoCorregido = corregirNombresPowerFit(contenido)
-  const html = `
+  const contenidoCorregido = contenidoPlanLegible(contenido)
+  const html = `<!doctype html>
       <html>
-        <head><meta charset="utf-8" /></head>
+        <head>
+          <meta charset="utf-8" />
+          <title>Planificación PowerFit 360</title>
+          <style>
+            body{font-family:Arial,sans-serif;line-height:1.5;color:#111;padding:28px}
+            pre{font-family:Arial,sans-serif;font-size:14px;white-space:pre-wrap;line-height:1.55}
+          </style>
+        </head>
         <body>
-          <pre style="font-family: Arial; font-size: 14px; white-space: pre-wrap;">
-${escapeHtml(contenidoCorregido)}
-          </pre>
+          <pre>${escapeHtml(contenidoCorregido)}</pre>
         </body>
-      </html>
-    `
+      </html>`
 
   const blob = new Blob([html], { type: 'application/msword;charset=utf-8' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
 
   a.href = url
-  a.download = `PowerFit-${nombreAlumno || 'alumno'}-${Date.now()}.doc`
+  a.download = `PowerFit-${nombreArchivoSeguro(nombreAlumno || 'alumno')}-${Date.now()}.doc`
+  a.style.display = 'none'
+  document.body.appendChild(a)
   a.click()
+  a.remove()
 
-  URL.revokeObjectURL(url)
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000)
 }
 
 function celdaExcel(value) {
@@ -429,6 +436,34 @@ function textoWorkoutIA(workout, numero) {
 
   return lines.filter((line) => line !== '').join('\n')
 }
+
+function contenidoPlanLegible(contenido, numero = 1) {
+  if (contenido && typeof contenido === 'object') {
+    const formatted = textoWorkoutIA(contenido, numero)
+    return formatted || corregirNombresPowerFit(JSON.stringify(contenido, null, 2))
+  }
+
+  const raw = String(contenido || '').trim()
+  if (!raw) return ''
+
+  if (raw.startsWith('{') || raw.startsWith('[')) {
+    try {
+      const parsed = JSON.parse(raw)
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        (Array.isArray(parsed.warmup) || Array.isArray(parsed.blocks) || Array.isArray(parsed.cooldown))
+      ) {
+        return corregirNombresPowerFit(textoWorkoutIA(parsed, numero))
+      }
+    } catch {
+      // Mantener contenido histórico si no es JSON válido.
+    }
+  }
+
+  return corregirNombresPowerFit(raw)
+}
+
 function mensajeErrorGenerador(code, idioma = 'es') {
   const mensajes = {
     es: {
@@ -1517,7 +1552,7 @@ Vuelta a la calma: dirigida en clase.
               <VistaPlanMensual plan={planAbierto} nombreAlumno={student?.nombre} />
             ) : (
               <pre className="whitespace-pre-wrap text-sm">
-                {corregirNombresPowerFit(planAbierto.contenido)}
+                {contenidoPlanLegible(planAbierto.contenido)}
               </pre>
             )}
           </div>
