@@ -1,4 +1,4 @@
-﻿const CACHE_VERSION = 'powerfit-360-v2026-09-24-mp-checkout-01'
+﻿const CACHE_VERSION = 'powerfit-360-v2026-09-27-cps-generator-download-01'
 const APP_SHELL = [
   '/',
   '/manifest.webmanifest',
