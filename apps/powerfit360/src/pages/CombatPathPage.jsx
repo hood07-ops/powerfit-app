@@ -92,6 +92,56 @@ function clp(value) {
   }).format(value || 0)
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
+}
+
+function downloadStudyTomo(detail, routeLabel) {
+  const content = detail?.study?.content || detail?.tomo?.study_content || ''
+  if (!content) {
+    window.alert('Este tomo todavía no tiene contenido descargable disponible.')
+    return
+  }
+
+  const tomoNo = detail?.tomo?.tomo_no || ''
+  const title = detail?.tomo?.title || detail?.study?.title || `Tomo ${tomoNo}`
+  const html = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${escapeHtml(title)}</title>
+<style>
+body{font-family:Arial,sans-serif;line-height:1.55;color:#111;padding:28px}
+h1{font-size:26px;margin:0 0 6px}
+h2{font-size:16px;margin:0 0 24px;color:#555}
+pre{font-family:Arial,sans-serif;white-space:pre-wrap;font-size:14px;line-height:1.55}
+</style>
+</head>
+<body>
+<h1>Tomo ${escapeHtml(tomoNo)} — ${escapeHtml(title)}</h1>
+<h2>${escapeHtml(routeLabel || 'CPS PowerFit 360')}</h2>
+<pre>${escapeHtml(content)}</pre>
+</body>
+</html>`
+
+  const blob = new Blob([html], { type: 'application/msword;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  const safeTitle = String(title).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_-]+/g, '-').replace(/^-+|-+$/g, '')
+  a.href = url
+  a.download = `PowerFit-Tomo-${tomoNo}-${safeTitle || 'CPS'}.doc`
+  a.style.display = 'none'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+}
+
 function classForStatus(status) {
   if (['UNLOCKED', 'TOMO_COMPLETED', 'COMPLETED', 'VIDEO_APPROVED', 'LIVE_APPROVED'].includes(status)) {
     return 'border-green-500 bg-green-950/30 text-green-200'
@@ -522,11 +572,26 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
           </div>
         )}
 
-        {(detail?.access_status !== 'LOCKED' || isAdmin) && detail?.tomo?.study_content && (
+        {(detail?.access_status !== 'LOCKED' || isAdmin) &&
+          (detail?.study?.content || detail?.tomo?.study_content) && (
           <div className="mt-6 rounded-2xl border border-yellow-500/40 bg-black p-4 sm:p-5">
-            <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Contenido de estudio</p>
-            <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-6 text-zinc-200">
-              {detail.tomo.study_content}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Contenido de estudio</p>
+                <p className="mt-1 text-sm font-bold text-zinc-400">
+                  {detail?.study?.version ? `Versión ${detail.study.version}` : 'Material oficial del tomo'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => downloadStudyTomo(detail, ROUTE_LABELS[selected.path])}
+                className="rounded-xl bg-blue-600 px-4 py-3 font-black text-white hover:bg-blue-700"
+              >
+                Descargar tomo
+              </button>
+            </div>
+            <pre className="mt-4 whitespace-pre-wrap font-sans text-sm leading-6 text-zinc-200">
+              {detail?.study?.content || detail?.tomo?.study_content}
             </pre>
           </div>
         )}
