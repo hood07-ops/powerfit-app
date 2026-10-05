@@ -100,16 +100,22 @@ assert.equal(paymentUnlockKey({ origin: 'powerfit360', productType: 'membership'
 
 const cpsPage = await readFile(new URL('../apps/cps/index.html', import.meta.url), 'utf8');
 assert.match(cpsPage, /Abrir tomo \/ Subir videos/);
-assert.match(cpsPage, /new Blob\(\[text\]/);
 assert.match(cpsPage, /const canDownload=s=>isUnlocked\(s\)/);
-assert.doesNotMatch(cpsPage, /form\.action='\/api\/download-tomo'/);
+assert.match(cpsPage, /form\.action='\/api\/download-tomo'/);
+assert.doesNotMatch(cpsPage, /new Blob\(\[text\]/);
 assert.match(cpsPage, /cps-technique-submissions/);
 assert.match(cpsPage, /submit_powerfit_card_video_secure/);
+assert.match(cpsPage, /get_powerfit_cps_attention_secure/);
+assert.match(cpsPage, /get_powerfit_cps_route_progress_secure/);
+assert.match(cpsPage, /get_powerfit_final_exam_eligibility_secure/);
 
 const downloadEndpoint = await readFile(new URL('../api/download-tomo.js', import.meta.url), 'utf8');
-assert.match(downloadEndpoint, /new URLSearchParams\(raw\)/);
-assert.match(downloadEndpoint, /Content-Disposition/);
-assert.match(downloadEndpoint, /MAX_CONTENT_BYTES/);
+assert.match(downloadEndpoint, /cps-tomo-downloads/);
+assert.match(downloadEndpoint, /createSignedUrl\(path,300\)/);
+assert.match(downloadEndpoint, /downloadUrl/);
+assert.match(downloadEndpoint, /location\.replace\(downloadUrl\)/);
+assert.match(downloadEndpoint, /Referrer-Policy/);
+assert.match(downloadEndpoint, /no-referrer/);
 
 const tomoExpansionMigration = await readFile(new URL('../supabase/migrations/20260918043000_expand_cps_to_15_tomos.sql', import.meta.url), 'utf8');
 assert.match(tomoExpansionMigration, /tomo_no >= 1 and tomo_no <= 15/);
