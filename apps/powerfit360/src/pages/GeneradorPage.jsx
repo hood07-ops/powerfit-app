@@ -1148,7 +1148,7 @@ Vuelta a la calma: dirigida en clase.
       : sinDisponibles
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="mobile-ui-page mobile-generator-page space-y-6 sm:space-y-8">
       <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <h1 className="text-3xl sm:text-4xl font-black text-red-500">
           {t.title}

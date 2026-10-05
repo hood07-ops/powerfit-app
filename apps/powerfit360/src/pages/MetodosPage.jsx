@@ -877,7 +877,7 @@ export default function MetodosPage({ idioma = 'es' }) {
   )
 
   return (
-    <div className="space-y-6">
+    <div className="mobile-ui-page mobile-library-page space-y-6">
       <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>

@@ -397,13 +397,21 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
             const completed = tomos.filter((tomo) => tomo.access_status === 'TOMO_COMPLETED').length
 
             return (
-              <article key={route.code} className="rounded-3xl border border-zinc-700/80 bg-gradient-to-b from-zinc-950 to-black p-4 sm:p-5 shadow-xl shadow-black/20">
+              <article key={route.code} className="cps-route-card rounded-3xl border border-zinc-700/80 bg-gradient-to-b from-zinc-950 to-black p-4 sm:p-5 shadow-xl shadow-black/20">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <h3 className="text-2xl font-black text-white">{ROUTE_LABELS[route.code] || route.name}</h3>
-                    <p className="text-sm font-bold text-zinc-400">
-                      {route.uses_belts ? 'Grados Blanco → Negro 1er Dan' : 'Boxeo Nivel 1 → 7 + Tomo Especial final'}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <div className="cps-route-icon" aria-hidden="true">
+                      {route.code === 'BOXING' ? '🥊' : '⚡'}
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.2em] text-red-400">
+                        Camino CPS
+                      </p>
+                      <h3 className="text-2xl font-black text-white">{ROUTE_LABELS[route.code] || route.name}</h3>
+                      <p className="text-sm font-bold text-zinc-400">
+                        {route.uses_belts ? 'Grados Blanco → Negro 1er Dan' : 'Boxeo Nivel 1 → 7 + Tomo Especial final'}
+                      </p>
+                    </div>
                   </div>
                   <Badge status={enrollment?.status || 'LOCKED'}>{enrollment?.status || 'No matriculado'}</Badge>
                 </div>
@@ -411,8 +419,21 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                 <div className="mt-4 grid grid-cols-2 gap-3">
                   <CombatMetric label="Actual" value={currentStage?.label || '-'} />
                   <CombatMetric label="Meses mínimos" value={currentStage?.minimum_months || 4} />
-                  <CombatMetric label="Tomos desbloqueados" value={`${unlocked}/${tomos.length}`} />
-                  <CombatMetric label="Tomos completos" value={`${completed}/${tomos.length}`} />
+                  <CombatMetric label="Desbloqueados" value={`${unlocked}/${tomos.length}`} />
+                  <CombatMetric label="Completados" value={`${completed}/${tomos.length}`} />
+                </div>
+
+                <div className="cps-progress-shell mt-4">
+                  <div className="flex items-center justify-between text-xs font-black">
+                    <span className="text-zinc-400">Progreso de tomos</span>
+                    <span className="text-white">{tomos.length ? Math.round((completed / tomos.length) * 100) : 0}%</span>
+                  </div>
+                  <div className="cps-progress-track mt-2">
+                    <div
+                      className="cps-progress-fill"
+                      style={{ width: `${tomos.length ? Math.max(4, (completed / tomos.length) * 100) : 4}%` }}
+                    />
+                  </div>
                 </div>
 
                 {!enrollment && (

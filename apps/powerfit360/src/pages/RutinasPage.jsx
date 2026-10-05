@@ -234,7 +234,7 @@ export default function RutinasPage({ student, onUpdateStudent }) {
   }
   return (
 
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="mobile-ui-page mobile-routines-page min-h-screen bg-black text-white p-3 sm:p-6">
 
       <div className="bg-zinc-900 border border-red-600 rounded-3xl p-6 mb-8">
 

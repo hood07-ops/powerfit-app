@@ -430,7 +430,7 @@ export default function ConstructorPage({ student, onUpdateStudent, idioma = 'es
   }
 
   return (
-    <div className="space-y-5">
+    <div className="mobile-ui-page mobile-constructor-page space-y-5">
       <section className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <div className="flex flex-col gap-2 mb-5">
           <h2 className="text-3xl sm:text-4xl font-black text-yellow-400">{t.title}</h2>
