@@ -3137,20 +3137,106 @@ function StudentHomePanel({ student, setSection }) {
     cargar()
   }, [student?.id])
 
-  function progresoHome(plan) {
+  function metaHome(plan) {
     const contenido = String(plan?.contenido || '')
     const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
     const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
-    const totalSesiones = Math.max(1, semanas * sesionesSemana)
+    const inicio = contenido.match(/PLAN_INICIO:(\d{4}-\d{2}-\d{2})/)?.[1] || ''
+    const diasSemana = String(contenido.match(/PLAN_DIAS:([^\n]+)/)?.[1] || '')
+      .split(',')
+      .map(Number)
+      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+
+    return {
+      semanas: Math.max(1, semanas),
+      sesionesSemana: Math.max(1, sesionesSemana),
+      totalSesiones: Math.max(1, semanas * sesionesSemana),
+      inicio,
+      diasSemana,
+    }
+  }
+
+  function progresoHome(plan) {
+    const meta = metaHome(plan)
     const info = completados[plan.id] || {}
-    const done = info.legacyComplete ? totalSesiones : Object.keys(info.sessions || {}).length
-    return { done: Math.min(done, totalSesiones), totalSesiones, complete: done >= totalSesiones }
+    const done = info.legacyComplete ? meta.totalSesiones : Object.keys(info.sessions || {}).length
+    return { done: Math.min(done, meta.totalSesiones), totalSesiones: meta.totalSesiones, complete: done >= meta.totalSesiones }
+  }
+
+  function fechaHomeISO(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  function fechasHome(plan) {
+    const meta = metaHome(plan)
+    if (!meta.inicio || meta.diasSemana.length === 0) return []
+
+    const result = []
+    const cursor = new Date(`${meta.inicio}T12:00:00`)
+    let guard = 0
+    while (result.length < meta.totalSesiones && guard < 370) {
+      if (meta.diasSemana.includes(cursor.getDay())) result.push(fechaHomeISO(cursor))
+      cursor.setDate(cursor.getDate() + 1)
+      guard += 1
+    }
+    return result
+  }
+
+  function siguienteSesionHome(plan) {
+    const meta = metaHome(plan)
+    const info = completados[plan.id] || {}
+    if (info.legacyComplete) return null
+
+    for (let sessionNumber = 1; sessionNumber <= meta.totalSesiones; sessionNumber += 1) {
+      if (!info.sessions?.[sessionNumber]) {
+        const fecha = fechasHome(plan)[sessionNumber - 1] || ''
+        const hoy = fechaHomeISO(new Date())
+        const estado = !fecha ? 'Pendiente' : fecha < hoy ? 'Atrasada' : fecha === hoy ? 'Hoy' : 'Próxima'
+        return { sessionNumber, fecha, estado }
+      }
+    }
+    return null
+  }
+
+  function contenidoSesionHome(plan, sessionNumber) {
+    const meta = metaHome(plan)
+    const slot = ((Number(sessionNumber) - 1) % meta.sesionesSemana) + 1
+    const contenido = String(plan?.contenido || '')
+    const pattern = new RegExp(
+      `SESION_${slot}_INICIO\\n([\\s\\S]*?)\\nSESION_${slot}_FIN`,
+    )
+    const match = contenido.match(pattern)
+    if (match?.[1]) return match[1].trim()
+
+    const general = contenido.split('NOTAS_GENERALES')[1]
+    return general ? general.trim() : contenido
+  }
+
+  function formatearFechaHome(fecha) {
+    if (!fecha) return ''
+    return new Date(`${fecha}T12:00:00`).toLocaleDateString('es-CL', {
+      weekday: 'long',
+      day: '2-digit',
+      month: 'long',
+    })
   }
 
   const planActivo = planes.find((plan) => !progresoHome(plan).complete) || planes[0] || null
   const objetivo = String(planActivo?.objetivo || '')
     .replace(/^coach_(personalizado_)?/, '')
     .replaceAll('_', ' ')
+  const siguienteSesion = planActivo ? siguienteSesionHome(planActivo) : null
+  const tituloSesion =
+    siguienteSesion?.estado === 'Hoy'
+      ? 'Entrenamiento de hoy'
+      : siguienteSesion?.estado === 'Atrasada'
+        ? 'Entrenamiento atrasado'
+        : siguienteSesion?.estado === 'Próxima'
+          ? 'Próxima sesión'
+          : 'Mi entrenamiento asignado'
 
   return (
     <div className="space-y-5">
@@ -3169,7 +3255,7 @@ function StudentHomePanel({ student, setSection }) {
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-sm font-black uppercase text-blue-300">Entrenamiento</p>
-              <h3 className="text-2xl font-black mt-1">Mi entrenamiento asignado</h3>
+              <h3 className="text-2xl font-black mt-1">{tituloSesion}</h3>
             </div>
             <span className="rounded-full bg-blue-950 border border-blue-700 px-3 py-1 text-xs font-black text-blue-200">
               {planes.filter((plan) => !progresoHome(plan).complete).length} pendiente{planes.filter((plan) => !progresoHome(plan).complete).length === 1 ? '' : 's'}
@@ -3181,19 +3267,53 @@ function StudentHomePanel({ student, setSection }) {
           ) : planActivo ? (
             <div className="mt-5 bg-black/50 border border-zinc-700 rounded-2xl p-4">
               <p className="text-yellow-400 font-black capitalize">{objetivo || 'Entrenamiento personalizado'}</p>
-              <p className="text-sm text-zinc-400 mt-1">
-                {planActivo.created_at ? new Date(planActivo.created_at).toLocaleDateString('es-CL') : 'Plan activo'}
-              </p>
-              <p className={`mt-2 inline-block rounded-full border px-3 py-1 text-xs font-black ${
-                progresoHome(planActivo).complete
-                  ? 'bg-green-950 border-green-700 text-green-300'
-                  : 'bg-yellow-950 border-yellow-700 text-yellow-300'
-              }`}>
-                {progresoHome(planActivo).done}/{progresoHome(planActivo).totalSesiones} sesiones
-              </p>
-              <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-zinc-200 max-h-56 overflow-auto">
-                {planActivo.contenido || 'Sin contenido disponible.'}
-              </pre>
+              {siguienteSesion?.fecha ? (
+                <p className="text-sm text-cyan-300 mt-1 capitalize">
+                  {formatearFechaHome(siguienteSesion.fecha)}
+                </p>
+              ) : (
+                <p className="text-sm text-zinc-400 mt-1">
+                  {planActivo.created_at ? new Date(planActivo.created_at).toLocaleDateString('es-CL') : 'Plan activo'}
+                </p>
+              )}
+
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <span className={`inline-block rounded-full border px-3 py-1 text-xs font-black ${
+                  progresoHome(planActivo).complete
+                    ? 'bg-green-950 border-green-700 text-green-300'
+                    : 'bg-yellow-950 border-yellow-700 text-yellow-300'
+                }`}>
+                  {progresoHome(planActivo).done}/{progresoHome(planActivo).totalSesiones} sesiones
+                </span>
+                {siguienteSesion && (
+                  <span className={`inline-block rounded-full border px-3 py-1 text-xs font-black ${
+                    siguienteSesion.estado === 'Hoy'
+                      ? 'bg-blue-950 border-blue-500 text-blue-200'
+                      : siguienteSesion.estado === 'Atrasada'
+                        ? 'bg-red-950 border-red-700 text-red-300'
+                        : siguienteSesion.estado === 'Próxima'
+                          ? 'bg-cyan-950 border-cyan-700 text-cyan-300'
+                          : 'bg-yellow-950 border-yellow-700 text-yellow-300'
+                  }`}>
+                    {siguienteSesion.estado}
+                  </span>
+                )}
+              </div>
+
+              {siguienteSesion ? (
+                <>
+                  <p className="mt-4 text-sm font-black text-zinc-400">
+                    Sesión {siguienteSesion.sessionNumber} de {progresoHome(planActivo).totalSesiones}
+                  </p>
+                  <pre className="mt-2 whitespace-pre-wrap rounded-xl bg-zinc-950 p-3 font-sans text-sm text-zinc-200 max-h-56 overflow-auto">
+                    {contenidoSesionHome(planActivo, siguienteSesion.sessionNumber)}
+                  </pre>
+                </>
+              ) : (
+                <p className="mt-4 text-sm font-black text-green-400">
+                  Plan completado.
+                </p>
+              )}
             </div>
           ) : (
             <div className="mt-5 bg-black/50 border border-zinc-800 rounded-2xl p-4">
