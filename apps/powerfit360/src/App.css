@@ -772,3 +772,72 @@ textarea:focus {
     color: #fff !important;
   }
 }
+
+
+@media (max-width: 767px) {
+  .mobile-routines-page {
+    background: transparent !important;
+  }
+
+  .mobile-routines-page > div:first-child {
+    margin-bottom: 16px !important;
+    padding: 18px !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 28px !important;
+    background: linear-gradient(180deg, rgba(27,27,31,.98), rgba(10,10,12,.99)) !important;
+  }
+
+  .mobile-routines-page > div:first-child h1 {
+    margin: 0;
+    color: #fff !important;
+    font-size: 1.8rem !important;
+    line-height: 1.05 !important;
+    letter-spacing: -.03em;
+  }
+
+  .mobile-routines-page > div:first-child p {
+    margin-top: 8px !important;
+    font-size: .9rem !important;
+  }
+
+  .mobile-routines-page .grid.md\:grid-cols-2 > div {
+    padding: 16px !important;
+    border: 1px solid rgba(255,255,255,.08) !important;
+    border-radius: 24px !important;
+    background: linear-gradient(180deg, rgba(28,28,31,.96), rgba(14,14,17,.99)) !important;
+    box-shadow: 0 14px 34px rgba(0,0,0,.24);
+  }
+
+  .mobile-routines-page .grid.md\:grid-cols-2 > div h2 {
+    color: #fff !important;
+    font-size: 1.25rem !important;
+    line-height: 1.1 !important;
+  }
+
+  .mobile-routines-page .grid.md\:grid-cols-2 > div p.text-cyan-400,
+  .mobile-routines-page .grid.md\:grid-cols-2 > div p.text-orange-400,
+  .mobile-routines-page .grid.md\:grid-cols-2 > div p.text-pink-400 {
+    color: #d4d4d8 !important;
+  }
+
+  .mobile-routines-page ul li {
+    border: 1px solid rgba(255,255,255,.06);
+    background: rgba(255,255,255,.035) !important;
+    border-radius: 16px !important;
+  }
+
+  .mobile-routines-page button.bg-red-600 {
+    background: linear-gradient(180deg, #ef4444, #b91c1c) !important;
+    box-shadow: 0 10px 24px rgba(127,29,29,.25);
+  }
+
+  .mobile-routines-page span.bg-green-600,
+  .mobile-routines-page span.bg-purple-700 {
+    background: rgba(255,255,255,.07) !important;
+    border: 1px solid rgba(255,255,255,.08);
+    color: #d4d4d8 !important;
+    font-size: 10px !important;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+  }
+}
