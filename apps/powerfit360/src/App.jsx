@@ -1564,6 +1564,7 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [asignados, setAsignados] = useState([])
+  const [completados, setCompletados] = useState({})
   const [cargandoAsignados, setCargandoAsignados] = useState(false)
 
   const alumno = alumnos.find((item) => String(item.id) === String(form.alumnoId))
@@ -1601,6 +1602,14 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
           return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
         }),
       )
+
+      const completionMap = {}
+      ;(data?.records || []).forEach((record) => {
+        const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
+        const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+        if (match?.[1]) completionMap[match[1]] = record
+      })
+      setCompletados(completionMap)
       setCargandoAsignados(false)
     }
 
@@ -1644,6 +1653,14 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
         return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
       }),
     )
+
+    const completionMap = {}
+    ;(data?.records || []).forEach((record) => {
+      const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
+      const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+      if (match?.[1]) completionMap[match[1]] = record
+    })
+    setCompletados(completionMap)
   }
 
   async function guardarEntrenamiento() {
@@ -1825,6 +1842,30 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
                 <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
                   {plan.contenido || 'Sin contenido'}
                 </pre>
+                {completados[plan.id] ? (
+                  <div className="mt-4 rounded-2xl border border-green-600 bg-green-950/40 p-4">
+                    <p className="font-black text-green-400">Alumno completó este entrenamiento</p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      {completados[plan.id]?.created_at
+                        ? new Date(completados[plan.id].created_at).toLocaleString('es-CL')
+                        : 'Registro completado'}
+                    </p>
+                    {completados[plan.id]?.metodo && (
+                      <p className="mt-2 text-sm text-yellow-300">
+                        {String(completados[plan.id].metodo).replace(`PLAN_COMPLETADO:${plan.id} |`, '').trim()}
+                      </p>
+                    )}
+                    {completados[plan.id]?.observacion && !String(completados[plan.id].observacion).startsWith('PLAN_COMPLETADO:') && (
+                      <p className="mt-2 text-sm text-zinc-200">
+                        Comentario del alumno: {completados[plan.id].observacion}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-yellow-700/60 bg-yellow-950/20 p-3 text-sm font-black text-yellow-300">
+                    Pendiente de completar
+                  </div>
+                )}
               </details>
             ))}
           </div>
@@ -2737,6 +2778,7 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
 
 function StudentHomePanel({ student, setSection }) {
   const [planes, setPlanes] = useState([])
+  const [completados, setCompletados] = useState({})
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -2766,13 +2808,21 @@ function StudentHomePanel({ student, setSection }) {
       })
 
       setPlanes(coachPlans)
+
+      const completionMap = {}
+      ;(data?.records || []).forEach((record) => {
+        const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
+        const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+        if (match?.[1]) completionMap[match[1]] = record
+      })
+      setCompletados(completionMap)
       setCargando(false)
     }
 
     cargar()
   }, [student?.id])
 
-  const planActivo = planes[0] || null
+  const planActivo = planes.find((plan) => !completados[plan.id]) || planes[0] || null
   const objetivo = String(planActivo?.objetivo || '')
     .replace(/^coach_(personalizado_)?/, '')
     .replaceAll('_', ' ')
@@ -2797,7 +2847,7 @@ function StudentHomePanel({ student, setSection }) {
               <h3 className="text-2xl font-black mt-1">Mi entrenamiento asignado</h3>
             </div>
             <span className="rounded-full bg-blue-950 border border-blue-700 px-3 py-1 text-xs font-black text-blue-200">
-              {planes.length} plan{planes.length === 1 ? '' : 'es'}
+              {planes.filter((plan) => !completados[plan.id]).length} pendiente{planes.filter((plan) => !completados[plan.id]).length === 1 ? '' : 's'}
             </span>
           </div>
 
@@ -2809,6 +2859,11 @@ function StudentHomePanel({ student, setSection }) {
               <p className="text-sm text-zinc-400 mt-1">
                 {planActivo.created_at ? new Date(planActivo.created_at).toLocaleDateString('es-CL') : 'Plan activo'}
               </p>
+              {completados[planActivo.id] && (
+                <p className="mt-2 inline-block rounded-full bg-green-950 border border-green-700 px-3 py-1 text-xs font-black text-green-300">
+                  Completado
+                </p>
+              )}
               <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-zinc-200 max-h-56 overflow-auto">
                 {planActivo.contenido || 'Sin contenido disponible.'}
               </pre>
