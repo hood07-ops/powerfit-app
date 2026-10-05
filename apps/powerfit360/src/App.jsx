@@ -1559,6 +1559,8 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     titulo: defaultObjective.titulo,
     objetivo: defaultObjective.value,
     nivel: 'intermedio',
+    semanas: 1,
+    sesionesSemana: 3,
     contenido: defaultObjective.contenido,
   })
   const [mensaje, setMensaje] = useState('')
@@ -1606,8 +1608,25 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       const completionMap = {}
       ;(data?.records || []).forEach((record) => {
         const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
-        const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
-        if (match?.[1]) completionMap[match[1]] = record
+        const sessionMatch = texto.match(/SESION_COMPLETADA:([a-zA-Z0-9-]+):(\d+)/)
+        const planMatch = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+
+        if (sessionMatch?.[1]) {
+          const planId = sessionMatch[1]
+          const sessionNumber = Number(sessionMatch[2])
+          completionMap[planId] = {
+            ...(completionMap[planId] || {}),
+            sessions: {
+              ...(completionMap[planId]?.sessions || {}),
+              [sessionNumber]: record,
+            },
+          }
+        } else if (planMatch?.[1]) {
+          completionMap[planMatch[1]] = {
+            ...(completionMap[planMatch[1]] || {}),
+            legacyComplete: record,
+          }
+        }
       })
       setCompletados(completionMap)
       setCargandoAsignados(false)
@@ -1663,6 +1682,23 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     setCompletados(completionMap)
   }
 
+  function metaPlanCoach(plan) {
+    const contenido = String(plan?.contenido || '')
+    const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
+    const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
+    const totalSesiones = Math.max(1, semanas * sesionesSemana)
+    const info = completados[plan.id] || {}
+    const done = info.legacyComplete ? totalSesiones : Object.keys(info.sessions || {}).length
+
+    return {
+      semanas,
+      sesionesSemana,
+      totalSesiones,
+      done: Math.min(done, totalSesiones),
+      complete: done >= totalSesiones,
+    }
+  }
+
   async function guardarEntrenamiento() {
     if (!alumno?.id || guardando) return
     if (!form.titulo.trim() || !form.contenido.trim()) {
@@ -1684,6 +1720,8 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       `Título: ${form.titulo}`,
       `Objetivo: ${objetivoLabel}`,
       `Nivel: ${form.nivel}`,
+      `PLAN_SEMANAS:${Number(form.semanas || 1)}`,
+      `PLAN_SESIONES_SEMANA:${Number(form.sesionesSemana || 1)}`,
       '',
       form.contenido,
     ].join('\n')
@@ -1779,6 +1817,40 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
               <option value="avanzado">Avanzado</option>
             </select>
           </label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="grid gap-2 font-black text-sm text-zinc-300">
+              Semanas
+              <select
+                value={form.semanas}
+                onChange={(event) => update('semanas', Number(event.target.value))}
+                className="bg-black border border-zinc-700 rounded-xl p-3"
+              >
+                {[1, 2, 4, 6, 8, 12].map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+
+            <label className="grid gap-2 font-black text-sm text-zinc-300">
+              Sesiones / semana
+              <select
+                value={form.sesionesSemana}
+                onChange={(event) => update('sesionesSemana', Number(event.target.value))}
+                className="bg-black border border-zinc-700 rounded-xl p-3"
+              >
+                {[1, 2, 3, 4, 5, 6].map((value) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <div className="rounded-2xl border border-blue-800 bg-blue-950/20 p-4">
+            <p className="font-black text-blue-300">Estructura del plan</p>
+            <p className="mt-1 text-sm text-zinc-400">
+              {Number(form.semanas) * Number(form.sesionesSemana)} sesiones totales · {form.semanas} semana{Number(form.semanas) === 1 ? '' : 's'}.
+            </p>
+          </div>
 
           <div className="bg-black/40 border border-zinc-800 rounded-2xl p-4">
             <p className="font-black text-yellow-400">Objetivos disponibles</p>
@@ -1842,30 +1914,56 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
                 <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
                   {plan.contenido || 'Sin contenido'}
                 </pre>
-                {completados[plan.id] ? (
-                  <div className="mt-4 rounded-2xl border border-green-600 bg-green-950/40 p-4">
-                    <p className="font-black text-green-400">Alumno completó este entrenamiento</p>
-                    <p className="mt-1 text-sm text-zinc-300">
-                      {completados[plan.id]?.created_at
-                        ? new Date(completados[plan.id].created_at).toLocaleString('es-CL')
-                        : 'Registro completado'}
-                    </p>
-                    {completados[plan.id]?.metodo && (
-                      <p className="mt-2 text-sm text-yellow-300">
-                        {String(completados[plan.id].metodo).replace(`PLAN_COMPLETADO:${plan.id} |`, '').trim()}
-                      </p>
-                    )}
-                    {completados[plan.id]?.observacion && !String(completados[plan.id].observacion).startsWith('PLAN_COMPLETADO:') && (
-                      <p className="mt-2 text-sm text-zinc-200">
-                        Comentario del alumno: {completados[plan.id].observacion}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-yellow-700/60 bg-yellow-950/20 p-3 text-sm font-black text-yellow-300">
-                    Pendiente de completar
-                  </div>
-                )}
+                {(() => {
+                  const progress = metaPlanCoach(plan)
+                  const records = Object.values(completados[plan.id]?.sessions || {})
+                    .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0))
+
+                  return (
+                    <div className="mt-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-black text-emerald-400">
+                            Progreso: {progress.done}/{progress.totalSesiones} sesiones
+                          </p>
+                          <p className="mt-1 text-sm text-zinc-400">
+                            {progress.semanas} semana{progress.semanas === 1 ? '' : 's'} · {progress.sesionesSemana} sesión{progress.sesionesSemana === 1 ? '' : 'es'} por semana
+                          </p>
+                        </div>
+                        <span className={`rounded-full border px-3 py-1 text-xs font-black ${
+                          progress.complete
+                            ? 'border-green-700 bg-green-950 text-green-300'
+                            : 'border-yellow-700 bg-yellow-950 text-yellow-300'
+                        }`}>
+                          {progress.complete ? 'PLAN COMPLETADO' : 'EN PROGRESO'}
+                        </span>
+                      </div>
+
+                      {records.length > 0 && (
+                        <div className="mt-4 space-y-2">
+                          {records.map((record, index) => (
+                            <div key={record.id || index} className="rounded-xl bg-black/40 p-3">
+                              <p className="font-black text-green-300">
+                                Sesión {index + 1} completada
+                              </p>
+                              <p className="mt-1 text-xs text-zinc-500">
+                                {record.created_at ? new Date(record.created_at).toLocaleString('es-CL') : 'Registrada'}
+                              </p>
+                              <p className="mt-1 text-sm text-yellow-300">
+                                {String(record.metodo || '').split('|').slice(1).join('|').trim()}
+                              </p>
+                              {record.observacion && !String(record.observacion).startsWith('SESION_COMPLETADA:') && (
+                                <p className="mt-1 text-sm text-zinc-300">
+                                  Comentario: {record.observacion}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
               </details>
             ))}
           </div>
@@ -2812,8 +2910,25 @@ function StudentHomePanel({ student, setSection }) {
       const completionMap = {}
       ;(data?.records || []).forEach((record) => {
         const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
-        const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
-        if (match?.[1]) completionMap[match[1]] = record
+        const sessionMatch = texto.match(/SESION_COMPLETADA:([a-zA-Z0-9-]+):(\d+)/)
+        const planMatch = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+
+        if (sessionMatch?.[1]) {
+          const planId = sessionMatch[1]
+          const sessionNumber = Number(sessionMatch[2])
+          completionMap[planId] = {
+            ...(completionMap[planId] || {}),
+            sessions: {
+              ...(completionMap[planId]?.sessions || {}),
+              [sessionNumber]: record,
+            },
+          }
+        } else if (planMatch?.[1]) {
+          completionMap[planMatch[1]] = {
+            ...(completionMap[planMatch[1]] || {}),
+            legacyComplete: record,
+          }
+        }
       })
       setCompletados(completionMap)
       setCargando(false)
@@ -2822,7 +2937,17 @@ function StudentHomePanel({ student, setSection }) {
     cargar()
   }, [student?.id])
 
-  const planActivo = planes.find((plan) => !completados[plan.id]) || planes[0] || null
+  function progresoHome(plan) {
+    const contenido = String(plan?.contenido || '')
+    const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
+    const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
+    const totalSesiones = Math.max(1, semanas * sesionesSemana)
+    const info = completados[plan.id] || {}
+    const done = info.legacyComplete ? totalSesiones : Object.keys(info.sessions || {}).length
+    return { done: Math.min(done, totalSesiones), totalSesiones, complete: done >= totalSesiones }
+  }
+
+  const planActivo = planes.find((plan) => !progresoHome(plan).complete) || planes[0] || null
   const objetivo = String(planActivo?.objetivo || '')
     .replace(/^coach_(personalizado_)?/, '')
     .replaceAll('_', ' ')
@@ -2847,7 +2972,7 @@ function StudentHomePanel({ student, setSection }) {
               <h3 className="text-2xl font-black mt-1">Mi entrenamiento asignado</h3>
             </div>
             <span className="rounded-full bg-blue-950 border border-blue-700 px-3 py-1 text-xs font-black text-blue-200">
-              {planes.filter((plan) => !completados[plan.id]).length} pendiente{planes.filter((plan) => !completados[plan.id]).length === 1 ? '' : 's'}
+              {planes.filter((plan) => !progresoHome(plan).complete).length} pendiente{planes.filter((plan) => !progresoHome(plan).complete).length === 1 ? '' : 's'}
             </span>
           </div>
 
@@ -2859,11 +2984,13 @@ function StudentHomePanel({ student, setSection }) {
               <p className="text-sm text-zinc-400 mt-1">
                 {planActivo.created_at ? new Date(planActivo.created_at).toLocaleDateString('es-CL') : 'Plan activo'}
               </p>
-              {completados[planActivo.id] && (
-                <p className="mt-2 inline-block rounded-full bg-green-950 border border-green-700 px-3 py-1 text-xs font-black text-green-300">
-                  Completado
-                </p>
-              )}
+              <p className={`mt-2 inline-block rounded-full border px-3 py-1 text-xs font-black ${
+                progresoHome(planActivo).complete
+                  ? 'bg-green-950 border-green-700 text-green-300'
+                  : 'bg-yellow-950 border-yellow-700 text-yellow-300'
+              }`}>
+                {progresoHome(planActivo).done}/{progresoHome(planActivo).totalSesiones} sesiones
+              </p>
               <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-zinc-200 max-h-56 overflow-auto">
                 {planActivo.contenido || 'Sin contenido disponible.'}
               </pre>
