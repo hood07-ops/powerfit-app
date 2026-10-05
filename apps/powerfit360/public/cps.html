@@ -234,6 +234,13 @@ async function buyTomo(pathCode,tomoNo){stateEl.innerHTML='<strong>Conectando co
 async function grant(pathCode,tomoNo){if(!window.confirm('¿Abrir este tomo como administrador?'))return;const{error}=await supabase.rpc('grant_powerfit_tomo_admin_secure',{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_tomo_no:Number(tomoNo),p_reason:'Prueba administrativa CPS'});if(error)alert(humanError(error.message));await loadHome()}
 async function grantAll(pathCode){if(!window.confirm('¿Abrir todos los tomos de esta disciplina?'))return;const{error}=await supabase.rpc('grant_powerfit_all_tomos_admin_secure',{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_reason:'Prueba administrativa CPS'});if(error)alert(humanError(error.message));await loadHome()}
 document.addEventListener('click',event=>{const target=event.target.closest('button');if(!target)return;const detail=target.dataset.detail?.split(':'),download=target.dataset.download?.split(':'),buy=target.dataset.buy?.split(':'),grantOne=target.dataset.grant?.split(':'),video=target.dataset.video?.split(':'),answer=target.dataset.answer?.split(':');if(target.dataset.enroll)enrollPath(target.dataset.enroll);if(detail)loadDetail(detail[0],Number(detail[1]));if(download)downloadTomo(download[0],Number(download[1]));if(buy)buyTomo(buy[0],Number(buy[1]));if(grantOne)grant(grantOne[0],Number(grantOne[1]));if(video)chooseVideo(video[0],Number(video[1]),Number(video[2]));if(answer)submitAnswer(answer[0],Number(answer[1]),Number(answer[2]));if(target.dataset.all)grantAll(target.dataset.all)});
+let cpsFocusRefreshTimer=null;
+function refreshCpsOnReturn(){
+  if(cpsFocusRefreshTimer)clearTimeout(cpsFocusRefreshTimer);
+  cpsFocusRefreshTimer=setTimeout(()=>loadHome(),180);
+}
+window.addEventListener('focus',refreshCpsOnReturn);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refreshCpsOnReturn()});
 loadHome();
 </script>
 </body>
