@@ -3012,6 +3012,103 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
 }
 
 function NotificacionesPanel({ students, registroCompras, avatarRequests, student, isAdmin }) {
+  const [trainingAlert, setTrainingAlert] = useState(null)
+
+  useEffect(() => {
+    async function cargarAvisoEntrenamiento() {
+      if (isAdmin || !student?.id) {
+        setTrainingAlert(null)
+        return
+      }
+
+      const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
+        p_alumno_id: student.id,
+        p_limit: 100,
+      })
+
+      if (error) {
+        setTrainingAlert(null)
+        return
+      }
+
+      const plans = (data?.plans || []).filter((plan) => {
+        const objetivo = String(plan?.objetivo || '')
+        const sourceRef = String(plan?.source_ref || '')
+        return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
+      })
+
+      const completionMap = {}
+      ;(data?.records || []).forEach((record) => {
+        const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
+        const match = texto.match(/SESION_COMPLETADA:([a-zA-Z0-9-]+):(\d+)/)
+        if (match?.[1]) {
+          completionMap[match[1]] = {
+            ...(completionMap[match[1]] || {}),
+            [Number(match[2])]: record,
+          }
+        }
+      })
+
+      function localISO(date) {
+        const y = date.getFullYear()
+        const m = String(date.getMonth() + 1).padStart(2, '0')
+        const d = String(date.getDate()).padStart(2, '0')
+        return `${y}-${m}-${d}`
+      }
+
+      for (const plan of plans) {
+        const contenido = String(plan?.contenido || '')
+        const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
+        const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
+        const total = Math.max(1, semanas * sesionesSemana)
+        const inicio = contenido.match(/PLAN_INICIO:(\d{4}-\d{2}-\d{2})/)?.[1] || ''
+        const dias = String(contenido.match(/PLAN_DIAS:([^\n]+)/)?.[1] || '')
+          .split(',')
+          .map(Number)
+          .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+
+        const done = completionMap[plan.id] || {}
+        let nextSession = null
+        for (let n = 1; n <= total; n += 1) {
+          if (!done[n]) {
+            nextSession = n
+            break
+          }
+        }
+        if (!nextSession) continue
+
+        let fecha = ''
+        if (inicio && dias.length > 0) {
+          const fechas = []
+          const cursor = new Date(`${inicio}T12:00:00`)
+          let guard = 0
+          while (fechas.length < total && guard < 370) {
+            if (dias.includes(cursor.getDay())) fechas.push(localISO(cursor))
+            cursor.setDate(cursor.getDate() + 1)
+            guard += 1
+          }
+          fecha = fechas[nextSession - 1] || ''
+        }
+
+        const hoy = localISO(new Date())
+        const estado = !fecha ? 'Pendiente' : fecha < hoy ? 'Atrasada' : fecha === hoy ? 'Hoy' : 'Próxima'
+        setTrainingAlert({
+          plan,
+          sessionNumber: nextSession,
+          total,
+          fecha,
+          estado,
+          progreso: Object.keys(done).length,
+        })
+        return
+      }
+
+      setTrainingAlert(null)
+    }
+
+    cargarAvisoEntrenamiento()
+  }, [isAdmin, student?.id])
+
   const comprasPendientes = registroCompras.filter(
     (compra) => (compra.estado || compra.estado_pago || 'Pendiente') !== 'Aprobado'
   )
@@ -3032,7 +3129,7 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
           Notificaciones
         </h2>
         <p className="text-zinc-400 mt-2">
-          Alertas de pagos, vencimientos, bloqueos y solicitudes pendientes.
+          Alertas de entrenamiento, pagos, vencimientos y solicitudes pendientes.
         </p>
       </div>
 
@@ -3042,6 +3139,45 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
         <Info label="Membresías por vencer" value={alumnosPorVencer.length} />
         <Info label="Morosos" value={morosos.length} />
       </div>
+
+      {!isAdmin && trainingAlert && (
+        <div className={`rounded-2xl border p-5 ${
+          trainingAlert.estado === 'Hoy'
+            ? 'border-blue-500 bg-blue-950/40'
+            : trainingAlert.estado === 'Atrasada'
+              ? 'border-red-600 bg-red-950/40'
+              : 'border-cyan-700 bg-cyan-950/30'
+        }`}>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-black uppercase text-zinc-400">Entrenamiento</p>
+              <h3 className={`mt-1 text-2xl font-black ${
+                trainingAlert.estado === 'Hoy'
+                  ? 'text-blue-300'
+                  : trainingAlert.estado === 'Atrasada'
+                    ? 'text-red-300'
+                    : 'text-cyan-300'
+              }`}>
+                {trainingAlert.estado === 'Hoy'
+                  ? 'Tienes entrenamiento hoy'
+                  : trainingAlert.estado === 'Atrasada'
+                    ? 'Tienes una sesión atrasada'
+                    : 'Próxima sesión programada'}
+              </h3>
+              <p className="mt-2 text-zinc-300">
+                Sesión {trainingAlert.sessionNumber} de {trainingAlert.total}
+                {trainingAlert.fecha ? ` · ${formatearFecha(trainingAlert.fecha)}` : ''}
+              </p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Progreso: {trainingAlert.progreso}/{trainingAlert.total} sesiones.
+              </p>
+            </div>
+            <span className="rounded-full border border-current px-3 py-1 text-xs font-black">
+              {trainingAlert.estado}
+            </span>
+          </div>
+        </div>
+      )}
 
       {!isAdmin && misDias !== null && misDias <= 5 && (
         <div className="bg-yellow-500 text-black rounded-2xl p-5 font-black">
