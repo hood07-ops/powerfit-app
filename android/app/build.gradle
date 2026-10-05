@@ -3,12 +3,24 @@ apply plugin: 'com.android.application'
 android {
     namespace = "cl.powerfit.app"
     compileSdk = rootProject.ext.compileSdkVersion
+    signingConfigs {
+        powerfitTest {
+            def testStore = System.getenv("POWERFIT_TEST_KEYSTORE")
+            if (testStore) {
+                storeFile file(testStore)
+                storePassword System.getenv("POWERFIT_TEST_STORE_PASSWORD") ?: "powerfit-debug-2026"
+                keyAlias System.getenv("POWERFIT_TEST_KEY_ALIAS") ?: "powerfit-test"
+                keyPassword System.getenv("POWERFIT_TEST_KEY_PASSWORD") ?: "powerfit-debug-2026"
+            }
+        }
+    }
+
     defaultConfig {
         applicationId "cl.powerfit.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode Integer.parseInt(System.getenv("POWERFIT_VERSION_CODE") ?: "1")
+        versionName "1.0.${System.getenv('POWERFIT_VERSION_CODE') ?: '1'}"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -17,6 +29,12 @@ android {
         }
     }
     buildTypes {
+        debug {
+            if (System.getenv("POWERFIT_TEST_KEYSTORE")) {
+                signingConfig signingConfigs.powerfitTest
+            }
+        }
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

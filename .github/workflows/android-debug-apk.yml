@@ -12,6 +12,12 @@ permissions:
 jobs:
   build-debug-apk:
     runs-on: ubuntu-latest
+    env:
+      POWERFIT_VERSION_CODE: ${{ github.run_number }}
+      POWERFIT_TEST_KEYSTORE: ${{ github.workspace }}/android/powerfit-test.keystore
+      POWERFIT_TEST_STORE_PASSWORD: powerfit-debug-2026
+      POWERFIT_TEST_KEY_ALIAS: powerfit-test
+      POWERFIT_TEST_KEY_PASSWORD: powerfit-debug-2026
 
     steps:
       - name: Checkout
@@ -38,6 +44,11 @@ jobs:
       - name: Sync Capacitor Android
         run: npx cap sync android
 
+      - name: Restore stable internal test signing key
+        run: |
+          base64 --decode android/powerfit-test-keystore.b64 > android/powerfit-test.keystore
+          keytool -list -keystore android/powerfit-test.keystore -storepass "$POWERFIT_TEST_STORE_PASSWORD" -alias "$POWERFIT_TEST_KEY_ALIAS" >/dev/null
+
       - name: Build debug APK
         run: |
           chmod +x android/gradlew
@@ -57,4 +68,4 @@ jobs:
           gh release delete debug-apk-latest --yes --cleanup-tag || true
           gh release create debug-apk-latest powerfit-debug.apk \
             --title "PowerFit 360 APK de prueba" \
-            --notes "APK debug generado automaticamente desde main. Usa este archivo solo para pruebas internas."
+            --notes "APK de prueba firmado con la clave interna estable de PowerFit. VersionCode: $POWERFIT_VERSION_CODE. La primera instalación con esta firma puede requerir desinstalar una APK antigua; las siguientes podrán actualizarse encima."
