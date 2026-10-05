@@ -14,6 +14,7 @@ import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RutinasPage from './pages/RutinasPage'
 import AssignedTrainingPage from './pages/AssignedTrainingPage'
+import PremiumDesktopNav from './PremiumDesktopNav'
 import ChatWidget from './components/ChatWidget'
 
 function Info({ label, value }) {
@@ -100,30 +101,6 @@ const UI_TEXT = {
     language: 'Language',
     payMonthly: 'Pay monthly fee',
   },
-}
-
-const NAV_ITEMS = {
-  Inicio: { label: 'home' },
-  Admin: { label: 'adminStudents', adminOnly: true },
-  MiCamino: { label: 'combatPath' },
-  Graduaciones: { label: 'graduations', adminOnly: true },
-  Entrenamientos: { label: 'customTrainings', adminOnly: true },
-  MiEntrenamiento: { label: 'myTraining' },
-  AsistenciaQR: { label: 'attendanceQr' },
-  XPRangos: { label: 'xpRanks', lockable: true },
-  Metodos: { label: 'library', lockable: true },
-  Generador: { label: 'aiGenerator', lockable: true },
-  Constructor: { label: 'workoutBuilder', lockable: true },
-  Rutinas: { label: 'routines', lockable: true },
-  Premium: { label: 'premium' },
-  Reportes: { label: 'reports', adminOnly: true },
-  Estadísticas: { label: 'stats', lockable: true },
-  Notificaciones: { label: 'notifications' },
-  Ficha: { label: 'profile' },
-  Pago: { label: 'payment' },
-  Evaluaciones: { label: 'evaluations', lockable: true },
-  RegistroCompras: { label: 'purchaseLog', adminOnly: true },
-  Marca: { label: 'brandSettings', adminOnly: true, brandingOnly: true },
 }
 
 const AVATAR_TEMPLATES = [
