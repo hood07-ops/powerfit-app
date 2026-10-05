@@ -169,9 +169,11 @@ export default function RutinasPage({ student, onUpdateStudent }) {
       return
     }
 
-    const asignados = (data?.plans || []).filter((plan) =>
-      String(plan?.objetivo || '').startsWith('coach_personalizado'),
-    )
+    const asignados = (data?.plans || []).filter((plan) => {
+      const objetivo = String(plan?.objetivo || '')
+      const sourceRef = String(plan?.source_ref || '')
+      return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
+    })
 
     setEntrenosAsignados(asignados)
   }
@@ -285,7 +287,9 @@ export default function RutinasPage({ student, onUpdateStudent }) {
             {entrenosAsignados.map((plan) => (
               <details key={plan.id} className="bg-zinc-950 border border-zinc-700 rounded-2xl p-4">
                 <summary className="cursor-pointer font-black text-yellow-400">
-                  {plan.objetivo?.replace('coach_personalizado_', '') || 'Entrenamiento personalizado'} - {new Date(plan.created_at).toLocaleDateString('es-CL')}
+                  {String(plan.objetivo || 'Entrenamiento personalizado')
+                    .replace(/^coach_(personalizado_)?/, '')
+                    .replaceAll('_', ' ')} - {new Date(plan.created_at).toLocaleDateString('es-CL')}
                 </summary>
                 <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
                   {plan.contenido}
