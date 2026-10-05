@@ -182,9 +182,24 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     const completionMap = {}
     ;(data?.records || []).forEach((record) => {
       const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
-      const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
-      if (match?.[1]) {
-        completionMap[match[1]] = record
+      const sessionMatch = texto.match(/SESION_COMPLETADA:([a-zA-Z0-9-]+):(\d+)/)
+      const planMatch = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+
+      if (sessionMatch?.[1]) {
+        const planId = sessionMatch[1]
+        const sessionNumber = Number(sessionMatch[2])
+        completionMap[planId] = {
+          ...(completionMap[planId] || {}),
+          sessions: {
+            ...(completionMap[planId]?.sessions || {}),
+            [sessionNumber]: record,
+          },
+        }
+      } else if (planMatch?.[1]) {
+        completionMap[planMatch[1]] = {
+          ...(completionMap[planMatch[1]] || {}),
+          legacyComplete: record,
+        }
       }
     })
     setCompletados(completionMap)
@@ -247,43 +262,74 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     onUpdateStudent?.()
   }
 
-  function actualizarFeedbackPlan(planId, field, value) {
+  function planMeta(plan) {
+    const contenido = String(plan?.contenido || '')
+    const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
+    const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
+    return {
+      semanas: Math.max(1, semanas),
+      sesionesSemana: Math.max(1, sesionesSemana),
+      totalSesiones: Math.max(1, semanas * sesionesSemana),
+    }
+  }
+
+  function progresoPlan(plan) {
+    const meta = planMeta(plan)
+    const info = completados[plan.id] || {}
+    const done = info.legacyComplete
+      ? meta.totalSesiones
+      : Object.keys(info.sessions || {}).length
+
+    return {
+      ...meta,
+      done: Math.min(done, meta.totalSesiones),
+      complete: done >= meta.totalSesiones,
+    }
+  }
+
+  function actualizarFeedbackPlan(planId, sessionNumber, field, value) {
+    const key = `${planId}:${sessionNumber}`
     setFeedbackPlan((current) => ({
       ...current,
-      [planId]: {
-        ...(current[planId] || {}),
+      [key]: {
+        ...(current[key] || {}),
         [field]: value,
       },
     }))
   }
 
-  async function marcarPlanCompletado(plan) {
-    if (!student?.id || !plan?.id || completados[plan.id]) return
+  async function marcarSesionCompletada(plan, sessionNumber) {
+    if (!student?.id || !plan?.id) return
 
-    const valores = feedbackPlan[plan.id] || {}
+    const progress = progresoPlan(plan)
+    const existing = completados[plan.id]?.sessions?.[sessionNumber]
+    if (existing || completados[plan.id]?.legacyComplete) return
+
+    const key = `${plan.id}:${sessionNumber}`
+    const valores = feedbackPlan[key] || {}
     const rpe = Math.min(10, Math.max(1, Number(valores.rpe || 6)))
     const comentario = String(valores.comentario || '').trim()
 
     const { error } = await supabase.rpc('save_powerfit_training_record_secure', {
       p_alumno_id: student.id,
-      p_rutina_nombre: `Plan coach - ${String(plan.objetivo || '').replace(/^coach_/, '').replaceAll('_', ' ')}`,
-      p_metodo: `PLAN_COMPLETADO:${plan.id} | RPE:${rpe}`,
+      p_rutina_nombre: `Plan coach - sesión ${sessionNumber}/${progress.totalSesiones} - ${String(plan.objetivo || '').replace(/^coach_/, '').replaceAll('_', ' ')}`,
+      p_metodo: `SESION_COMPLETADA:${plan.id}:${sessionNumber} | RPE:${rpe}`,
       p_tipo_record: 'repeticiones',
       p_vueltas: null,
       p_repeticiones: 1,
       p_tiempo_segundos: null,
       p_peso_kg: null,
       p_porcentaje_rm: null,
-      p_observacion: comentario || `PLAN_COMPLETADO:${plan.id}`,
-      p_reason: 'Plan asignado por coach completado por alumno',
+      p_observacion: comentario || `SESION_COMPLETADA:${plan.id}:${sessionNumber}`,
+      p_reason: 'Sesión de plan asignado por coach completada por alumno',
     })
 
     if (error) {
-      setMensaje(`No se pudo marcar como completado: ${error.message}`)
+      setMensaje(`No se pudo marcar la sesión como completada: ${error.message}`)
       return
     }
 
-    setMensaje('Entrenamiento marcado como completado. Tu coach ya puede ver el registro.')
+    setMensaje(`Sesión ${sessionNumber}/${progress.totalSesiones} completada. Tu coach ya puede verla.`)
     await cargarEntrenosAsignados()
     onUpdateStudent?.()
   }
@@ -349,59 +395,107 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                   {plan.contenido}
                 </pre>
 
-                {completados[plan.id] ? (
-                  <div className="mt-4 rounded-2xl border border-green-600 bg-green-950/40 p-4">
-                    <p className="font-black text-green-400">COMPLETADO</p>
-                    <p className="mt-1 text-sm text-zinc-300">
-                      {completados[plan.id]?.created_at
-                        ? new Date(completados[plan.id].created_at).toLocaleString('es-CL')
-                        : 'Registrado'}
-                    </p>
-                    {completados[plan.id]?.metodo && (
-                      <p className="mt-2 text-sm text-zinc-400">
-                        {String(completados[plan.id].metodo).replace(`PLAN_COMPLETADO:${plan.id} |`, '').trim()}
-                      </p>
-                    )}
-                    {completados[plan.id]?.observacion && !String(completados[plan.id].observacion).startsWith('PLAN_COMPLETADO:') && (
-                      <p className="mt-2 text-sm text-zinc-300">
-                        Comentario: {completados[plan.id].observacion}
-                      </p>
-                    )}
-                  </div>
-                ) : (
-                  <div className="mt-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
-                    <p className="font-black text-blue-300">Al terminar este entrenamiento</p>
-                    <div className="mt-3 grid sm:grid-cols-[140px_1fr] gap-3">
-                      <label className="grid gap-2 text-sm font-black text-zinc-300">
-                        RPE 1-10
-                        <input
-                          type="number"
-                          min="1"
-                          max="10"
-                          value={feedbackPlan[plan.id]?.rpe || '6'}
-                          onChange={(e) => actualizarFeedbackPlan(plan.id, 'rpe', e.target.value)}
-                          className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
-                        />
-                      </label>
-                      <label className="grid gap-2 text-sm font-black text-zinc-300">
-                        Comentario para tu coach
-                        <input
-                          value={feedbackPlan[plan.id]?.comentario || ''}
-                          onChange={(e) => actualizarFeedbackPlan(plan.id, 'comentario', e.target.value)}
-                          placeholder="Cómo te sentiste, dificultad, dolor, observaciones..."
-                          className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
-                        />
-                      </label>
+                {(() => {
+                  const progress = progresoPlan(plan)
+                  const nextSession = Array.from(
+                    { length: progress.totalSesiones },
+                    (_, index) => index + 1,
+                  ).find((number) => !completados[plan.id]?.sessions?.[number])
+
+                  return (
+                    <div className="mt-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="font-black text-blue-300">Progreso del plan</p>
+                          <p className="text-sm text-zinc-400 mt-1">
+                            {progress.done}/{progress.totalSesiones} sesiones completadas
+                            {' · '}
+                            {progress.semanas} semana{progress.semanas === 1 ? '' : 's'}
+                            {' · '}
+                            {progress.sesionesSemana} sesión{progress.sesionesSemana === 1 ? '' : 'es'} por semana
+                          </p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-black border ${
+                          progress.complete
+                            ? 'bg-green-950 border-green-700 text-green-300'
+                            : 'bg-yellow-950 border-yellow-700 text-yellow-300'
+                        }`}>
+                          {progress.complete ? 'PLAN COMPLETADO' : 'EN PROGRESO'}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {Array.from({ length: progress.totalSesiones }, (_, index) => index + 1).map((sessionNumber) => {
+                          const record = completados[plan.id]?.sessions?.[sessionNumber]
+                          const key = `${plan.id}:${sessionNumber}`
+
+                          return (
+                            <div
+                              key={sessionNumber}
+                              className={`rounded-2xl border p-4 ${
+                                record
+                                  ? 'border-green-700 bg-green-950/30'
+                                  : sessionNumber === nextSession
+                                    ? 'border-blue-600 bg-blue-950/20'
+                                    : 'border-zinc-800 bg-black/30'
+                              }`}
+                            >
+                              <p className="font-black">
+                                Sesión {sessionNumber} de {progress.totalSesiones}
+                              </p>
+
+                              {record ? (
+                                <>
+                                  <p className="mt-2 text-sm font-black text-green-400">COMPLETADA</p>
+                                  <p className="mt-1 text-xs text-zinc-400">
+                                    {record.created_at ? new Date(record.created_at).toLocaleString('es-CL') : 'Registrada'}
+                                  </p>
+                                  <p className="mt-2 text-sm text-yellow-300">
+                                    {String(record.metodo || '').split('|').slice(1).join('|').trim()}
+                                  </p>
+                                  {record.observacion && !String(record.observacion).startsWith('SESION_COMPLETADA:') && (
+                                    <p className="mt-2 text-sm text-zinc-300">{record.observacion}</p>
+                                  )}
+                                </>
+                              ) : sessionNumber === nextSession ? (
+                                <>
+                                  <div className="mt-3 grid gap-2">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      max="10"
+                                      value={feedbackPlan[key]?.rpe || '6'}
+                                      onChange={(e) => actualizarFeedbackPlan(plan.id, sessionNumber, 'rpe', e.target.value)}
+                                      placeholder="RPE 1-10"
+                                      className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
+                                    />
+                                    <input
+                                      value={feedbackPlan[key]?.comentario || ''}
+                                      onChange={(e) => actualizarFeedbackPlan(plan.id, sessionNumber, 'comentario', e.target.value)}
+                                      placeholder="Comentario para tu coach"
+                                      className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
+                                    />
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => marcarSesionCompletada(plan, sessionNumber)}
+                                    className="mt-3 w-full rounded-xl bg-green-600 hover:bg-green-700 p-3 font-black"
+                                  >
+                                    Completar sesión {sessionNumber}
+                                  </button>
+                                </>
+                              ) : (
+                                <p className="mt-2 text-sm text-zinc-500">
+                                  Se habilita al completar la sesión anterior.
+                                </p>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => marcarPlanCompletado(plan)}
-                      className="mt-3 w-full rounded-2xl bg-green-600 hover:bg-green-700 p-4 font-black"
-                    >
-                      Marcar entrenamiento como completado
-                    </button>
-                  </div>
-                )}
+                  )
+                })()}
               </details>
             ))}
           </div>
