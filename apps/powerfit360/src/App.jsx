@@ -1573,24 +1573,19 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
   const [completados, setCompletados] = useState({})
   const [cargandoAsignados, setCargandoAsignados] = useState(false)
 
-  const alumno = alumnos.find((item) => String(item.id) === String(form.alumnoId))
-
-  useEffect(() => {
-    if (!form.alumnoId && alumnos[0]?.id) {
-      setForm((current) => ({ ...current, alumnoId: String(alumnos[0].id) }))
-    }
-  }, [alumnos, form.alumnoId])
+  const selectedAlumnoId = form.alumnoId || (alumnos[0]?.id ? String(alumnos[0].id) : '')
+  const alumno = alumnos.find((item) => String(item.id) === String(selectedAlumnoId))
 
   useEffect(() => {
     async function cargarAsignados() {
-      if (!form.alumnoId) {
+      if (!selectedAlumnoId) {
         setAsignados([])
         return
       }
 
       setCargandoAsignados(true)
       const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
-        p_alumno_id: form.alumnoId,
+        p_alumno_id: selectedAlumnoId,
         p_limit: 100,
       })
 
@@ -1637,7 +1632,7 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     }
 
     cargarAsignados()
-  }, [form.alumnoId])
+  }, [selectedAlumnoId])
 
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
@@ -1773,7 +1768,7 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
           <label className="grid gap-2 font-black text-sm text-zinc-300">
             Alumno
             <select
-              value={form.alumnoId}
+              value={selectedAlumnoId}
               onChange={(event) => update('alumnoId', event.target.value)}
               className="bg-black border border-zinc-700 rounded-xl p-3"
             >
@@ -3082,14 +3077,17 @@ export default function App() {
   const sessionIsAdmin = student?.role?.toLowerCase() === 'admin'
 
   useEffect(() => {
-    if (!student?.id || initialSectionApplied) return
+    if (!student?.id || initialSectionApplied) return undefined
 
     const requestedSection = new URLSearchParams(window.location.search).get('section')
-    if (!requestedSection) {
-      setSection(sessionIsAdmin ? (edition.sections[0] || 'Admin') : 'Inicio')
-    }
+    const timer = window.setTimeout(() => {
+      if (!requestedSection) {
+        setSection(sessionIsAdmin ? (edition.sections[0] || 'Admin') : 'Inicio')
+      }
+      setInitialSectionApplied(true)
+    }, 0)
 
-    setInitialSectionApplied(true)
+    return () => window.clearTimeout(timer)
   }, [edition.sections, initialSectionApplied, sessionIsAdmin, student?.id])
 
 
