@@ -16,26 +16,6 @@ import RutinasPage from './pages/RutinasPage'
 import AssignedTrainingPage from './pages/AssignedTrainingPage'
 import ChatWidget from './components/ChatWidget'
 
-function Btn({ text, set, disabled, active, show = true }) {
-  if (!show) return null
-
-  return (
-    <button
-      onClick={set}
-      disabled={disabled}
-      className={`shrink-0 min-w-[132px] flex-1 sm:flex-none px-4 py-3 rounded-2xl font-black text-sm sm:text-base transition ${
-        disabled
-          ? 'bg-zinc-700 opacity-40'
-          : active
-            ? 'bg-red-600 text-white shadow-lg shadow-red-950/40'
-            : 'bg-zinc-800 hover:bg-red-600'
-      }`}
-    >
-      {text}
-    </button>
-  )
-}
-
 function Info({ label, value }) {
   return (
     <div className="bg-zinc-800 rounded-2xl p-3 sm:p-4 min-w-0">
@@ -3954,32 +3934,15 @@ export default function App() {
         </div>
       </div>
 
-      <div data-nav-items={Object.keys(NAV_ITEMS).length} className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
-        <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
-          {!isAdmin && <Btn show={editionAllows('Inicio')} text={idioma === 'en' ? 'Home' : 'Mi Inicio'} active={visibleSection === 'Inicio'} set={() => setSection('Inicio')} />}
-          {!isAdmin && <Btn show={editionAllows('MiEntrenamiento')} text={t.myTraining} active={visibleSection === 'MiEntrenamiento'} set={() => setSection('MiEntrenamiento')} />}
-          {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
-          <Btn show={editionAllows('MiCamino')} text={t.combatPath} active={visibleSection === 'MiCamino'} set={() => setSection('MiCamino')} />
-          {isAdmin && <Btn show={editionAllows('Graduaciones')} text={t.graduations} active={visibleSection === 'Graduaciones'} set={() => setSection('Graduaciones')} />}
-          {isAdmin && <Btn show={editionAllows('Entrenamientos')} text={t.customTrainings} active={visibleSection === 'Entrenamientos'} set={() => setSection('Entrenamientos')} />}
-          <Btn show={editionAllows('AsistenciaQR')} text={t.attendanceQr} active={visibleSection === 'AsistenciaQR'} set={() => setSection('AsistenciaQR')} />
-          <Btn show={editionAllows('XPRangos')} text={t.xpRanks} active={visibleSection === 'XPRangos'} set={() => setSection('XPRangos')} />
-          <Btn show={editionAllows('Metodos')} text={t.library} active={visibleSection === 'Metodos'} set={() => setSection('Metodos')} />
-          {isAdmin && <Btn show={editionAllows('Generador')} text={t.aiGenerator} active={visibleSection === 'Generador'} set={() => setSection('Generador')} />}
-          <Btn show={editionAllows('Constructor')} text={t.workoutBuilder} active={visibleSection === 'Constructor'} set={() => setSection('Constructor')} />
-          <Btn show={editionAllows('Rutinas')} text={t.routines} active={visibleSection === 'Rutinas'} set={() => setSection('Rutinas')} />
-          <Btn show={editionAllows('Premium')} text={t.premium} active={visibleSection === 'Premium'} set={() => setSection('Premium')} />
-          <Btn show={editionAllows('Reportes')} text={t.reports} active={visibleSection === 'Reportes'} disabled={!isAdmin} set={() => setSection('Reportes')} />
-          <Btn show={editionAllows('Estadísticas')} text={t.stats} active={visibleSection === 'Estadísticas'} set={() => setSection('Estadísticas')} />
-          <Btn show={editionAllows('Notificaciones')} text={t.notifications} active={visibleSection === 'Notificaciones'} set={() => setSection('Notificaciones')} />
-
-          <Btn show={editionAllows('Ficha')} text={t.profile} active={visibleSection === 'Ficha'} set={() => setSection('Ficha')} />
-          <Btn show={editionAllows('Pago')} text={t.payment} active={visibleSection === 'Pago'} set={() => setSection('Pago')} />
-          <Btn show={editionAllows('Evaluaciones')} text={t.evaluations} active={visibleSection === 'Evaluaciones'} set={() => setSection('Evaluaciones')} />
-          {isAdmin && <Btn show={editionAllows('RegistroCompras')} text={t.purchaseLog} active={visibleSection === 'RegistroCompras'} set={() => setSection('RegistroCompras')} />}
-          {isAdmin && <Btn show={edition.allowBranding && editionAllows('Marca')} text={t.brandSettings} active={visibleSection === 'Marca'} set={() => setSection('Marca')} />}
-        </div>
-      </div>
+      <PremiumDesktopNav
+        isAdmin={isAdmin}
+        idioma={idioma}
+        t={t}
+        edition={edition}
+        visibleSection={visibleSection}
+        setSection={setSection}
+        editionAllows={editionAllows}
+      />
 
       {paymentReturn && (
         <div
