@@ -120,6 +120,7 @@ const UI_TEXT = {
 }
 
 const NAV_ITEMS = {
+  Inicio: { label: 'home' },
   Admin: { label: 'adminStudents', adminOnly: true },
   MiCamino: { label: 'combatPath' },
   Graduaciones: { label: 'graduations', adminOnly: true },
@@ -2734,6 +2735,133 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
   )
 }
 
+function StudentHomePanel({ student, setSection }) {
+  const [planes, setPlanes] = useState([])
+  const [cargando, setCargando] = useState(true)
+
+  useEffect(() => {
+    async function cargar() {
+      if (!student?.id) {
+        setPlanes([])
+        setCargando(false)
+        return
+      }
+
+      setCargando(true)
+      const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
+        p_alumno_id: student.id,
+        p_limit: 50,
+      })
+
+      if (error) {
+        setPlanes([])
+        setCargando(false)
+        return
+      }
+
+      const coachPlans = (data?.plans || []).filter((plan) => {
+        const objetivo = String(plan?.objetivo || '')
+        const sourceRef = String(plan?.source_ref || '')
+        return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
+      })
+
+      setPlanes(coachPlans)
+      setCargando(false)
+    }
+
+    cargar()
+  }, [student?.id])
+
+  const planActivo = planes[0] || null
+  const objetivo = String(planActivo?.objetivo || '')
+    .replace(/^coach_(personalizado_)?/, '')
+    .replaceAll('_', ' ')
+
+  return (
+    <div className="space-y-5">
+      <section className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-5 sm:p-7">
+        <p className="text-sm font-black uppercase tracking-wide text-red-400">Mi Inicio</p>
+        <h2 className="mt-2 text-3xl sm:text-5xl font-black text-white">
+          Hola, {student?.nombre || 'alumno'}
+        </h2>
+        <p className="mt-3 text-zinc-400">
+          Aquí tienes lo importante de hoy. Tu coach controla las asignaciones y tú ves solamente tu información.
+        </p>
+      </section>
+
+      <div className="grid lg:grid-cols-2 gap-5">
+        <section className="bg-zinc-900 border border-blue-500 rounded-2xl sm:rounded-3xl p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-black uppercase text-blue-300">Entrenamiento</p>
+              <h3 className="text-2xl font-black mt-1">Mi entrenamiento asignado</h3>
+            </div>
+            <span className="rounded-full bg-blue-950 border border-blue-700 px-3 py-1 text-xs font-black text-blue-200">
+              {planes.length} plan{planes.length === 1 ? '' : 'es'}
+            </span>
+          </div>
+
+          {cargando ? (
+            <p className="mt-5 text-zinc-400">Cargando entrenamiento...</p>
+          ) : planActivo ? (
+            <div className="mt-5 bg-black/50 border border-zinc-700 rounded-2xl p-4">
+              <p className="text-yellow-400 font-black capitalize">{objetivo || 'Entrenamiento personalizado'}</p>
+              <p className="text-sm text-zinc-400 mt-1">
+                {planActivo.created_at ? new Date(planActivo.created_at).toLocaleDateString('es-CL') : 'Plan activo'}
+              </p>
+              <pre className="mt-4 whitespace-pre-wrap font-sans text-sm text-zinc-200 max-h-56 overflow-auto">
+                {planActivo.contenido || 'Sin contenido disponible.'}
+              </pre>
+            </div>
+          ) : (
+            <div className="mt-5 bg-black/50 border border-zinc-800 rounded-2xl p-4">
+              <p className="font-black text-zinc-200">Aún no tienes un entrenamiento asignado.</p>
+              <p className="text-sm text-zinc-500 mt-1">Cuando tu coach te asigne uno, aparecerá aquí automáticamente.</p>
+            </div>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setSection('Rutinas')}
+            className="mt-4 w-full rounded-2xl bg-blue-600 hover:bg-blue-700 p-4 font-black"
+          >
+            Ver todos mis entrenamientos
+          </button>
+        </section>
+
+        <section className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-5">
+          <p className="text-sm font-black uppercase text-zinc-400">Accesos rápidos</p>
+          <div className="mt-4 grid sm:grid-cols-2 gap-3">
+            <button onClick={() => setSection('MiCamino')} className="bg-zinc-950 border border-zinc-700 hover:border-yellow-500 rounded-2xl p-5 text-left">
+              <p className="font-black text-yellow-400">Mi camino</p>
+              <p className="text-sm text-zinc-500 mt-1">Nivel, progreso y contenido habilitado.</p>
+            </button>
+            <button onClick={() => setSection('Evaluaciones')} className="bg-zinc-950 border border-zinc-700 hover:border-cyan-500 rounded-2xl p-5 text-left">
+              <p className="font-black text-cyan-400">Evaluaciones</p>
+              <p className="text-sm text-zinc-500 mt-1">Tests, registros y evolución.</p>
+            </button>
+            <button onClick={() => setSection('Ficha')} className="bg-zinc-950 border border-zinc-700 hover:border-green-500 rounded-2xl p-5 text-left">
+              <p className="font-black text-green-400">Mi ficha</p>
+              <p className="text-sm text-zinc-500 mt-1">Datos personales y deportivos.</p>
+            </button>
+            <button onClick={() => setSection('Pago')} className="bg-zinc-950 border border-zinc-700 hover:border-red-500 rounded-2xl p-5 text-left">
+              <p className="font-black text-red-400">Mi pago</p>
+              <p className="text-sm text-zinc-500 mt-1">Estado: {student?.estado_pago || 'Pendiente'}.</p>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <section className="bg-zinc-900 border border-emerald-700 rounded-2xl sm:rounded-3xl p-5">
+        <h3 className="text-xl font-black text-emerald-400">Lo que comparte PowerFit contigo</h3>
+        <p className="text-zinc-400 mt-2">
+          Solo ves tus entrenamientos, progreso, evaluaciones, niveles habilitados, mensajes y estado de pago. La administración, otros alumnos, notas internas y configuración del sistema permanecen ocultos.
+        </p>
+      </section>
+    </div>
+  )
+}
+
 export default function App() {
   const [user, setUser] = useState(null)
   const [student, setStudent] = useState(null)
@@ -2747,6 +2875,7 @@ export default function App() {
     const requestedSection = new URLSearchParams(window.location.search).get('section')
     return requestedSection || getAppEdition().sections[0] || 'AsistenciaQR'
   })
+  const [initialSectionApplied, setInitialSectionApplied] = useState(false)
   const [busquedaAdmin, setBusquedaAdmin] = useState('')
   const [alumnoDetalle, setAlumnoDetalle] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -2765,6 +2894,18 @@ export default function App() {
   const edition = getAppEdition()
   const t = UI_TEXT[idioma] || UI_TEXT.es
   const sessionIsAdmin = student?.role?.toLowerCase() === 'admin'
+
+  useEffect(() => {
+    if (!student?.id || initialSectionApplied) return
+
+    const requestedSection = new URLSearchParams(window.location.search).get('section')
+    if (!requestedSection) {
+      setSection(sessionIsAdmin ? (edition.sections[0] || 'Admin') : 'Inicio')
+    }
+
+    setInitialSectionApplied(true)
+  }, [edition.sections, initialSectionApplied, sessionIsAdmin, student?.id])
+
 
   useEffect(() => listenForPowerFitUpdate(setPwaUpdate), [])
 
@@ -2789,6 +2930,8 @@ export default function App() {
   }, [edition.appName])
 
   function editionAllows(sectionName) {
+    if (sectionName === 'Inicio') return true
+
     if (
       sectionName === 'Pago' &&
       student &&
@@ -3528,7 +3671,7 @@ export default function App() {
   const termsAccepted =
     !termsFeatureActive ||
     (Boolean(student?.terminos_aceptados) && student?.terminos_version === TERMS_VERSION)
-  const visibleSection = canOpenSection(section, isAdmin) ? section : 'AsistenciaQR'
+  const visibleSection = canOpenSection(section, isAdmin) ? section : (isAdmin ? 'Admin' : 'Inicio')
   const pagoAlDia = student?.estado_pago === 'Pagado'
   const diasParaVencer = diferenciaDias(student?.fecha_vencimiento)
   const mostrarAvisoVencimiento =
@@ -3629,6 +3772,7 @@ export default function App() {
 
       <div data-nav-items={Object.keys(NAV_ITEMS).length} className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
+          {!isAdmin && <Btn show={editionAllows('Inicio')} text={idioma === 'en' ? 'Home' : 'Mi Inicio'} active={visibleSection === 'Inicio'} set={() => setSection('Inicio')} />}
           {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
           <Btn show={editionAllows('MiCamino')} text={t.combatPath} active={visibleSection === 'MiCamino'} set={() => setSection('MiCamino')} />
           {isAdmin && <Btn show={editionAllows('Graduaciones')} text={t.graduations} active={visibleSection === 'Graduaciones'} set={() => setSection('Graduaciones')} />}
@@ -3721,6 +3865,10 @@ export default function App() {
             Pagar mensualidad
           </button>
         </div>
+      )}
+
+      {!isAdmin && visibleSection === 'Inicio' && (
+        <StudentHomePanel student={student} setSection={setSection} />
       )}
 
       {editionAllows('AsistenciaQR') && visibleSection === 'AsistenciaQR' && (
