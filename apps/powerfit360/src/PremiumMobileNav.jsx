@@ -4,7 +4,7 @@ import { supabase } from './supabase'
 const STUDENT_PRIMARY = [
   { label: 'CPS', aliases: ['Mi Camino', 'My Path'] },
   { label: 'QR', aliases: ['Asistencia QR', 'QR attendance'] },
-  { label: 'Entrenar', aliases: ['Rutinas', 'Routines'] },
+  { label: 'Entrenar', aliases: ['Mi entrenamiento', 'My training', 'Rutinas', 'Routines'] },
   { label: 'Ficha', aliases: ['Ficha personal', 'Personal profile'] },
 ]
 
