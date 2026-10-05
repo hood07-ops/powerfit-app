@@ -13,6 +13,7 @@ import MetodosPage from './pages/MetodosPage'
 import MiQRPage from './pages/MiQRPage'
 import RegistroComprasPage from './pages/RegistroComprasPage'
 import RutinasPage from './pages/RutinasPage'
+import AssignedTrainingPage from './pages/AssignedTrainingPage'
 import ChatWidget from './components/ChatWidget'
 
 function Btn({ text, set, disabled, active, show = true }) {
@@ -82,6 +83,7 @@ const UI_TEXT = {
     payment: 'Pago / deuda',
     evaluations: 'Evaluaciones',
     customTrainings: 'Entrenos alumnos',
+    myTraining: 'Mi entrenamiento',
     combatPath: 'Mi Camino',
     graduations: 'Graduaciones',
     adminStudents: 'ADMIN ALUMNOS',
@@ -109,6 +111,7 @@ const UI_TEXT = {
     payment: 'Payment / debt',
     evaluations: 'Evaluations',
     customTrainings: 'Student plans',
+    myTraining: 'My training',
     combatPath: 'My Path',
     graduations: 'Graduations',
     adminStudents: 'STUDENTS ADMIN',
@@ -125,6 +128,7 @@ const NAV_ITEMS = {
   MiCamino: { label: 'combatPath' },
   Graduaciones: { label: 'graduations', adminOnly: true },
   Entrenamientos: { label: 'customTrainings', adminOnly: true },
+  MiEntrenamiento: { label: 'myTraining' },
   AsistenciaQR: { label: 'attendanceQr' },
   XPRangos: { label: 'xpRanks', lockable: true },
   Metodos: { label: 'library', lockable: true },
@@ -3004,10 +3008,10 @@ function StudentHomePanel({ student, setSection }) {
 
           <button
             type="button"
-            onClick={() => setSection('Rutinas')}
+            onClick={() => setSection('MiEntrenamiento')}
             className="mt-4 w-full rounded-2xl bg-blue-600 hover:bg-blue-700 p-4 font-black"
           >
-            Ver todos mis entrenamientos
+            Abrir mi entrenamiento
           </button>
         </section>
 
@@ -3112,7 +3116,7 @@ export default function App() {
   }, [edition.appName])
 
   function editionAllows(sectionName) {
-    if (sectionName === 'Inicio') return true
+    if (sectionName === 'Inicio' || sectionName === 'MiEntrenamiento') return true
 
     if (
       sectionName === 'Pago' &&
@@ -3955,6 +3959,7 @@ export default function App() {
       <div data-nav-items={Object.keys(NAV_ITEMS).length} className="sticky top-0 z-40 -mx-3 sm:mx-0 px-3 sm:px-0 py-3 mb-5 sm:mb-8 bg-black/95 backdrop-blur border-y border-zinc-900 sm:border-0">
         <div className="flex flex-nowrap sm:flex-wrap gap-3 overflow-x-auto pb-1 sm:pb-0">
           {!isAdmin && <Btn show={editionAllows('Inicio')} text={idioma === 'en' ? 'Home' : 'Mi Inicio'} active={visibleSection === 'Inicio'} set={() => setSection('Inicio')} />}
+          {!isAdmin && <Btn show={editionAllows('MiEntrenamiento')} text={t.myTraining} active={visibleSection === 'MiEntrenamiento'} set={() => setSection('MiEntrenamiento')} />}
           {isAdmin && <Btn show={editionAllows('Admin')} text={t.adminStudents} active={visibleSection === 'Admin'} set={() => setSection('Admin')} />}
           <Btn show={editionAllows('MiCamino')} text={t.combatPath} active={visibleSection === 'MiCamino'} set={() => setSection('MiCamino')} />
           {isAdmin && <Btn show={editionAllows('Graduaciones')} text={t.graduations} active={visibleSection === 'Graduaciones'} set={() => setSection('Graduaciones')} />}
@@ -4051,6 +4056,13 @@ export default function App() {
 
       {!isAdmin && visibleSection === 'Inicio' && (
         <StudentHomePanel student={student} setSection={setSection} />
+      )}
+
+      {!isAdmin && editionAllows('MiEntrenamiento') && visibleSection === 'MiEntrenamiento' && (
+        <AssignedTrainingPage
+          student={student}
+          onUpdateStudent={() => cargarUsuario()}
+        />
       )}
 
       {editionAllows('AsistenciaQR') && visibleSection === 'AsistenciaQR' && (
