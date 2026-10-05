@@ -88,23 +88,33 @@ async function loadHome(){
   if(error){stateEl.className='panel error';stateEl.textContent=humanError(error.message);return}
   home=data;
   const enrolled=(home.routes||[]).filter(r=>r.enrollment);
-  const progressResults=await Promise.all(enrolled.map(async route=>{
-    const{data:progress}=await supabase.rpc('get_powerfit_cps_route_progress_secure',{p_alumno_id:Number(home.student_alumno_id),p_path_code:route.code});
-    return[route.code,progress];
+  const routeResults=await Promise.all(enrolled.map(async route=>{
+    const[progressResult,eligibilityResult]=await Promise.all([
+      supabase.rpc('get_powerfit_cps_route_progress_secure',{p_alumno_id:Number(home.student_alumno_id),p_path_code:route.code}),
+      supabase.rpc('get_powerfit_final_exam_eligibility_secure',{p_alumno_id:Number(home.student_alumno_id),p_path_code:route.code})
+    ]);
+    return[route.code,{progress:progressResult.data||null,eligibility:eligibilityResult.data||null}];
   }));
-  const progressMap=Object.fromEntries(progressResults);
-  home.routes=(home.routes||[]).map(route=>({...route,academic_progress:progressMap[route.code]||null}));
+  const routeMap=Object.fromEntries(routeResults);
+  home.routes=(home.routes||[]).map(route=>({...route,academic_progress:routeMap[route.code]?.progress||null,final_exam_eligibility:routeMap[route.code]?.eligibility||null}));
   stateEl.className='panel';
   stateEl.innerHTML=`<strong>Precio actual por tomo:</strong> ${money(home.tomo_price_clp)} <span class="muted">(${home.is_admin?'modo admin disponible':'alumno'})</span>`;
   renderRoutes();
 }
 
-function nextAcademicStep(p){
+function nextAcademicStep(p,e){
   if(!p)return'Continúa con el tomo actual';
   if(Number(p.stage_questions_approved||0)<Number(p.stage_questions_total||0))return'Responde y aprueba las preguntas pendientes';
   if(Number(p.stage_cards_completed||0)<Number(p.stage_cards_total||0))return'Completa las tarjetas técnicas, video y evaluación presencial';
   if(Number(p.stage_tomos_completed||0)<Number(p.stage_tomos_total||0))return'Completa la evaluación del tomo';
-  return p.stage_ready_for_exam?'Etapa completa: prepárate para examen/promoción':'Requisitos académicos completos';
+  if(e?.eligible)return'Ya cumples todos los requisitos: examen final habilitado';
+  if(e?.reason==='MINIMUM_TIME')return`Cumple el tiempo mínimo: ${e.months_in_stage||0}/${e.minimum_months||0} meses`;
+  if(e?.reason==='MINIMUM_ATTENDANCE')return`Completa la asistencia mínima: ${e.attendance_count||0}/${e.attendance_required||0} sesiones`;
+  if(e?.reason==='THEORY_PENDING')return'Finaliza la teoría pendiente';
+  if(e?.reason==='TECHNICAL_CARDS_PENDING')return'Finaliza las evaluaciones técnicas pendientes';
+  if(e?.reason==='TOMOS_PENDING')return'Completa los tomos obligatorios';
+  if(e?.reason==='CRITICAL_FAIL_OPEN')return'Corrige los fallos críticos abiertos';
+  return p.stage_ready_for_exam?'Etapa académica completa; revisa requisitos de promoción':'Continúa con tu etapa actual';
 }
 
 function renderRoutes(){
@@ -113,7 +123,7 @@ function renderRoutes(){
   routes.forEach(route=>{
     const el=document.createElement('article');
     if(!route.enrollment){el.className='panel route start';el.innerHTML=`<h2>${route.name}</h2><p class="muted">Aún no estás inscrito en esta ruta. Actívala para ver los tomos y poder comprarlos.</p><div class="actions"><button data-enroll="${route.code}">Comenzar ${route.name}</button></div>`;routesEl.appendChild(el);return}
-    const p=routeProgress(route),academic=route.academic_progress||{},currentLabel=academic.stage_label||p.current?.label||`Etapa ${route.enrollment.current_stage_order}`,isKick=route.code==='KICKBOXING';
+    const p=routeProgress(route),academic=route.academic_progress||{},eligibility=route.final_exam_eligibility||{},currentLabel=academic.stage_label||p.current?.label||`Etapa ${route.enrollment.current_stage_order}`,isKick=route.code==='KICKBOXING';
     const stagePct=academic.stage_progress_pct??p.currentPct,totalPct=academic.route_progress_pct??p.totalPct;
     const stageQuestions=`${academic.stage_questions_approved??0}/${academic.stage_questions_total??0}`;
     const stageCards=`${academic.stage_cards_completed??0}/${academic.stage_cards_total??0}`;
@@ -121,7 +131,7 @@ function renderRoutes(){
     const levelBlock=isKick?`<div class="belt-wrap"><div class="current-label">Grado que estás cursando</div><div class="belt" style="${beltStyle(currentLabel)}" aria-label="Cinturón ${currentLabel}"></div><div class="belt-name">${currentLabel}</div></div>`:`<div><div class="current-label">Nivel que estás estudiando</div><div class="current-value">${currentLabel}</div>${p.next?`<div class="next-label">Siguiente: ${p.next.label}</div>`:'<div class="next-label">Último nivel de la ruta</div>'}</div>`;
     const tomos=(route.stages||[]).flatMap(stage=>stage.tomos||[]);
     el.className='panel route';
-    el.innerHTML=`<div class="route-head"><div><h2>${route.name}</h2><div class="muted">Progresión académica CPS</div></div>${levelBlock}</div><div class="current-box"><div class="progress-block"><div class="progress-row"><span>Evolución del ${isKick?'grado':'nivel'} actual</span><span>${stagePct}% · requisitos ${academic.stage_requirements_completed??0}/${academic.stage_requirements_total??0}</span></div><div class="progress"><span style="width:${Math.max(0,Math.min(100,Number(stagePct||0)))}%"></span></div><div class="question-meta" style="margin-top:10px"><span class="status">Teoría ${stageQuestions}</span><span class="status">Técnicas ${stageCards}</span><span class="status">Tomos ${stageTomos}</span></div></div><div class="progress-block"><div class="progress-row"><span>Evolución total en ${route.name}</span><span>${totalPct}% · ${academic.route_tomos_completed??p.totalDone}/${academic.route_tomos_total??p.totalTotal} tomos</span></div><div class="progress total"><span style="width:${Math.max(0,Math.min(100,Number(totalPct||0)))}%"></span></div></div><div class="question-card" style="margin-top:12px"><strong>Siguiente paso</strong><div class="muted" style="margin-top:5px">${esc(nextAcademicStep(academic))}</div></div></div><div class="actions" style="margin-top:14px">${home.is_admin?`<button class="admin" data-all="${route.code}">Abrir todos los tomos como Admin</button>`:''}</div><div class="tomos">${tomos.map(tomo=>`<div class="tomo"><div><strong>Tomo ${tomo.tomo_no}</strong> - ${tomo.title}</div><span class="status ${isUnlocked(tomo.access_status)?'unlocked':'locked'}">${statusLabel(tomo.access_status)}</span><div class="actions">${canDownload(tomo.access_status)?`<button class="secondary" data-detail="${route.code}:${tomo.tomo_no}">Abrir tomo / Subir videos</button><button class="secondary" data-download="${route.code}:${tomo.tomo_no}">Descargar tomo</button>`:''}${isUnlocked(tomo.access_status)?'':`<button data-buy="${route.code}:${tomo.tomo_no}">Comprar ${money(tomo.price_clp||home.tomo_price_clp)}</button>`}${home.is_admin&&!isUnlocked(tomo.access_status)?`<button class="admin" data-grant="${route.code}:${tomo.tomo_no}">Activar tomo como Admin</button>`:''}</div></div>`).join('')}</div>`;
+    el.innerHTML=`<div class="route-head"><div><h2>${route.name}</h2><div class="muted">Progresión académica CPS</div></div>${levelBlock}</div><div class="current-box"><div class="progress-block"><div class="progress-row"><span>Evolución del ${isKick?'grado':'nivel'} actual</span><span>${stagePct}% · requisitos ${academic.stage_requirements_completed??0}/${academic.stage_requirements_total??0}</span></div><div class="progress"><span style="width:${Math.max(0,Math.min(100,Number(stagePct||0)))}%"></span></div><div class="question-meta" style="margin-top:10px"><span class="status">Teoría ${stageQuestions}</span><span class="status">Técnicas ${stageCards}</span><span class="status">Tomos ${stageTomos}</span></div></div><div class="progress-block"><div class="progress-row"><span>Evolución total en ${route.name}</span><span>${totalPct}% · ${academic.route_tomos_completed??p.totalDone}/${academic.route_tomos_total??p.totalTotal} tomos</span></div><div class="progress total"><span style="width:${Math.max(0,Math.min(100,Number(totalPct||0)))}%"></span></div></div><div class="question-card" style="margin-top:12px"><strong>Siguiente paso</strong><div class="muted" style="margin-top:5px">${esc(nextAcademicStep(academic,eligibility))}</div><div class="question-meta" style="margin-top:10px"><span class="status">Tiempo ${esc(eligibility.months_in_stage??0)}/${esc(eligibility.minimum_months??0)} meses</span><span class="status">Asistencia ${esc(eligibility.attendance_count??0)}/${esc(eligibility.attendance_required??0)}</span>${eligibility.eligible?'<span class="status unlocked">Examen habilitado</span>':'<span class="status">Examen pendiente</span>'}</div></div></div><div class="actions" style="margin-top:14px">${home.is_admin?`<button class="admin" data-all="${route.code}">Abrir todos los tomos como Admin</button>`:''}</div><div class="tomos">${tomos.map(tomo=>`<div class="tomo"><div><strong>Tomo ${tomo.tomo_no}</strong> - ${tomo.title}</div><span class="status ${isUnlocked(tomo.access_status)?'unlocked':'locked'}">${statusLabel(tomo.access_status)}</span><div class="actions">${canDownload(tomo.access_status)?`<button class="secondary" data-detail="${route.code}:${tomo.tomo_no}">Abrir tomo / Subir videos</button><button class="secondary" data-download="${route.code}:${tomo.tomo_no}">Descargar tomo</button>`:''}${isUnlocked(tomo.access_status)?'':`<button data-buy="${route.code}:${tomo.tomo_no}">Comprar ${money(tomo.price_clp||home.tomo_price_clp)}</button>`}${home.is_admin&&!isUnlocked(tomo.access_status)?`<button class="admin" data-grant="${route.code}:${tomo.tomo_no}">Activar tomo como Admin</button>`:''}</div></div>`).join('')}</div>`;
     routesEl.appendChild(el)
   })
 }
