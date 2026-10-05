@@ -1404,12 +1404,15 @@ function AdminAlumnosPanel({
         </div>
       </div>
 
-      <input
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre, correo, teléfono..."
-        className="w-full bg-black border border-zinc-700 p-4 rounded-2xl mb-6 outline-none focus:border-red-500"
-      />
+      <div className="student-search-shell mb-6">
+        <span className="student-search-icon" aria-hidden="true">⌕</span>
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre, correo o teléfono"
+          className="student-search-input"
+        />
+      </div>
 
       <div className="space-y-3">
         {alumnosFiltrados.map((alumno) => {
@@ -1417,57 +1420,73 @@ function AdminAlumnosPanel({
           const diasVence = diferenciaDias(alumno.fecha_vencimiento)
 
           return (
-            <div
+            <article
               key={alumno.id}
-              className="admin-student-card grid lg:grid-cols-6 gap-4 items-start lg:items-center rounded-2xl p-4 sm:p-5"
+              className="admin-student-card rounded-3xl p-4 sm:p-5"
             >
-              <div className="min-w-0">
-                <p className="text-xl font-black text-white">
-                  {alumno.nombre || '-'}
-                </p>
-                <p className="text-zinc-400 text-sm">
-                  {alumno.email || alumno.telefono || '-'}
-                </p>
+              <div className="flex items-start gap-3">
+                <div className="student-avatar-mark" aria-hidden="true">
+                  {(alumno.nombre || alumno.email || '?').trim().charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xl font-black text-white leading-tight">
+                    {alumno.nombre || '-'}
+                  </p>
+                  <p className="mt-1 truncate text-sm text-zinc-400">
+                    {alumno.email || alumno.telefono || '-'}
+                  </p>
+                </div>
+                <span className="student-role-chip">{alumno.role || 'alumno'}</span>
               </div>
 
-              <StatusBadge estado={alumno.estado_pago} />
-
-              <div className="text-sm text-zinc-300">
-                <p>Vence: {alumno.fecha_vencimiento || '-'}</p>
-                <p>
-                  {diasVence === null
-                    ? 'Sin fecha'
-                    : diasVence < 0
-                      ? `Vencida hace ${Math.abs(diasVence)} día(s)`
-                      : `Faltan ${diasVence} día(s)`}
-                </p>
+              <div className="mt-4">
+                <StatusBadge estado={alumno.estado_pago} />
               </div>
 
-              <div className="text-sm text-zinc-300">
-                <p>Asistencias: {resumen.total}</p>
-                <p>Mes: {resumen.mes}</p>
+              <div className="student-metrics-grid mt-4">
+                <div className="student-metric">
+                  <span>Vencimiento</span>
+                  <strong>{alumno.fecha_vencimiento || '-'}</strong>
+                  <small>
+                    {diasVence === null
+                      ? 'Sin fecha'
+                      : diasVence < 0
+                        ? `Vencida hace ${Math.abs(diasVence)} día(s)`
+                        : `Faltan ${diasVence} día(s)`}
+                  </small>
+                </div>
+                <div className="student-metric">
+                  <span>Generaciones IA</span>
+                  <strong>{alumno.generaciones_disponibles || 0}</strong>
+                  <small>Disponibles</small>
+                </div>
+                <div className="student-metric">
+                  <span>Asistencias</span>
+                  <strong>{resumen.total}</strong>
+                  <small>Total registradas</small>
+                </div>
+                <div className="student-metric">
+                  <span>Este mes</span>
+                  <strong>{resumen.mes}</strong>
+                  <small>Asistencias</small>
+                </div>
               </div>
 
-              <div className="text-sm text-zinc-300">
-                <p>Generaciones: {alumno.generaciones_disponibles || 0}</p>
-                <p>Rol: {alumno.role || 'alumno'}</p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row lg:flex-wrap gap-2">
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <button
                   onClick={() => abrirDetalle(alumno)}
-                  className="bg-red-600 hover:bg-red-700 px-4 py-3 rounded-xl font-black shadow-lg shadow-red-950/30"
+                  className="student-primary-action"
                 >
                   Ver ficha
                 </button>
                 <button
                   onClick={() => registrarPago(alumno)}
-                  className="border border-zinc-600 bg-zinc-900 hover:border-red-500 hover:bg-zinc-800 px-4 py-3 rounded-xl font-black"
+                  className="student-secondary-action"
                 >
-                  Registrar pago manual
+                  Registrar pago
                 </button>
               </div>
-            </div>
+            </article>
           )
         })}
 
@@ -3378,7 +3397,7 @@ export default function App() {
         </div>
       )}
 
-      <div className="bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+      <div className="app-profile-hero bg-zinc-900 border border-red-600 rounded-2xl sm:rounded-3xl p-4 sm:p-5 mb-3 sm:mb-6 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
         <div className="min-w-0 flex items-center gap-4">
           <img
             src={branding.logoUrl || DEFAULT_BRANDING.logoUrl}
