@@ -266,10 +266,18 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     const contenido = String(plan?.contenido || '')
     const semanas = Number(contenido.match(/PLAN_SEMANAS:(\d+)/)?.[1] || 1)
     const sesionesSemana = Number(contenido.match(/PLAN_SESIONES_SEMANA:(\d+)/)?.[1] || 1)
+    const inicio = contenido.match(/PLAN_INICIO:(\d{4}-\d{2}-\d{2})/)?.[1] || ''
+    const diasSemana = String(contenido.match(/PLAN_DIAS:([^\n]+)/)?.[1] || '')
+      .split(',')
+      .map(Number)
+      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+
     return {
       semanas: Math.max(1, semanas),
       sesionesSemana: Math.max(1, sesionesSemana),
       totalSesiones: Math.max(1, semanas * sesionesSemana),
+      inicio,
+      diasSemana,
     }
   }
 
@@ -293,6 +301,58 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     const week = Math.floor((Number(sessionNumber) - 1) / meta.sesionesSemana) + 1
     const slot = ((Number(sessionNumber) - 1) % meta.sesionesSemana) + 1
     return { week, slot }
+  }
+
+  function fechaLocalISO(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  function fechasPlan(plan) {
+    const meta = planMeta(plan)
+    if (!meta.inicio || meta.diasSemana.length === 0) return []
+
+    const result = []
+    const cursor = new Date(`${meta.inicio}T12:00:00`)
+    let guard = 0
+
+    while (result.length < meta.totalSesiones && guard < 370) {
+      if (meta.diasSemana.includes(cursor.getDay())) {
+        result.push(fechaLocalISO(cursor))
+      }
+      cursor.setDate(cursor.getDate() + 1)
+      guard += 1
+    }
+
+    return result
+  }
+
+  function fechaSesion(plan, sessionNumber) {
+    return fechasPlan(plan)[Number(sessionNumber) - 1] || ''
+  }
+
+  function estadoSesion(plan, sessionNumber) {
+    const record = completados[plan.id]?.sessions?.[sessionNumber]
+    if (record || completados[plan.id]?.legacyComplete) return 'Completada'
+
+    const fecha = fechaSesion(plan, sessionNumber)
+    if (!fecha) return 'Pendiente'
+
+    const hoy = fechaLocalISO(new Date())
+    if (fecha < hoy) return 'Atrasada'
+    if (fecha === hoy) return 'Hoy'
+    return 'Próxima'
+  }
+
+  function formatearFechaPlan(fecha) {
+    if (!fecha) return ''
+    return new Date(`${fecha}T12:00:00`).toLocaleDateString('es-CL', {
+      weekday: 'short',
+      day: '2-digit',
+      month: 'short',
+    })
   }
 
   function progresoPlan(plan) {
@@ -326,6 +386,12 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     const progress = progresoPlan(plan)
     const existing = completados[plan.id]?.sessions?.[sessionNumber]
     if (existing || completados[plan.id]?.legacyComplete) return
+
+    const estado = estadoSesion(plan, sessionNumber)
+    if (estado === 'Próxima') {
+      setMensaje(`Esta sesión está programada para ${formatearFechaPlan(fechaSesion(plan, sessionNumber))}.`)
+      return
+    }
 
     const key = `${plan.id}:${sessionNumber}`
     const valores = feedbackPlan[key] || {}
@@ -439,6 +505,11 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                             {' · '}
                             {progress.sesionesSemana} sesión{progress.sesionesSemana === 1 ? '' : 'es'} por semana
                           </p>
+                          {fechasPlan(plan).length > 0 && (
+                            <p className="mt-1 text-sm text-cyan-300">
+                              {formatearFechaPlan(fechasPlan(plan)[0])} → {formatearFechaPlan(fechasPlan(plan).at(-1))}
+                            </p>
+                          )}
                         </div>
                         <span className={`rounded-full px-3 py-1 text-xs font-black border ${
                           progress.complete
@@ -471,6 +542,26 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                               <p className="mt-1 text-xs font-black uppercase text-blue-300">
                                 Semana {semanaSesion(plan, sessionNumber).week} · Día {semanaSesion(plan, sessionNumber).slot}
                               </p>
+                              <div className="mt-2 flex flex-wrap items-center gap-2">
+                                {fechaSesion(plan, sessionNumber) && (
+                                  <span className="rounded-full border border-zinc-700 bg-black/50 px-2 py-1 text-[11px] font-black text-zinc-300">
+                                    {formatearFechaPlan(fechaSesion(plan, sessionNumber))}
+                                  </span>
+                                )}
+                                <span className={`rounded-full border px-2 py-1 text-[11px] font-black ${
+                                  estadoSesion(plan, sessionNumber) === 'Completada'
+                                    ? 'border-green-700 bg-green-950 text-green-300'
+                                    : estadoSesion(plan, sessionNumber) === 'Hoy'
+                                      ? 'border-blue-500 bg-blue-950 text-blue-200'
+                                      : estadoSesion(plan, sessionNumber) === 'Atrasada'
+                                        ? 'border-red-700 bg-red-950 text-red-300'
+                                        : estadoSesion(plan, sessionNumber) === 'Próxima'
+                                          ? 'border-cyan-700 bg-cyan-950 text-cyan-300'
+                                          : 'border-yellow-700 bg-yellow-950 text-yellow-300'
+                                }`}>
+                                  {estadoSesion(plan, sessionNumber)}
+                                </span>
+                              </div>
 
                               {(record || sessionNumber === nextSession) && (
                                 <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-black/40 p-3 font-sans text-sm text-zinc-200">
@@ -512,10 +603,15 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                                   </div>
                                   <button
                                     type="button"
+                                    disabled={estadoSesion(plan, sessionNumber) === 'Próxima'}
                                     onClick={() => marcarSesionCompletada(plan, sessionNumber)}
-                                    className="mt-3 w-full rounded-xl bg-green-600 hover:bg-green-700 p-3 font-black"
+                                    className="mt-3 w-full rounded-xl bg-green-600 hover:bg-green-700 disabled:bg-zinc-700 disabled:text-zinc-400 disabled:cursor-not-allowed p-3 font-black"
                                   >
-                                    Completar sesión {sessionNumber}
+                                    {estadoSesion(plan, sessionNumber) === 'Próxima'
+                                      ? `Disponible ${formatearFechaPlan(fechaSesion(plan, sessionNumber))}`
+                                      : estadoSesion(plan, sessionNumber) === 'Atrasada'
+                                        ? `Completar sesión atrasada ${sessionNumber}`
+                                        : `Completar sesión ${sessionNumber}`}
                                   </button>
                                 </>
                               ) : (
