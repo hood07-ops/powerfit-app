@@ -792,6 +792,9 @@ function EvaluacionesPage({ student, user, onSaved }) {
     dolor: '2',
     observacion: '',
   })
+  const [sesionesContenido, setSesionesContenido] = useState(() =>
+    construirSesiones(defaultObjective.value, 3, defaultObjective.contenido),
+  )
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
 
@@ -1514,6 +1517,50 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     },
   ]
 
+  function contenidoSesionPorObjetivo(objetivo, slot, fallback) {
+    const presets = {
+      perdida_grasa: [
+        'FUERZA + GASTO ENERGÉTICO\n- RAMP 8-10 min\n- Sentadilla goblet 4x10\n- Remo con mancuerna 4x10 por lado\n- Flexiones 4x8-12\n- Peso muerto rumano 3x10\n- Final: 10 min zona 2',
+        'METABÓLICO / INTERVALOS\n- Activación 8 min\n- Circuito 4 rondas\n- 12 kettlebell swing\n- 10 burpees técnicos\n- 200 m carrera o remo\n- 30 s plancha\n- Descanso 90 s',
+        'CARDIO + FULL BODY\n- Movilidad 6-8 min\n- 20-30 min zona 2\n- 3 rondas: 12 zancadas, 10 press, 12 remo, 30 s core\n- Vuelta a la calma 5 min',
+      ],
+      fuerza: [
+        'FUERZA A\n- Sentadilla 5x5\n- Press 5x5\n- Remo 4x8\n- Core antirotación 3x10',
+        'FUERZA B\n- Peso muerto 5x3\n- Press vertical 4x6\n- Zancada 4x8 por lado\n- Farmer carry 4 tramos',
+        'FUERZA C\n- Front squat 4x5\n- Bench press 4x6\n- Remo unilateral 4x8\n- Bisagra accesoria 3x10',
+      ],
+      cardio: [
+        'BASE AERÓBICA\n- 30-45 min zona 2\n- Ritmo estable\n- Registrar distancia y RPE',
+        'INTERVALOS\n- 10 min suave\n- 6 x 3 min fuerte / 2 min suave\n- 8 min vuelta a la calma',
+        'UMBRAL CONTROLADO\n- 10 min suave\n- 3 x 8 min moderado-alto / 3 min suave\n- 8 min suave',
+      ],
+      fighter: [
+        'TÉCNICA + MOTOR\n- Sombra técnica 4 rounds\n- Desplazamientos 4 rounds\n- Trabajo rotacional 4 series\n- Core 3 series',
+        'POTENCIA + FUERZA\n- Lanzamientos rotacionales\n- Push press\n- Saltos según fase\n- Trabajo unilateral',
+        'CONDITIONING FIGHTER\n- 5-8 rounds x 3 min\n- 1 min pausa\n- Mantener calidad técnica bajo fatiga',
+      ],
+      acondicionamiento: [
+        'FULL BODY A\n- Sentadilla\n- Empuje\n- Tirón\n- Core\n- 3-4 series',
+        'CONDICIONAMIENTO B\n- Circuito 4 rondas\n- Trabajo global\n- Intervalos 30/30',
+        'FULL BODY C + CARDIO\n- Bisagra\n- Zancada\n- Press\n- Remo\n- 15 min cardio moderado',
+      ],
+      casa_principiante: [
+        'CASA A\n- Sentadilla a silla 3x8\n- Flexión inclinada 3x8\n- Puente glúteos 3x10\n- Marcha 5 min',
+        'CASA B\n- Step touch 4x45 s\n- Zancada asistida 3x6 por lado\n- Remo con banda/toalla 3x10\n- Core suave',
+        'CASA C\n- Circuito bajo impacto 3 rondas\n- Sentadilla a silla\n- Empuje pared\n- Marcha\n- Movilidad',
+      ],
+    }
+
+    const list = presets[objetivo] || []
+    return list[slot % Math.max(1, list.length)] || fallback
+  }
+
+  function construirSesiones(objetivo, sesionesSemana, fallback) {
+    return Array.from({ length: Number(sesionesSemana || 1) }, (_, index) =>
+      contenidoSesionPorObjetivo(objetivo, index, fallback),
+    )
+  }
+
   const defaultObjective = objetivos[0]
   const [form, setForm] = useState({
     alumnoId: alumnos[0]?.id ? String(alumnos[0].id) : '',
@@ -1608,6 +1655,26 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       titulo: preset.titulo,
       contenido: preset.contenido,
     }))
+    setSesionesContenido(
+      construirSesiones(preset.value, form.sesionesSemana, preset.contenido),
+    )
+  }
+
+  function cambiarSesionesSemana(value) {
+    const next = Number(value)
+    update('sesionesSemana', next)
+    setSesionesContenido((current) =>
+      Array.from({ length: next }, (_, index) =>
+        current[index] ||
+        contenidoSesionPorObjetivo(form.objetivo, index, form.contenido),
+      ),
+    )
+  }
+
+  function actualizarContenidoSesion(index, value) {
+    setSesionesContenido((current) =>
+      current.map((item, itemIndex) => (itemIndex === index ? value : item)),
+    )
   }
 
   async function recargarAsignados() {
@@ -1632,8 +1699,25 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     const completionMap = {}
     ;(data?.records || []).forEach((record) => {
       const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
-      const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
-      if (match?.[1]) completionMap[match[1]] = record
+      const sessionMatch = texto.match(/SESION_COMPLETADA:([a-zA-Z0-9-]+):(\d+)/)
+      const planMatch = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+
+      if (sessionMatch?.[1]) {
+        const planId = sessionMatch[1]
+        const sessionNumber = Number(sessionMatch[2])
+        completionMap[planId] = {
+          ...(completionMap[planId] || {}),
+          sessions: {
+            ...(completionMap[planId]?.sessions || {}),
+            [sessionNumber]: record,
+          },
+        }
+      } else if (planMatch?.[1]) {
+        completionMap[planMatch[1]] = {
+          ...(completionMap[planMatch[1]] || {}),
+          legacyComplete: record,
+        }
+      }
     })
     setCompletados(completionMap)
   }
@@ -1679,6 +1763,14 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       `PLAN_SEMANAS:${Number(form.semanas || 1)}`,
       `PLAN_SESIONES_SEMANA:${Number(form.sesionesSemana || 1)}`,
       '',
+      'ESTRUCTURA_SEMANAL',
+      ...sesionesContenido.flatMap((contenidoSesion, index) => [
+        `SESION_${index + 1}_INICIO`,
+        contenidoSesion,
+        `SESION_${index + 1}_FIN`,
+        '',
+      ]),
+      'NOTAS_GENERALES',
       form.contenido,
     ].join('\n')
 
@@ -1791,7 +1883,7 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
               Sesiones / semana
               <select
                 value={form.sesionesSemana}
-                onChange={(event) => update('sesionesSemana', Number(event.target.value))}
+                onChange={(event) => cambiarSesionesSemana(event.target.value)}
                 className="bg-black border border-zinc-700 rounded-xl p-3"
               >
                 {[1, 2, 3, 4, 5, 6].map((value) => (
@@ -1817,15 +1909,36 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
         </div>
 
         <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
-          <label className="grid gap-2 font-black text-sm text-zinc-300">
-            Entrenamiento editable
-            <textarea
-              value={form.contenido}
-              onChange={(event) => update('contenido', event.target.value)}
-              rows={20}
-              className="bg-black border border-zinc-700 rounded-xl p-3 font-mono text-sm"
-            />
-          </label>
+          <div className="space-y-4">
+            <div>
+              <p className="font-black text-blue-300">Sesiones de la semana</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Estas sesiones se repiten como estructura base durante las semanas del plan. Puedes editar cada una por separado.
+              </p>
+            </div>
+
+            {sesionesContenido.map((contenidoSesion, index) => (
+              <label key={index} className="grid gap-2 font-black text-sm text-zinc-300">
+                Sesión {index + 1}
+                <textarea
+                  value={contenidoSesion}
+                  onChange={(event) => actualizarContenidoSesion(index, event.target.value)}
+                  rows={9}
+                  className="bg-black border border-zinc-700 rounded-xl p-3 font-mono text-sm"
+                />
+              </label>
+            ))}
+
+            <label className="grid gap-2 font-black text-sm text-zinc-300">
+              Notas generales del plan
+              <textarea
+                value={form.contenido}
+                onChange={(event) => update('contenido', event.target.value)}
+                rows={7}
+                className="bg-black border border-zinc-700 rounded-xl p-3 font-mono text-sm"
+              />
+            </label>
+          </div>
 
           <button
             onClick={guardarEntrenamiento}
