@@ -273,6 +273,28 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     }
   }
 
+  function contenidoSesion(plan, sessionNumber) {
+    const contenido = String(plan?.contenido || '')
+    const meta = planMeta(plan)
+    const weeklySlot = ((Number(sessionNumber) - 1) % meta.sesionesSemana) + 1
+    const pattern = new RegExp(
+      `SESION_${weeklySlot}_INICIO\\n([\\s\\S]*?)\\nSESION_${weeklySlot}_FIN`,
+    )
+    const match = contenido.match(pattern)
+
+    if (match?.[1]) return match[1].trim()
+
+    const general = contenido.split('NOTAS_GENERALES')[1]
+    return general ? general.trim() : contenido
+  }
+
+  function semanaSesion(plan, sessionNumber) {
+    const meta = planMeta(plan)
+    const week = Math.floor((Number(sessionNumber) - 1) / meta.sesionesSemana) + 1
+    const slot = ((Number(sessionNumber) - 1) % meta.sesionesSemana) + 1
+    return { week, slot }
+  }
+
   function progresoPlan(plan) {
     const meta = planMeta(plan)
     const info = completados[plan.id] || {}
@@ -391,9 +413,12 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                     .replace(/^coach_(personalizado_)?/, '')
                     .replaceAll('_', ' ')} - {new Date(plan.created_at).toLocaleDateString('es-CL')}
                 </summary>
-                <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
-                  {plan.contenido}
-                </pre>
+                <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/30 p-4">
+                  <p className="font-black text-zinc-200">Plan asignado por tu coach</p>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Abre y completa cada sesión en orden. El contenido cambia según el día de la semana.
+                  </p>
+                </div>
 
                 {(() => {
                   const progress = progresoPlan(plan)
@@ -443,6 +468,15 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                               <p className="font-black">
                                 Sesión {sessionNumber} de {progress.totalSesiones}
                               </p>
+                              <p className="mt-1 text-xs font-black uppercase text-blue-300">
+                                Semana {semanaSesion(plan, sessionNumber).week} · Día {semanaSesion(plan, sessionNumber).slot}
+                              </p>
+
+                              {(record || sessionNumber === nextSession) && (
+                                <pre className="mt-3 whitespace-pre-wrap rounded-xl bg-black/40 p-3 font-sans text-sm text-zinc-200">
+                                  {contenidoSesion(plan, sessionNumber)}
+                                </pre>
+                              )}
 
                               {record ? (
                                 <>
