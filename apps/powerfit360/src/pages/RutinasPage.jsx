@@ -5,6 +5,8 @@ export default function RutinasPage({ student, onUpdateStudent }) {
   const [mensaje, setMensaje] = useState('')
   const [formValues, setFormValues] = useState({})
   const [entrenosAsignados, setEntrenosAsignados] = useState([])
+  const [completados, setCompletados] = useState({})
+  const [feedbackPlan, setFeedbackPlan] = useState({})
 
   const bloques = [
 
@@ -176,6 +178,16 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     })
 
     setEntrenosAsignados(asignados)
+
+    const completionMap = {}
+    ;(data?.records || []).forEach((record) => {
+      const texto = `${record?.metodo || ''} ${record?.observacion || ''}`
+      const match = texto.match(/PLAN_COMPLETADO:([a-zA-Z0-9-]+)/)
+      if (match?.[1]) {
+        completionMap[match[1]] = record
+      }
+    })
+    setCompletados(completionMap)
   }
 
   useEffect(() => {
@@ -234,6 +246,48 @@ export default function RutinasPage({ student, onUpdateStudent }) {
     setFormValues({})
     onUpdateStudent?.()
   }
+
+  function actualizarFeedbackPlan(planId, field, value) {
+    setFeedbackPlan((current) => ({
+      ...current,
+      [planId]: {
+        ...(current[planId] || {}),
+        [field]: value,
+      },
+    }))
+  }
+
+  async function marcarPlanCompletado(plan) {
+    if (!student?.id || !plan?.id || completados[plan.id]) return
+
+    const valores = feedbackPlan[plan.id] || {}
+    const rpe = Math.min(10, Math.max(1, Number(valores.rpe || 6)))
+    const comentario = String(valores.comentario || '').trim()
+
+    const { error } = await supabase.rpc('save_powerfit_training_record_secure', {
+      p_alumno_id: student.id,
+      p_rutina_nombre: `Plan coach - ${String(plan.objetivo || '').replace(/^coach_/, '').replaceAll('_', ' ')}`,
+      p_metodo: `PLAN_COMPLETADO:${plan.id} | RPE:${rpe}`,
+      p_tipo_record: 'repeticiones',
+      p_vueltas: null,
+      p_repeticiones: 1,
+      p_tiempo_segundos: null,
+      p_peso_kg: null,
+      p_porcentaje_rm: null,
+      p_observacion: comentario || `PLAN_COMPLETADO:${plan.id}`,
+      p_reason: 'Plan asignado por coach completado por alumno',
+    })
+
+    if (error) {
+      setMensaje(`No se pudo marcar como completado: ${error.message}`)
+      return
+    }
+
+    setMensaje('Entrenamiento marcado como completado. Tu coach ya puede ver el registro.')
+    await cargarEntrenosAsignados()
+    onUpdateStudent?.()
+  }
+
   return (
 
     <div className="mobile-ui-page mobile-routines-page min-h-screen bg-black text-white p-3 sm:p-6">
@@ -294,6 +348,60 @@ export default function RutinasPage({ student, onUpdateStudent }) {
                 <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
                   {plan.contenido}
                 </pre>
+
+                {completados[plan.id] ? (
+                  <div className="mt-4 rounded-2xl border border-green-600 bg-green-950/40 p-4">
+                    <p className="font-black text-green-400">COMPLETADO</p>
+                    <p className="mt-1 text-sm text-zinc-300">
+                      {completados[plan.id]?.created_at
+                        ? new Date(completados[plan.id].created_at).toLocaleString('es-CL')
+                        : 'Registrado'}
+                    </p>
+                    {completados[plan.id]?.metodo && (
+                      <p className="mt-2 text-sm text-zinc-400">
+                        {String(completados[plan.id].metodo).replace(`PLAN_COMPLETADO:${plan.id} |`, '').trim()}
+                      </p>
+                    )}
+                    {completados[plan.id]?.observacion && !String(completados[plan.id].observacion).startsWith('PLAN_COMPLETADO:') && (
+                      <p className="mt-2 text-sm text-zinc-300">
+                        Comentario: {completados[plan.id].observacion}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+                    <p className="font-black text-blue-300">Al terminar este entrenamiento</p>
+                    <div className="mt-3 grid sm:grid-cols-[140px_1fr] gap-3">
+                      <label className="grid gap-2 text-sm font-black text-zinc-300">
+                        RPE 1-10
+                        <input
+                          type="number"
+                          min="1"
+                          max="10"
+                          value={feedbackPlan[plan.id]?.rpe || '6'}
+                          onChange={(e) => actualizarFeedbackPlan(plan.id, 'rpe', e.target.value)}
+                          className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
+                        />
+                      </label>
+                      <label className="grid gap-2 text-sm font-black text-zinc-300">
+                        Comentario para tu coach
+                        <input
+                          value={feedbackPlan[plan.id]?.comentario || ''}
+                          onChange={(e) => actualizarFeedbackPlan(plan.id, 'comentario', e.target.value)}
+                          placeholder="Cómo te sentiste, dificultad, dolor, observaciones..."
+                          className="rounded-xl border border-zinc-700 bg-black p-3 text-white"
+                        />
+                      </label>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => marcarPlanCompletado(plan)}
+                      className="mt-3 w-full rounded-2xl bg-green-600 hover:bg-green-700 p-4 font-black"
+                    >
+                      Marcar entrenamiento como completado
+                    </button>
+                  </div>
+                )}
               </details>
             ))}
           </div>
