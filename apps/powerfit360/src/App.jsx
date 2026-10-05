@@ -1500,46 +1500,171 @@ function AdminAlumnosPanel({
 
 function EntrenamientosCoachPanel({ students, user, onSaved }) {
   const alumnos = students.filter((alumno) => alumno.role !== 'admin')
+  const objetivos = [
+    {
+      value: 'perdida_grasa',
+      label: 'Pérdida de grasa',
+      titulo: 'Pérdida de grasa - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- RAMP 8-10 min\n\nBLOQUE 1 - FUERZA FUNCIONAL\n- Sentadilla goblet 4x10\n- Remo con mancuerna 4x10 por lado\n- Flexiones 4x8-12\n\nBLOQUE 2 - METABÓLICO\n- Circuito 4 rondas\n- 12 kettlebell swing\n- 10 burpees técnicos\n- 200 m carrera o remo\n- 30 s plancha\n\nFINAL\n- Zona 2: 12-20 min\n\nNOTAS\n- Priorizar adherencia, gasto energético, técnica y progresión. Registrar RPE, dolor y observaciones.',
+    },
+    {
+      value: 'fuerza',
+      label: 'Fuerza',
+      titulo: 'Fuerza - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- RAMP 8-10 min\n\nBLOQUE PRINCIPAL\n- Sentadilla 5x5\n- Press 5x5\n- Peso muerto 5x3\n- Remo 4x8\n\nACCESORIOS\n- Core antirotación 3x10 por lado\n\nNOTAS\n- Ajustar carga por RM y mantener técnica estable. Registrar RPE.',
+    },
+    {
+      value: 'cardio',
+      label: 'Cardio / resistencia',
+      titulo: 'Cardio y resistencia - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- Movilidad + trote suave 8 min\n\nBLOQUE AERÓBICO\n- 4 x 4 min ritmo moderado\n- Descanso 2 min suave\n\nBLOQUE FINAL\n- 10 x 30/30 s controlados\n\nVUELTA A LA CALMA\n- 8 min suave + respiración\n\nNOTAS\n- Registrar distancia, tiempo, FC si está disponible y RPE.',
+    },
+    {
+      value: 'fighter',
+      label: 'Fighter / combate',
+      titulo: 'Fighter conditioning - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- Movilidad + sombra técnica 8 min\n\nBLOQUE 1 - MOTOR TRANSVERSAL\n- Desplazamientos + rotación 4 rondas\n\nBLOQUE 2 - POTENCIA\n- Lanzamientos / bandas / saltos según fase\n\nBLOQUE 3 - CONDITIONING\n- 5 rounds x 3 min / 1 min pausa\n\nNOTAS\n- Mantener calidad técnica bajo fatiga y registrar RPE.',
+    },
+    {
+      value: 'acondicionamiento',
+      label: 'Acondicionamiento general',
+      titulo: 'Acondicionamiento general - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- RAMP 8 min\n\nFUERZA FUNCIONAL\n- 4 ejercicios x 3-4 series\n\nCIRCUITO\n- 4 rondas de trabajo global\n\nCARDIO\n- 12 min continuo moderado\n\nNOTAS\n- Ajustar volumen al nivel del alumno y registrar RPE.',
+    },
+    {
+      value: 'casa_principiante',
+      label: 'Casa principiante',
+      titulo: 'Casa principiante - PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- Marcha suave + movilidad 6-8 min\n\nCIRCUITO 2-3 RONDAS\n- 8 sentadillas a silla\n- 8 flexiones inclinadas\n- 10 puentes de glúteos\n- 30 s marcha en el lugar\n\nVUELTA A LA CALMA\n- Movilidad + respiración 5 min\n\nNOTAS\n- Trabajo de bajo impacto, técnica y adherencia.',
+    },
+    {
+      value: 'personalizado',
+      label: 'Personalizado',
+      titulo: 'Entrenamiento personalizado PowerFit',
+      contenido:
+        'ACTIVACIÓN\n- RAMP 8 min\n\nBLOQUE 1\n- Ejercicio / series / repeticiones\n\nBLOQUE 2\n- Ejercicio / series / repeticiones\n\nBLOQUE 3\n- Método / duración\n\nNOTAS\n- Registrar RPE, dolor y observaciones.',
+    },
+  ]
+
+  const defaultObjective = objetivos[0]
   const [form, setForm] = useState({
     alumnoId: alumnos[0]?.id ? String(alumnos[0].id) : '',
-    titulo: 'Entrenamiento personalizado PowerFit',
-    objetivo: 'Fuerza funcional + motor transversal',
+    titulo: defaultObjective.titulo,
+    objetivo: defaultObjective.value,
     nivel: 'intermedio',
-    contenido:
-      'ACTIVACION\n- RAMP 8 min\n\nBLOQUE 1 - MOTOR TRANSVERSAL\n- 3 rondas tecnicas\n\nBLOQUE 2 - FUERZA FUNCIONAL\n- 4 series principales\n\nBLOQUE 3 - SISTEMA METABOLICO\n- 8-12 min calidad\n\nNOTAS\n- Registrar RPE, dolor y observaciones.',
+    contenido: defaultObjective.contenido,
   })
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [asignados, setAsignados] = useState([])
+  const [cargandoAsignados, setCargandoAsignados] = useState(false)
 
   const alumno = alumnos.find((item) => String(item.id) === String(form.alumnoId))
 
   useEffect(() => {
     if (!form.alumnoId && alumnos[0]?.id) {
-      update('alumnoId', String(alumnos[0].id))
+      setForm((current) => ({ ...current, alumnoId: String(alumnos[0].id) }))
     }
   }, [alumnos, form.alumnoId])
+
+  useEffect(() => {
+    async function cargarAsignados() {
+      if (!form.alumnoId) {
+        setAsignados([])
+        return
+      }
+
+      setCargandoAsignados(true)
+      const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
+        p_alumno_id: form.alumnoId,
+        p_limit: 100,
+      })
+
+      if (error) {
+        setAsignados([])
+        setCargandoAsignados(false)
+        return
+      }
+
+      const plans = Array.isArray(data?.plans) ? data.plans : []
+      setAsignados(
+        plans.filter((plan) => {
+          const objetivo = String(plan?.objetivo || '')
+          const sourceRef = String(plan?.source_ref || '')
+          return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
+        }),
+      )
+      setCargandoAsignados(false)
+    }
+
+    cargarAsignados()
+  }, [form.alumnoId])
 
   function update(field, value) {
     setForm((current) => ({ ...current, [field]: value }))
   }
 
+  function cambiarObjetivo(value) {
+    const preset = objetivos.find((item) => item.value === value)
+    if (!preset) {
+      update('objetivo', value)
+      return
+    }
+
+    setForm((current) => ({
+      ...current,
+      objetivo: preset.value,
+      titulo: preset.titulo,
+      contenido: preset.contenido,
+    }))
+  }
+
+  async function recargarAsignados() {
+    if (!alumno?.id) return
+
+    const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
+      p_alumno_id: alumno.id,
+      p_limit: 100,
+    })
+
+    if (error) return
+
+    const plans = Array.isArray(data?.plans) ? data.plans : []
+    setAsignados(
+      plans.filter((plan) => {
+        const objetivo = String(plan?.objetivo || '')
+        const sourceRef = String(plan?.source_ref || '')
+        return objetivo.startsWith('coach_') || sourceRef === 'coach_assignment'
+      }),
+    )
+  }
+
   async function guardarEntrenamiento() {
     if (!alumno?.id || guardando) return
     if (!form.titulo.trim() || !form.contenido.trim()) {
-      setMensaje('Completa titulo y contenido del entrenamiento.')
+      setMensaje('Completa título y contenido del entrenamiento.')
       return
     }
 
     setGuardando(true)
     setMensaje('')
 
+    const objetivoLabel =
+      objetivos.find((item) => item.value === form.objetivo)?.label || form.objetivo
+
     const contenido = [
       'POWERFIT 360 - ENTRENAMIENTO ASIGNADO POR COACH',
       `Alumno: ${alumno.nombre || '-'}`,
       `Coach: ${user?.email || '-'}`,
       `Fecha: ${new Date().toLocaleString('es-CL')}`,
-      `Titulo: ${form.titulo}`,
-      `Objetivo: ${form.objetivo}`,
+      `Título: ${form.titulo}`,
+      `Objetivo: ${objetivoLabel}`,
       `Nivel: ${form.nivel}`,
       '',
       form.contenido,
@@ -1547,7 +1672,7 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
 
     const { error } = await supabase.rpc('save_powerfit_plan_secure', {
       p_alumno_id: alumno.id,
-      p_objetivo: `coach_personalizado_${form.objetivo}`,
+      p_objetivo: `coach_${form.objetivo}`,
       p_nivel: form.nivel,
       p_contenido: contenido,
       p_source: 'manual',
@@ -1560,7 +1685,8 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       return
     }
 
-    setMensaje(`Entrenamiento asignado a ${alumno.nombre}.`)
+    await recargarAsignados()
+    setMensaje(`Entrenamiento "${form.titulo}" asignado a ${alumno.nombre} y visible en su app.`)
     setGuardando(false)
     onSaved?.()
   }
@@ -1569,10 +1695,10 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     <div className="space-y-6">
       <section className="bg-zinc-900 border border-blue-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
         <h2 className="text-3xl sm:text-4xl font-black text-blue-300">
-          Entrenos alumnos
+          Asignar entrenamiento
         </h2>
         <p className="text-zinc-400 mt-2">
-          Carga entrenamientos personalizados desde Coach y dejalos disponibles en la app del alumno.
+          Elige un alumno, selecciona un objetivo, ajusta la plantilla y comprueba abajo los entrenamientos ya asignados.
         </p>
       </section>
 
@@ -1600,19 +1726,25 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
           </label>
 
           <label className="grid gap-2 font-black text-sm text-zinc-300">
-            Titulo
-            <input
-              value={form.titulo}
-              onChange={(event) => update('titulo', event.target.value)}
+            Objetivo del entrenamiento
+            <select
+              value={form.objetivo}
+              onChange={(event) => cambiarObjetivo(event.target.value)}
               className="bg-black border border-zinc-700 rounded-xl p-3"
-            />
+            >
+              {objetivos.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </label>
 
           <label className="grid gap-2 font-black text-sm text-zinc-300">
-            Objetivo
+            Título
             <input
-              value={form.objetivo}
-              onChange={(event) => update('objetivo', event.target.value)}
+              value={form.titulo}
+              onChange={(event) => update('titulo', event.target.value)}
               className="bg-black border border-zinc-700 rounded-xl p-3"
             />
           </label>
@@ -1624,20 +1756,27 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
               onChange={(event) => update('nivel', event.target.value)}
               className="bg-black border border-zinc-700 rounded-xl p-3"
             >
-              <option value="basico">Basico</option>
+              <option value="basico">Básico</option>
               <option value="intermedio">Intermedio</option>
               <option value="avanzado">Avanzado</option>
             </select>
           </label>
+
+          <div className="bg-black/40 border border-zinc-800 rounded-2xl p-4">
+            <p className="font-black text-yellow-400">Objetivos disponibles</p>
+            <p className="text-sm text-zinc-400 mt-2">
+              Pérdida de grasa, fuerza, cardio/resistencia, fighter, acondicionamiento general, casa principiante y personalizado.
+            </p>
+          </div>
         </div>
 
         <div className="bg-zinc-900 border border-zinc-700 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
           <label className="grid gap-2 font-black text-sm text-zinc-300">
-            Entrenamiento
+            Entrenamiento editable
             <textarea
               value={form.contenido}
               onChange={(event) => update('contenido', event.target.value)}
-              rows={16}
+              rows={20}
               className="bg-black border border-zinc-700 rounded-xl p-3 font-mono text-sm"
             />
           </label>
@@ -1650,6 +1789,45 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
             {guardando ? 'Asignando...' : 'Asignar entrenamiento al alumno'}
           </button>
         </div>
+      </section>
+
+      <section className="bg-zinc-900 border border-emerald-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div>
+            <h3 className="text-2xl sm:text-3xl font-black text-emerald-400">
+              Entrenamientos asignados
+            </h3>
+            <p className="text-zinc-400 mt-1">
+              {alumno ? `Historial visible para ${alumno.nombre || alumno.email || 'el alumno seleccionado'}.` : 'Selecciona un alumno.'}
+            </p>
+          </div>
+          <span className="bg-black/50 border border-zinc-700 rounded-full px-4 py-2 font-black">
+            {asignados.length} asignados
+          </span>
+        </div>
+
+        {cargandoAsignados ? (
+          <p className="text-zinc-400">Cargando entrenamientos...</p>
+        ) : asignados.length === 0 ? (
+          <p className="text-zinc-400">
+            Este alumno todavía no tiene entrenamientos asignados por Coach.
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {asignados.map((plan) => (
+              <details key={plan.id} className="bg-black/50 border border-zinc-700 rounded-2xl p-4">
+                <summary className="cursor-pointer font-black text-yellow-400">
+                  {String(plan.objetivo || 'Entrenamiento').replace(/^coach_(personalizado_)?/, '').replaceAll('_', ' ')}
+                  {' · '}
+                  {plan.created_at ? new Date(plan.created_at).toLocaleDateString('es-CL') : 'Sin fecha'}
+                </summary>
+                <pre className="mt-4 whitespace-pre-wrap text-sm text-zinc-200 font-sans">
+                  {plan.contenido || 'Sin contenido'}
+                </pre>
+              </details>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )
