@@ -103,7 +103,36 @@ function renderCard(card,pathCode,tomoNo){const status=card.video_status||card.s
 async function loadDetail(pathCode,tomoNo){detailEl.innerHTML="<div class='panel'>Cargando tomo...</div>";try{const[detailResult,study,questions]=await Promise.all([supabase.rpc('get_powerfit_tomo_detail_secure',{p_path_code:pathCode,p_tomo_no:Number(tomoNo)}),getStudy(pathCode,tomoNo),getQuestions(pathCode,tomoNo)]);if(detailResult.error)throw detailResult.error;const detail=detailResult.data;detailEl.innerHTML=`<h2 class="section-title">1. MATERIAL DE ESTUDIO</h2><section class="panel"><h3>${study?.title||detail.tomo?.title||`Tomo ${tomoNo}`}</h3><p class="muted">Versión: ${study?.study_version||study?.version||detail.tomo?.study_version||'study-v1'} | Acceso: ${study?.access_status||detail.access_status}</p><pre>${study?.content||'Material no disponible.'}</pre></section><h2 class="section-title">2. PREGUNTAS DEL TOMO</h2><p class="muted">Responde con tus propias palabras usando el material que acabas de estudiar. Tus respuestas quedan guardadas en tu ficha.</p><section class="question-list">${questions.length?questions.map(q=>renderQuestion(q,pathCode,tomoNo)).join(''):"<div class='panel'>Este tomo aún no tiene preguntas configuradas.</div>"}</section><h2 class="section-title">3. TARJETAS TÉCNICAS · VIDEO · PRESENCIAL</h2><p class="muted">Aquí debes subir las demostraciones prácticas de cada técnica para que el coach/admin las evalúe. Después de aprobar el video, la tarjeta pasa a evaluación presencial.</p><section class="card-list">${(detail.cards||[]).map(card=>renderCard(card,pathCode,tomoNo)).join('')||"<div class='panel'>No hay tarjetas técnicas para este tomo.</div>"}</section>`;detailEl.scrollIntoView({behavior:'smooth',block:'start'})}catch(error){detailEl.innerHTML=`<div class="panel error">${humanError(error.message)}</div>`}}
 async function chooseVideo(pathCode,cardId,tomoNo){const input=document.createElement('input');input.type='file';input.accept='video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov';input.style.display='none';input.addEventListener('change',async()=>{const file=input.files?.[0];if(file)await uploadCardVideo(pathCode,Number(cardId),Number(tomoNo),file);input.remove()},{once:true});document.body.appendChild(input);input.click()}
 async function uploadCardVideo(pathCode,cardId,tomoNo,file){const statusEl=document.querySelector(`#upload-state-${cardId}`),allowed=['video/mp4','video/webm','video/quicktime'];if(!allowed.includes(file.type)){alert('Formato no permitido. Usa MP4, WebM o MOV.');return}if(file.size>100*1024*1024){alert('El video supera 100 MB.');return}if(statusEl)statusEl.textContent='Subiendo video...';let storagePath=null;try{const{data:userData}=await supabase.auth.getUser();if(!userData.user)throw new Error('AUTH_REQUIRED');const filename=`${Date.now()}_${safeName(file.name)}`;storagePath=`${userData.user.id}/${safeName(pathCode)}/card_${cardId}/${filename}`;const{error:uploadError}=await supabase.storage.from('cps-technique-submissions').upload(storagePath,file,{cacheControl:'3600',upsert:false,contentType:file.type});if(uploadError)throw uploadError;const{error}=await supabase.rpc('submit_powerfit_card_video_secure',{p_path_code:pathCode,p_card_id:Number(cardId),p_storage_path:storagePath,p_original_filename:file.name});if(error){await supabase.storage.from('cps-technique-submissions').remove([storagePath]);throw error}if(statusEl)statusEl.textContent='Video enviado correctamente para evaluación.';await loadDetail(pathCode,tomoNo)}catch(error){if(statusEl)statusEl.textContent=`Error: ${humanError(error.message)}`;alert(humanError(error.message))}}
-async function downloadTomo(pathCode,tomoNo){try{stateEl.className='panel';stateEl.innerHTML='<strong>Preparando descarga...</strong>';const study=await getStudy(pathCode,tomoNo),text=[study?.title||`CPS Tomo ${tomoNo}`,`Ruta: ${pathCode}`,`Versión: ${study?.study_version||study?.version||'study-v1'}`,'',study?.content||''].join('\n'),filename=`CPS_${safeName(pathCode)}_Tomo_${String(tomoNo).padStart(2,'0')}_Estudio.txt`,blob=new Blob([text],{type:'text/plain;charset=utf-8'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;link.style.display='none';document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);stateEl.innerHTML=`<strong>Descarga iniciada:</strong> ${esc(filename)}`;setTimeout(()=>loadHome(),1200)}catch(error){alert(humanError(error.message));await loadHome()}}
+async function downloadTomo(pathCode,tomoNo){
+  try{
+    stateEl.className='panel';
+    stateEl.innerHTML='<strong>Preparando descarga segura...</strong>';
+    const study=await getStudy(pathCode,tomoNo);
+    const text=[
+      study?.title||`CPS Tomo ${tomoNo}`,
+      `Ruta: ${pathCode}`,
+      `Versión: ${study?.study_version||study?.version||'study-v1'}`,
+      '',
+      study?.content||''
+    ].join('\n');
+    const filename=`CPS_${safeName(pathCode)}_Tomo_${String(tomoNo).padStart(2,'0')}_Estudio.txt`;
+    const form=document.createElement('form');
+    form.method='POST';
+    form.action='/api/download-tomo';
+    form.style.display='none';
+    const fi=document.createElement('input');
+    fi.type='hidden';fi.name='filename';fi.value=filename;
+    const ci=document.createElement('textarea');
+    ci.name='content';ci.value=text;
+    form.append(fi,ci);
+    document.body.appendChild(form);
+    form.submit();
+    setTimeout(()=>form.remove(),10000);
+  }catch(error){
+    alert(humanError(error.message));
+    await loadHome();
+  }
+}
 async function buyTomo(pathCode,tomoNo){stateEl.innerHTML='<strong>Conectando con Mercado Pago...</strong>';const{data,error}=await supabase.functions.invoke('create-preference',{body:{payment_type:'cps_tomo',alumno_id:home.student_alumno_id,path_code:pathCode,tomo_no:Number(tomoNo)}});if(error||data?.error){alert(humanError(data?.message||data?.error||error?.message));await loadHome();return}const url=data.init_point||data.sandbox_init_point;if(!url){alert('Mercado Pago no devolvió un enlace de pago.');await loadHome();return}window.location.href=url}
 async function grant(pathCode,tomoNo){if(!window.confirm('¿Abrir este tomo como administrador?'))return;const{error}=await supabase.rpc('grant_powerfit_tomo_admin_secure',{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_tomo_no:Number(tomoNo),p_reason:'Prueba administrativa CPS'});if(error)alert(humanError(error.message));await loadHome()}
 async function grantAll(pathCode){if(!window.confirm('¿Abrir todos los tomos de esta disciplina?'))return;const{error}=await supabase.rpc('grant_powerfit_all_tomos_admin_secure',{p_alumno_id:home.student_alumno_id,p_path_code:pathCode,p_reason:'Prueba administrativa CPS'});if(error)alert(humanError(error.message));await loadHome()}
