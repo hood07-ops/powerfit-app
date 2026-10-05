@@ -792,9 +792,6 @@ function EvaluacionesPage({ student, user, onSaved }) {
     dolor: '2',
     observacion: '',
   })
-  const [sesionesContenido, setSesionesContenido] = useState(() =>
-    construirSesiones(defaultObjective.value, 3, defaultObjective.contenido),
-  )
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
 
@@ -1561,6 +1558,74 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     )
   }
 
+  const DIAS_SEMANA = [
+    { value: 1, label: 'Lunes' },
+    { value: 2, label: 'Martes' },
+    { value: 3, label: 'Miércoles' },
+    { value: 4, label: 'Jueves' },
+    { value: 5, label: 'Viernes' },
+    { value: 6, label: 'Sábado' },
+    { value: 0, label: 'Domingo' },
+  ]
+
+  function diasSugeridos(cantidad) {
+    const presets = {
+      1: [1],
+      2: [2, 4],
+      3: [1, 3, 5],
+      4: [1, 2, 4, 5],
+      5: [1, 2, 3, 4, 5],
+      6: [1, 2, 3, 4, 5, 6],
+    }
+    return presets[Number(cantidad)] || [1, 3, 5]
+  }
+
+  function fechaLocalISO(date) {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  function fechasPlanCoach(plan) {
+    const contenido = String(plan?.contenido || '')
+    const inicio = contenido.match(/PLAN_INICIO:(\d{4}-\d{2}-\d{2})/)?.[1]
+    const dias = String(contenido.match(/PLAN_DIAS:([^\n]+)/)?.[1] || '')
+      .split(',')
+      .map(Number)
+      .filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    const meta = metaPlanCoach(plan)
+
+    if (!inicio || dias.length === 0) return []
+
+    const result = []
+    const cursor = new Date(`${inicio}T12:00:00`)
+    let guard = 0
+
+    while (result.length < meta.totalSesiones && guard < 370) {
+      if (dias.includes(cursor.getDay())) {
+        result.push(fechaLocalISO(cursor))
+      }
+      cursor.setDate(cursor.getDate() + 1)
+      guard += 1
+    }
+
+    return result
+  }
+
+  function estadoSesionCoach(plan, sessionNumber) {
+    const record = completados[plan.id]?.sessions?.[sessionNumber]
+    if (record || completados[plan.id]?.legacyComplete) return 'Completada'
+
+    const fecha = fechasPlanCoach(plan)[sessionNumber - 1]
+    if (!fecha) return 'Pendiente'
+
+    const hoy = fechaHoy()
+    if (fecha < hoy) return 'Atrasada'
+    if (fecha === hoy) return 'Hoy'
+    return 'Próxima'
+  }
+
   const defaultObjective = objetivos[0]
   const [form, setForm] = useState({
     alumnoId: alumnos[0]?.id ? String(alumnos[0].id) : '',
@@ -1569,8 +1634,13 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
     nivel: 'intermedio',
     semanas: 1,
     sesionesSemana: 3,
+    fechaInicio: fechaHoy(),
+    diasSemana: diasSugeridos(3),
     contenido: defaultObjective.contenido,
   })
+  const [sesionesContenido, setSesionesContenido] = useState(() =>
+    construirSesiones(defaultObjective.value, 3, defaultObjective.contenido),
+  )
   const [mensaje, setMensaje] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [asignados, setAsignados] = useState([])
@@ -1662,13 +1732,26 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
 
   function cambiarSesionesSemana(value) {
     const next = Number(value)
-    update('sesionesSemana', next)
+    setForm((current) => ({
+      ...current,
+      sesionesSemana: next,
+      diasSemana: diasSugeridos(next),
+    }))
     setSesionesContenido((current) =>
       Array.from({ length: next }, (_, index) =>
         current[index] ||
         contenidoSesionPorObjetivo(form.objetivo, index, form.contenido),
       ),
     )
+  }
+
+  function actualizarDiaSesion(index, value) {
+    setForm((current) => ({
+      ...current,
+      diasSemana: current.diasSemana.map((day, dayIndex) =>
+        dayIndex === index ? Number(value) : day,
+      ),
+    }))
   }
 
   function actualizarContenidoSesion(index, value) {
@@ -1762,6 +1845,8 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
       `Nivel: ${form.nivel}`,
       `PLAN_SEMANAS:${Number(form.semanas || 1)}`,
       `PLAN_SESIONES_SEMANA:${Number(form.sesionesSemana || 1)}`,
+      `PLAN_INICIO:${form.fechaInicio || fechaHoy()}`,
+      `PLAN_DIAS:${(form.diasSemana || []).join(',')}`,
       '',
       'ESTRUCTURA_SEMANAL',
       ...sesionesContenido.flatMap((contenidoSesion, index) => [
@@ -1900,6 +1985,42 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
             </p>
           </div>
 
+          <div className="rounded-2xl border border-cyan-800 bg-cyan-950/20 p-4 space-y-3">
+            <div>
+              <p className="font-black text-cyan-300">Calendario del plan</p>
+              <p className="mt-1 text-sm text-zinc-500">
+                Define la fecha de inicio y el día correspondiente a cada sesión semanal.
+              </p>
+            </div>
+
+            <label className="grid gap-2 text-sm font-black text-zinc-300">
+              Fecha de inicio
+              <input
+                type="date"
+                value={form.fechaInicio}
+                onChange={(event) => update('fechaInicio', event.target.value)}
+                className="bg-black border border-zinc-700 rounded-xl p-3"
+              />
+            </label>
+
+            <div className="grid sm:grid-cols-2 gap-3">
+              {Array.from({ length: Number(form.sesionesSemana || 1) }, (_, index) => (
+                <label key={index} className="grid gap-2 text-sm font-black text-zinc-300">
+                  Sesión {index + 1}
+                  <select
+                    value={form.diasSemana[index] ?? diasSugeridos(form.sesionesSemana)[index] ?? 1}
+                    onChange={(event) => actualizarDiaSesion(index, event.target.value)}
+                    className="bg-black border border-zinc-700 rounded-xl p-3"
+                  >
+                    {DIAS_SEMANA.map((day) => (
+                      <option key={day.value} value={day.value}>{day.label}</option>
+                    ))}
+                  </select>
+                </label>
+              ))}
+            </div>
+          </div>
+
           <div className="bg-black/40 border border-zinc-800 rounded-2xl p-4">
             <p className="font-black text-yellow-400">Objetivos disponibles</p>
             <p className="text-sm text-zinc-400 mt-2">
@@ -1998,6 +2119,11 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
                           <p className="mt-1 text-sm text-zinc-400">
                             {progress.semanas} semana{progress.semanas === 1 ? '' : 's'} · {progress.sesionesSemana} sesión{progress.sesionesSemana === 1 ? '' : 'es'} por semana
                           </p>
+                          {fechasPlanCoach(plan).length > 0 && (
+                            <p className="mt-1 text-sm text-cyan-300">
+                              Inicio {formatearFecha(fechasPlanCoach(plan)[0])} · Fin {formatearFecha(fechasPlanCoach(plan).at(-1))}
+                            </p>
+                          )}
                         </div>
                         <span className={`rounded-full border px-3 py-1 text-xs font-black ${
                           progress.complete
@@ -2012,9 +2138,14 @@ function EntrenamientosCoachPanel({ students, user, onSaved }) {
                         <div className="mt-4 space-y-2">
                           {records.map((record, index) => (
                             <div key={record.id || index} className="rounded-xl bg-black/40 p-3">
-                              <p className="font-black text-green-300">
-                                Sesión {index + 1} completada
-                              </p>
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="font-black text-green-300">
+                                  Sesión {index + 1} completada
+                                </p>
+                                <span className="rounded-full border border-green-700 bg-green-950 px-2 py-1 text-[11px] font-black text-green-300">
+                                  {estadoSesionCoach(plan, index + 1)}
+                                </span>
+                              </div>
                               <p className="mt-1 text-xs text-zinc-500">
                                 {record.created_at ? new Date(record.created_at).toLocaleString('es-CL') : 'Registrada'}
                               </p>
