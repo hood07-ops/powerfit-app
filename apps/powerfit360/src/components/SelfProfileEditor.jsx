@@ -30,7 +30,13 @@ export default function SelfProfileEditor({ student, onSaved }) {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    setForm(student ? initialForm(student) : EMPTY)
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setForm(student ? initialForm(student) : EMPTY)
+    })
+    return () => {
+      cancelled = true
+    }
   }, [student])
 
   function update(field, value) {
