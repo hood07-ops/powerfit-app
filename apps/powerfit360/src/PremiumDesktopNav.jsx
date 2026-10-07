@@ -42,27 +42,52 @@ export default function PremiumDesktopNav({
         ['Ficha', t.profile],
       ]
 
-  const secondary = [
-    ['XPRangos', t.xpRanks],
-    ['Metodos', t.library],
-    ['Generador', t.aiGenerator],
-    ...(isAdmin ? [['Constructor', t.workoutBuilder]] : []),
-    ['Rutinas', t.routines],
-    ['Premium', t.premium],
-    ['Estadísticas', t.stats],
-    ['Notificaciones', t.notifications],
-    ...(isAdmin ? [['Reportes', t.reports]] : []),
-    ...(!isAdmin ? [['Pago', t.payment]] : []),
-    ['Evaluaciones', t.evaluations],
-    ...(isAdmin ? [['RegistroCompras', t.purchaseLog]] : []),
-    ...(isAdmin && edition.allowBranding ? [['Marca', t.brandSettings]] : []),
-    ...(isAdmin ? [['Ficha', t.profile], ['Pago', t.payment]] : []),
+  const secondaryGroups = [
+    {
+      key: 'performance',
+      label: idioma === 'en' ? 'Performance' : 'Rendimiento',
+      items: [
+        ['XPRangos', t.xpRanks],
+        ['Metodos', t.library],
+        ['Rutinas', t.routines],
+        ['Estadísticas', t.stats],
+        ['Evaluaciones', t.evaluations],
+      ],
+    },
+    {
+      key: 'tools',
+      label: idioma === 'en' ? 'Tools' : 'Herramientas',
+      items: [
+        ['Generador', t.aiGenerator],
+        ...(isAdmin ? [['Constructor', t.workoutBuilder]] : []),
+        ['Premium', t.premium],
+        ['Notificaciones', t.notifications],
+      ],
+    },
+    {
+      key: 'management',
+      label: idioma === 'en' ? 'Management' : 'Gestión',
+      items: [
+        ...(isAdmin ? [['Reportes', t.reports]] : []),
+        ...(!isAdmin ? [['Pago', t.payment]] : []),
+        ...(isAdmin ? [['RegistroCompras', t.purchaseLog]] : []),
+        ...(isAdmin && edition.allowBranding ? [['Marca', t.brandSettings]] : []),
+        ...(isAdmin ? [['Ficha', t.profile], ['Pago', t.payment]] : []),
+      ],
+    },
   ]
 
   const primarySections = new Set(primary.map(([section]) => section))
-  const visibleSecondary = secondary.filter(
-    ([section]) => !primarySections.has(section) && editionAllows(section),
-  )
+  const visibleGroups = secondaryGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        ([section]) => !primarySections.has(section) && editionAllows(section),
+      ),
+    }))
+    .filter((group) => group.items.length > 0)
+
+  const visibleSecondary = visibleGroups.flatMap((group) => group.items)
   const secondaryActive = visibleSecondary.some(([section]) => section === visibleSection)
 
   return (
@@ -93,16 +118,27 @@ export default function PremiumDesktopNav({
             >
               {idioma === 'en' ? 'More tools' : 'Más herramientas'}
             </summary>
-            <div className="mt-3 grid min-w-[290px] gap-2 rounded-3xl border border-zinc-700 bg-zinc-950 p-3 shadow-2xl sm:absolute sm:right-0 sm:grid-cols-2">
-              {visibleSecondary.map(([section, label]) => (
-                <NavButton
-                  key={section}
-                  label={label}
-                  active={visibleSection === section}
-                  disabled={section === 'Reportes' && !isAdmin}
-                  onClick={() => setSection(section)}
-                />
-              ))}
+            <div className="mt-3 min-w-[320px] rounded-3xl border border-zinc-700 bg-zinc-950 p-3 shadow-2xl sm:absolute sm:right-0 sm:min-w-[520px]">
+              <div className="grid gap-4 sm:grid-cols-2">
+                {visibleGroups.map((group) => (
+                  <section key={group.key} className="rounded-2xl border border-zinc-800 bg-black/40 p-3">
+                    <div className="mb-2 px-1 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      {group.label}
+                    </div>
+                    <div className="grid gap-2">
+                      {group.items.map(([section, label]) => (
+                        <NavButton
+                          key={section}
+                          label={label}
+                          active={visibleSection === section}
+                          disabled={section === 'Reportes' && !isAdmin}
+                          onClick={() => setSection(section)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
             </div>
           </details>
         )}
