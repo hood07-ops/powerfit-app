@@ -4936,40 +4936,78 @@ export default function App() {
             onRequestAiAvatar={solicitarAvatarIA}
           />
 
-          <div className="grid md:grid-cols-2 gap-4">
-            <Info label="Nombre" value={student?.nombre} />
-            <Info label="RUT" value={student?.rut} />
-            <Info label="Correo" value={student?.email || user.email} />
-            <Info label="Teléfono" value={student?.telefono} />
-            <Info label="Fecha de cumpleaños" value={formatearFecha(student?.fecha_nacimiento)} />
-            <Info label="Edad" value={student?.edad} />
-            <Info label="Peso" value={student?.peso ? `${student.peso} kg` : '-'} />
-            <Info label="Estatura" value={student?.altura ? `${student.altura} cm` : '-'} />
-            <Info label="Contacto de emergencia" value={student?.contacto_emergencia} />
-            <Info label="Observaciones" value={student?.observaciones} />
-            <Info label="Fecha de inicio" value={formatearFecha(student?.fecha_ingreso)} />
-            <Info label="Tiempo en PowerFit" value={antiguedadTexto(student?.fecha_ingreso)} />
-            <Info label="Fecha de pago" value={formatearFecha(student?.fecha_pago)} />
-            <Info
-              label="Fecha de salida / término"
-              value={formatearFecha(student?.fecha_salida || student?.fecha_vencimiento)}
-            />
-            <Info label="Mensualidad" value={`${student?.monto || 0}`} />
-            <Info label="Estado pago" value={student?.estado_pago} />
-            <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
-          </div>
+          <section className="mt-6 rounded-2xl border border-zinc-700 bg-black/30 p-4 sm:p-5">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                Identidad y contacto
+              </p>
+              <h3 className="mt-1 text-xl font-black text-white">Mis datos personales</h3>
+              <p className="mt-1 text-sm text-zinc-500">
+                Información visible para ti y para la gestión segura de tu entrenamiento.
+              </p>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="Nombre" value={student?.nombre} />
+              <Info label="RUT" value={student?.rut} />
+              <Info label="Correo" value={student?.email || user.email} />
+              <Info label="Teléfono" value={student?.telefono} />
+              <Info label="Fecha de nacimiento" value={formatearFecha(student?.fecha_nacimiento)} />
+              <Info label="Edad" value={student?.edad} />
+              <Info label="Peso" value={student?.peso ? `${student.peso} kg` : '-'} />
+              <Info label="Estatura" value={student?.altura ? `${student.altura} cm` : '-'} />
+              <Info label="Contacto de emergencia" value={student?.contacto_emergencia} />
+              <Info label="Observaciones" value={student?.observaciones} />
+            </div>
+          </section>
+
+          <section className="mt-4 rounded-2xl border border-amber-800/70 bg-amber-950/10 p-4 sm:p-5">
+            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-500">
+                  Datos protegidos
+                </p>
+                <h3 className="mt-1 text-xl font-black text-white">Escuela y membresía</h3>
+                <p className="mt-1 text-sm text-zinc-500">
+                  Estos datos los administra la escuela y no se modifican desde tu ficha personal.
+                </p>
+              </div>
+              <span className="rounded-full border border-amber-800 bg-amber-950/40 px-3 py-1 text-xs font-black text-amber-300">
+                Sólo lectura
+              </span>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Info label="Fecha de inicio" value={formatearFecha(student?.fecha_ingreso)} />
+              <Info label="Tiempo en PowerFit" value={antiguedadTexto(student?.fecha_ingreso)} />
+              <Info label="Estado de pago" value={student?.estado_pago} />
+              <Info label="Mensualidad" value={`${student?.monto || 0}`} />
+              <Info label="Último pago" value={formatearFecha(student?.fecha_pago)} />
+              <Info
+                label="Vencimiento"
+                value={formatearFecha(student?.fecha_vencimiento)}
+              />
+              <Info label="Generaciones IA disponibles" value={student?.generaciones_disponibles || 0} />
+            </div>
+          </section>
 
           <SelfProfileEditor
             student={student}
             onSaved={() => cargarUsuario()}
           />
 
-          <ProgressDashboard
-            records={recordsEntrenamiento}
-            rms={rmsAlumno}
-            asistencias={asistencias}
-            student={student}
-          />
+          <section className="mt-6">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-violet-400">
+                Evolución
+              </p>
+              <h3 className="mt-1 text-xl font-black text-white">Mi progreso deportivo</h3>
+            </div>
+            <ProgressDashboard
+              records={recordsEntrenamiento}
+              rms={rmsAlumno}
+              asistencias={asistencias}
+              student={student}
+            />
+          </section>
         </div>
       )}
 
