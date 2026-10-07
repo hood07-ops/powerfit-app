@@ -3396,6 +3396,31 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
   )
 }
 
+function cpsHomeNextStep(route) {
+  if (!route?.enrolled) return 'Ruta no iniciada'
+  const theoryDone = Number(route.stage_questions_approved || 0)
+  const theoryTotal = Number(route.stage_questions_total || 0)
+  const cardsDone = Number(route.stage_cards_completed || 0)
+  const cardsTotal = Number(route.stage_cards_total || 0)
+  const tomosDone = Number(route.stage_tomos_completed || 0)
+  const tomosTotal = Number(route.stage_tomos_total || 0)
+
+  if (theoryTotal > theoryDone) {
+    const pending = theoryTotal - theoryDone
+    return `Siguiente: aprobar ${pending} pregunta${pending === 1 ? '' : 's'} teórica${pending === 1 ? '' : 's'}`
+  }
+  if (cardsTotal > cardsDone) {
+    const pending = cardsTotal - cardsDone
+    return `Siguiente: completar ${pending} técnica${pending === 1 ? '' : 's'}`
+  }
+  if (tomosTotal > tomosDone) {
+    const pending = tomosTotal - tomosDone
+    return `Siguiente: cerrar ${pending} tomo${pending === 1 ? '' : 's'}`
+  }
+  if (route.stage_ready_for_exam) return 'Siguiente: examen final del nivel / grado'
+  return 'Revisa Mi Camino para continuar'
+}
+
 function StudentHomePanel({ student, setSection, asistencias = [] }) {
   const [planes, setPlanes] = useState([])
   const [completados, setCompletados] = useState({})
