@@ -70,8 +70,8 @@ const handler = createMcpHandler((server) => {
     async ({ language }) => {
       const text =
         language === "en"
-          ? "CPS means Combat Performance System. It covers Boxing, Kickboxing and K1, has 15 tomos, uses Boxing Levels rather than colored belts for boxing, and grade/belt progression for Kickboxing. Progress can include technique cards, video review, live assessment, tomo tests and promotion approval."
-          : "CPS significa Combat Performance System. Incluye Boxeo, Kickboxing y K1, tiene 15 tomos, usa Niveles de Boxeo en vez de cinturones por color para boxeo y progresión por grados/cinturones en Kickboxing. El avance puede incluir tarjetas técnicas, revisión de video, evaluación presencial, pruebas de tomo y aprobación de promoción.";
+          ? "CPS means Combat Performance System. It covers Boxing, Kickboxing and K1, has 17 configured tomos, uses Boxing Levels rather than colored belts for boxing, and grade/belt progression for Kickboxing. Each tomo includes theory questions plus practical progression through technique cards, video review, live assessment, tomo tests and promotion approval."
+          : "CPS significa Combat Performance System. Incluye Boxeo, Kickboxing y K1, tiene 17 tomos configurados, usa Niveles de Boxeo en vez de cinturones por color para boxeo y progresión por grados/cinturones en Kickboxing. Cada tomo incorpora preguntas teóricas y progresión práctica mediante tarjetas técnicas, revisión de video, evaluación presencial, prueba de tomo y aprobación de promoción.";
       return { content: [{ type: "text", text }], structuredContent: { answer: text } };
     },
   );
@@ -104,8 +104,8 @@ const handler = createMcpHandler((server) => {
     async ({ language }) => {
       const text =
         language === "en"
-          ? "A student opens the authorized tomo and technique card, uploads a required technique video, receives coach review and either approval or correction, completes the live assessment when eligible, and then proceeds to the tomo test and promotion requirements defined for the route."
-          : "El alumno abre el tomo autorizado y su tarjeta técnica, sube el video requerido, recibe revisión del coach con aprobación o corrección, realiza la evaluación presencial cuando corresponde y luego avanza a la prueba de tomo y requisitos de promoción definidos para su ruta.";
+          ? "A student studies the authorized tomo, answers its theory questions, receives coach review and corrections, completes the required technique cards and video review, performs the live assessment when eligible, and only then proceeds to the tomo test and promotion requirements defined for the route."
+          : "El alumno estudia el tomo autorizado, responde sus preguntas teóricas, recibe revisión y correcciones del coach, completa las tarjetas técnicas y la revisión de video, realiza la evaluación presencial cuando corresponde y sólo entonces avanza a la prueba de tomo y requisitos de promoción definidos para su ruta.";
       return { content: [{ type: "text", text }], structuredContent: { answer: text } };
     },
   );
