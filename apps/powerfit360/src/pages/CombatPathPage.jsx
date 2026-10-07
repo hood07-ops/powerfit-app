@@ -90,6 +90,16 @@ const QUESTION_STATUS_LABELS = {
   CORRECTION_REQUIRED: 'Corrección requerida',
 }
 
+const BELT_VISUALS = {
+  Blanco: 'linear-gradient(90deg,#f8fafc 0%,#e5e7eb 100%)',
+  Naranjo: 'linear-gradient(90deg,#fb923c 0%,#f97316 100%)',
+  Verde: 'linear-gradient(90deg,#4ade80 0%,#16a34a 100%)',
+  Azul: 'linear-gradient(90deg,#60a5fa 0%,#2563eb 100%)',
+  Café: 'linear-gradient(90deg,#a16207 0%,#713f12 100%)',
+  'Café-Negro': 'linear-gradient(90deg,#713f12 0%,#713f12 48%,#111827 52%,#111827 100%)',
+  'Negro 1er Dan': 'linear-gradient(90deg,#18181b 0%,#020617 100%)',
+}
+
 function clp(value) {
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
@@ -500,6 +510,35 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
                   <CombatMetric label="Desbloqueados" value={`${unlocked}/${tomos.length}`} />
                   <CombatMetric label="Completados" value={`${completed}/${tomos.length}`} />
                 </div>
+
+                {route.code === 'KICKBOXING' ? (
+                  <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Grado actual</p>
+                        <p className="mt-1 text-lg font-black text-white">{currentStage?.label || 'Sin grado'}</p>
+                      </div>
+                      <span className="text-xs font-black text-zinc-400">
+                        Evolución total {tomos.length ? Math.round((completed / tomos.length) * 100) : 0}%
+                      </span>
+                    </div>
+                    <div
+                      className="mt-3 h-5 rounded-full border border-zinc-700 shadow-inner"
+                      style={{ background: BELT_VISUALS[currentStage?.label] || '#27272a' }}
+                      aria-label={`Cinturón ${currentStage?.label || 'sin grado'}`}
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-4 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+                    <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Nivel que estás estudiando</p>
+                    <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-lg font-black text-white">{currentStage?.label || 'Boxeo Nivel 1'}</p>
+                      <span className="text-xs font-black text-zinc-400">
+                        Evolución total {tomos.length ? Math.round((completed / tomos.length) * 100) : 0}%
+                      </span>
+                    </div>
+                  </div>
+                )}
 
                 <div className="cps-progress-shell mt-4">
                   <div className="flex items-center justify-between text-xs font-black">
