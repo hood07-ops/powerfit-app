@@ -1389,6 +1389,7 @@ function AdminAlumnosPanel({
   alumnosFiltrados,
   abrirDetalle,
   registrarPago,
+  setSection,
 }) {
   const [filtroRapido, setFiltroRapido] = useState('todos')
   const hoy = new Date()
@@ -1457,6 +1458,45 @@ function AdminAlumnosPanel({
         <div className="rounded-2xl border border-red-500/20 bg-red-950/20 px-4 py-3 font-black text-white">
           <span className="text-red-400">👥</span> {visibles.length} / {students.length} alumnos
         </div>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <button
+          type="button"
+          onClick={() => setSection('AsistenciaQR')}
+          className="rounded-2xl border border-cyan-700 bg-cyan-950/30 p-4 text-left transition hover:border-cyan-400"
+        >
+          <p className="text-xs font-black uppercase tracking-wide text-cyan-400">Acción rápida</p>
+          <p className="mt-1 text-lg font-black text-white">Pasar asistencia</p>
+          <p className="mt-1 text-sm text-zinc-400">QR, registros y control del día.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => window.location.assign('/cps-admin.html')}
+          className="rounded-2xl border border-yellow-700 bg-yellow-950/30 p-4 text-left transition hover:border-yellow-400"
+        >
+          <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Acción rápida</p>
+          <p className="mt-1 text-lg font-black text-white">CPS académico</p>
+          <p className="mt-1 text-sm text-zinc-400">Teoría, videos, presencial y graduaciones.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSection('Entrenamientos')}
+          className="rounded-2xl border border-blue-700 bg-blue-950/30 p-4 text-left transition hover:border-blue-400"
+        >
+          <p className="text-xs font-black uppercase tracking-wide text-blue-400">Acción rápida</p>
+          <p className="mt-1 text-lg font-black text-white">Asignar entrenamiento</p>
+          <p className="mt-1 text-sm text-zinc-400">Crear y revisar planes de alumnos.</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setSection('Reportes')}
+          className="rounded-2xl border border-violet-700 bg-violet-950/30 p-4 text-left transition hover:border-violet-400"
+        >
+          <p className="text-xs font-black uppercase tracking-wide text-violet-400">Acción rápida</p>
+          <p className="mt-1 text-lg font-black text-white">Reportes</p>
+          <p className="mt-1 text-sm text-zinc-400">Operación, asistencia y finanzas.</p>
+        </button>
       </div>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
@@ -4865,6 +4905,7 @@ export default function App() {
           alumnosFiltrados={alumnosFiltrados}
           abrirDetalle={setAlumnoDetalle}
           registrarPago={registrarPago}
+          setSection={setSection}
         />
       )}
 
