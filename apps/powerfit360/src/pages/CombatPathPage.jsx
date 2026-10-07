@@ -84,6 +84,12 @@ const CARD_STATUS_LABELS = {
   COMPLETED: 'Completada',
 }
 
+const QUESTION_STATUS_LABELS = {
+  SUBMITTED: 'En revisión',
+  APPROVED: 'Aprobada',
+  CORRECTION_REQUIRED: 'Corrección requerida',
+}
+
 function clp(value) {
   return new Intl.NumberFormat('es-CL', {
     style: 'currency',
@@ -110,36 +116,33 @@ function downloadStudyTomo(detail, routeLabel) {
 
   const tomoNo = detail?.tomo?.tomo_no || ''
   const title = detail?.tomo?.title || detail?.study?.title || `Tomo ${tomoNo}`
-  const html = `<!doctype html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>${escapeHtml(title)}</title>
-<style>
-body{font-family:Arial,sans-serif;line-height:1.55;color:#111;padding:28px}
-h1{font-size:26px;margin:0 0 6px}
-h2{font-size:16px;margin:0 0 24px;color:#555}
-pre{font-family:Arial,sans-serif;white-space:pre-wrap;font-size:14px;line-height:1.55}
-</style>
-</head>
-<body>
-<h1>Tomo ${escapeHtml(tomoNo)} — ${escapeHtml(title)}</h1>
-<h2>${escapeHtml(routeLabel || 'CPS PowerFit 360')}</h2>
-<pre>${escapeHtml(content)}</pre>
-</body>
-</html>`
+  const filename = `CPS_${String(routeLabel || 'CPS').replace(/[^a-zA-Z0-9._-]+/g, '_')}_Tomo_${String(tomoNo).padStart(2, '0')}_Estudio.txt`
+  const text = [
+    title,
+    `Ruta: ${routeLabel || 'CPS PowerFit 360'}`,
+    `Versión: ${detail?.study?.version || detail?.tomo?.study_version || 'study-v1'}`,
+    '',
+    content,
+  ].join('\n')
 
-  const blob = new Blob([html], { type: 'application/msword;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  const safeTitle = String(title).replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ_-]+/g, '-').replace(/^-+|-+$/g, '')
-  a.href = url
-  a.download = `PowerFit-Tomo-${tomoNo}-${safeTitle || 'CPS'}.doc`
-  a.style.display = 'none'
-  document.body.appendChild(a)
-  a.click()
-  a.remove()
-  window.setTimeout(() => URL.revokeObjectURL(url), 5000)
+  const form = document.createElement('form')
+  form.method = 'POST'
+  form.action = '/api/download-tomo'
+  form.style.display = 'none'
+
+  const filenameInput = document.createElement('input')
+  filenameInput.type = 'hidden'
+  filenameInput.name = 'filename'
+  filenameInput.value = filename
+
+  const contentInput = document.createElement('textarea')
+  contentInput.name = 'content'
+  contentInput.value = text
+
+  form.append(filenameInput, contentInput)
+  document.body.appendChild(form)
+  form.submit()
+  window.setTimeout(() => form.remove(), 10000)
 }
 
 function classForStatus(status) {
@@ -191,6 +194,10 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState({ path: 'BOXING', tomo: 1 })
   const [detail, setDetail] = useState(null)
+  const [questions, setQuestions] = useState([])
+  const [questionDrafts, setQuestionDrafts] = useState({})
+  const [savingQuestion, setSavingQuestion] = useState(null)
+  const [questionNotice, setQuestionNotice] = useState({})
   const [uploadingCard, setUploadingCard] = useState(null)
   const [eligibility, setEligibility] = useState(null)
   const [eligibilityLoading, setEligibilityLoading] = useState(false)
@@ -203,6 +210,25 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
     ) || selectedRoute?.stages?.[0]
 
   const queue = useMemo(() => home?.coach_queue || [], [home])
+  const theory = useMemo(() => {
+    const total = questions.length
+    const answered = questions.filter((q) => String(q.answer_text || '').trim()).length
+    const approvedRows = questions.filter((q) => String(q.answer_status || '').toUpperCase() === 'APPROVED')
+    const approved = approvedRows.length
+    const correction = questions.filter((q) => String(q.answer_status || '').toUpperCase() === 'CORRECTION_REQUIRED').length
+    const scored = approvedRows.filter((q) => q.score != null).map((q) => Number(q.score))
+    const average = scored.length
+      ? Math.round(scored.reduce((sum, value) => sum + value, 0) / scored.length)
+      : null
+    return {
+      total,
+      answered,
+      approved,
+      correction,
+      average,
+      pct: total ? Math.round((approved / total) * 100) : 0,
+    }
+  }, [questions])
 
   const loadHome = useCallback(async function loadHome() {
     setLoading(true)
@@ -231,6 +257,25 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
     }
 
     setDetail(data)
+  }, [])
+
+  const loadQuestions = useCallback(async function loadQuestions(pathCode, tomoNo) {
+    const { data, error: rpcError } = await supabase.rpc('get_powerfit_tomo_questions_secure', {
+      p_path_code: pathCode,
+      p_tomo_no: Number(tomoNo),
+    })
+
+    if (rpcError) {
+      setQuestions([])
+      setQuestionDrafts({})
+      return
+    }
+
+    const rows = Array.isArray(data) ? data : []
+    setQuestions(rows)
+    setQuestionDrafts(
+      Object.fromEntries(rows.map((question) => [question.id, question.answer_text || ''])),
+    )
   }, [])
 
   const loadEligibility = useCallback(async function loadEligibility(pathCode, tomoNo) {
@@ -265,10 +310,11 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
   useEffect(() => {
     const timer = window.setTimeout(() => {
       loadDetail(selected.path, selected.tomo)
+      loadQuestions(selected.path, selected.tomo)
       loadEligibility(selected.path, selected.tomo)
     }, 0)
     return () => window.clearTimeout(timer)
-  }, [loadDetail, loadEligibility, selected.path, selected.tomo])
+  }, [loadDetail, loadEligibility, loadQuestions, selected.path, selected.tomo])
 
   async function enroll(pathCode) {
     const { error: rpcError } = await supabase.rpc('enroll_powerfit_combat_path_secure', {
@@ -323,6 +369,38 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
       popup?.close()
       window.alert(`No se pudo iniciar el pago CPS: ${paymentError.message}`)
     }
+  }
+
+  async function submitTheoryAnswer(question) {
+    const answer = String(questionDrafts[question.id] || '').trim()
+    if (!answer || savingQuestion) return
+
+    setSavingQuestion(question.id)
+    setQuestionNotice((current) => ({ ...current, [question.id]: 'Guardando respuesta...' }))
+
+    const { error: rpcError } = await supabase.rpc('submit_powerfit_tomo_answer_secure', {
+      p_path_code: selected.path,
+      p_tomo_no: Number(selected.tomo),
+      p_exam_item_id: Number(question.id),
+      p_answer_text: answer,
+    })
+
+    if (rpcError) {
+      setQuestionNotice((current) => ({
+        ...current,
+        [question.id]: `No se pudo guardar: ${rpcError.message}`,
+      }))
+      setSavingQuestion(null)
+      return
+    }
+
+    setQuestionNotice((current) => ({
+      ...current,
+      [question.id]: 'Respuesta guardada. Quedó pendiente de revisión.',
+    }))
+    await loadQuestions(selected.path, selected.tomo)
+    await loadHome()
+    setSavingQuestion(null)
   }
 
   async function uploadVideo(card, file) {
@@ -617,6 +695,106 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
           </div>
         )}
 
+        {(detail?.access_status !== 'LOCKED' || isAdmin) && (
+          <section className="mt-6 space-y-4">
+            <div className="rounded-2xl border border-blue-500/40 bg-blue-950/20 p-4 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-blue-300">Progreso teórico del tomo</p>
+                  <h4 className="mt-1 text-xl font-black text-white">
+                    {theory.approved}/{theory.total || 0} preguntas aprobadas
+                  </h4>
+                </div>
+                <Badge status={theory.total > 0 && theory.approved === theory.total ? 'COMPLETED' : 'VIDEO_UNDER_REVIEW'}>
+                  {theory.total > 0 && theory.approved === theory.total ? 'Teoría completa' : 'Teoría en progreso'}
+                </Badge>
+              </div>
+
+              <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-900">
+                <div
+                  className="h-full rounded-full bg-blue-500 transition-all"
+                  style={{ width: `${theory.pct}%` }}
+                />
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <CombatMetric label="Respondidas" value={`${theory.answered}/${theory.total}`} />
+                <CombatMetric label="Aprobadas" value={`${theory.approved}/${theory.total}`} />
+                <CombatMetric label="Corrección" value={theory.correction} />
+                <CombatMetric label="Promedio" value={theory.average == null ? '—' : `${theory.average}/100`} />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {questions.length === 0 ? (
+                <div className="rounded-2xl border border-zinc-800 bg-black p-4 text-sm font-bold text-zinc-400">
+                  Las preguntas aparecerán cuando el tomo esté habilitado para estudio.
+                </div>
+              ) : (
+                questions.map((question, index) => {
+                  const status = String(question.answer_status || '')
+                  const approved = status === 'APPROVED'
+                  return (
+                    <article key={question.id} className="rounded-2xl border border-zinc-800 bg-black p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                        <div>
+                          <p className="text-xs font-black uppercase text-blue-300">Pregunta {index + 1}</p>
+                          <p className="mt-1 font-black text-white">{question.prompt}</p>
+                        </div>
+                        <Badge status={approved ? 'COMPLETED' : status === 'CORRECTION_REQUIRED' ? 'FAILED' : 'VIDEO_UNDER_REVIEW'}>
+                          {QUESTION_STATUS_LABELS[status] || (question.answer_text ? 'En revisión' : 'Sin responder')}
+                        </Badge>
+                      </div>
+
+                      <textarea
+                        value={questionDrafts[question.id] ?? ''}
+                        onChange={(event) =>
+                          setQuestionDrafts((current) => ({
+                            ...current,
+                            [question.id]: event.target.value,
+                          }))
+                        }
+                        disabled={approved}
+                        placeholder="Responde con tus propias palabras usando el contenido del tomo."
+                        className="mt-4 min-h-28 w-full rounded-2xl border border-zinc-700 bg-zinc-950 p-3 text-sm text-white outline-none focus:border-blue-500 disabled:opacity-70"
+                      />
+
+                      {question.feedback && (
+                        <div className="mt-3 rounded-xl border border-zinc-800 bg-zinc-950 p-3 text-sm">
+                          <p className="font-black text-zinc-200">Feedback del coach</p>
+                          <p className="mt-1 text-zinc-400">{question.feedback}</p>
+                          {question.score != null && (
+                            <p className="mt-2 font-black text-blue-300">Puntaje: {question.score}/100</p>
+                          )}
+                        </div>
+                      )}
+
+                      {!approved && (
+                        <button
+                          type="button"
+                          disabled={!String(questionDrafts[question.id] || '').trim() || savingQuestion === question.id}
+                          onClick={() => submitTheoryAnswer(question)}
+                          className="mt-3 rounded-xl bg-blue-600 px-4 py-3 font-black text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          {savingQuestion === question.id
+                            ? 'Guardando...'
+                            : question.answer_text
+                              ? 'Actualizar respuesta'
+                              : 'Guardar respuesta'}
+                        </button>
+                      )}
+
+                      {questionNotice[question.id] && (
+                        <p className="mt-2 text-sm font-bold text-zinc-400">{questionNotice[question.id]}</p>
+                      )}
+                    </article>
+                  )
+                })
+              )}
+            </div>
+          </section>
+        )}
+
         <div className="mt-6 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
           <div className="rounded-2xl border border-zinc-800 bg-black p-4">
             <h4 className="text-xl font-black text-white">Flujo obligatorio</h4>
@@ -624,6 +802,7 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
               {[
                 'Pago / acceso',
                 'Aprendizaje',
+                '10 preguntas teóricas',
                 'Tarjetas técnicas',
                 'Video del alumno',
                 'Revisión del coach',
