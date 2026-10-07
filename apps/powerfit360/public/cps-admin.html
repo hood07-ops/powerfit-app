@@ -101,7 +101,7 @@ async function loadAll(){
   const{data:userData}=await supabase.auth.getUser();if(!userData.user){stateEl.className='panel error';stateEl.textContent='Sesión requerida. Ingresa primero con una cuenta administradora.';return}
   stateEl.className='panel';stateEl.textContent='Actualizando panel CPS...';
   const[q,v,l,s,inactive,audit]=await Promise.all([supabase.rpc('get_powerfit_question_review_queue_secure'),supabase.rpc('get_powerfit_video_review_queue_secure'),supabase.rpc('get_powerfit_live_assessment_queue_secure'),supabase.rpc('get_powerfit_cps_admin_students_secure'),supabase.rpc('get_powerfit_cps_inactivity_secure',{p_days:14}),supabase.rpc('audit_powerfit_cps_integrity_secure')]);
-  if(q.error||v.error||l.error||s.error||inactive.error||audit.error){stateEl.className='panel error';stateEl.textContent=humanError(q.error?.message||v.error?.message||l.error?.message||s.error?.message||inactive.error?.message||audit.error?.message);return}
+  if(q.error||v.error||l.error||s.error||inactive.error){stateEl.className='panel error';stateEl.textContent=humanError(q.error?.message||v.error?.message||l.error?.message||s.error?.message||inactive.error?.message);return}
   questionQueue=q.data||[];videoQueue=v.data||[];liveQueue=l.data||[];students=s.data||[];inactivityRows=inactive.data||[];
   $('#questionCount').textContent=questionQueue.length;
   $('#videoCount').textContent=videoQueue.length;
@@ -123,8 +123,7 @@ async function loadAll(){
   $('#priorityTech').textContent=priority.TECH;
   $('#priorityInactive').textContent=priority.INACTIVE;
   $('#studentCount').textContent=students.length;
-  $('#healthCount').textContent=Number(audit.data?.issue_count||0);
-  renderIntegrity(audit.data||{issue_count:0,issues:[]});
+  if(audit.error){$('#healthCount').textContent='—';integrityEl.innerHTML='';}else{$('#healthCount').textContent=Number(audit.data?.issue_count||0);renderIntegrity(audit.data||{issue_count:0,issues:[]});}
   stateEl.className='panel';stateEl.innerHTML='<strong>Panel actualizado.</strong> <span class="muted">Teoría, video, presencial y progreso en una sola consola.</span>';
   renderQuestions();renderVideos();renderLive();renderStudents();
 }
