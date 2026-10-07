@@ -3399,6 +3399,7 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
 function StudentHomePanel({ student, setSection }) {
   const [planes, setPlanes] = useState([])
   const [completados, setCompletados] = useState({})
+  const [cpsResumen, setCpsResumen] = useState([])
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
@@ -3410,10 +3411,25 @@ function StudentHomePanel({ student, setSection }) {
       }
 
       setCargando(true)
-      const { data, error } = await supabase.rpc('get_powerfit_training_history_secure', {
-        p_alumno_id: student.id,
-        p_limit: 50,
-      })
+      const [trainingResult, boxingResult, kickboxingResult] = await Promise.all([
+        supabase.rpc('get_powerfit_training_history_secure', {
+          p_alumno_id: student.id,
+          p_limit: 50,
+        }),
+        supabase.rpc('get_powerfit_cps_route_progress_secure', {
+          p_alumno_id: student.id,
+          p_path_code: 'BOXING',
+        }),
+        supabase.rpc('get_powerfit_cps_route_progress_secure', {
+          p_alumno_id: student.id,
+          p_path_code: 'KICKBOXING',
+        }),
+      ])
+
+      const { data, error } = trainingResult
+      setCpsResumen(
+        [boxingResult.data, kickboxingResult.data].filter((route) => route?.enrolled),
+      )
 
       if (error) {
         setPlanes([])
@@ -3675,6 +3691,93 @@ function StudentHomePanel({ student, setSection }) {
           </div>
         </section>
       </div>
+
+      <section className="bg-zinc-900 border border-yellow-600/70 rounded-2xl sm:rounded-3xl p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-black uppercase text-yellow-400">Mi progreso CPS</p>
+            <h3 className="mt-1 text-xl font-black text-white">Nivel, grado y evolución</h3>
+          </div>
+          <button
+            type="button"
+            onClick={() => setSection('MiCamino')}
+            className="rounded-xl bg-yellow-500 px-4 py-2 text-sm font-black text-black hover:bg-yellow-400"
+          >
+            Abrir Mi Camino
+          </button>
+        </div>
+
+        {cpsResumen.length ? (
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {cpsResumen.map((route) => {
+              const isKickboxing = route.route_code === 'KICKBOXING'
+              const beltBackground = {
+                Blanco: 'linear-gradient(90deg,#f8fafc,#e5e7eb)',
+                Naranjo: 'linear-gradient(90deg,#fb923c,#f97316)',
+                Verde: 'linear-gradient(90deg,#4ade80,#16a34a)',
+                Azul: 'linear-gradient(90deg,#60a5fa,#2563eb)',
+                Café: 'linear-gradient(90deg,#a16207,#713f12)',
+                'Café-Negro': 'linear-gradient(90deg,#713f12 0%,#713f12 48%,#111827 52%,#111827 100%)',
+                'Negro 1er Dan': 'linear-gradient(90deg,#18181b,#020617)',
+              }[route.stage_label]
+
+              return (
+                <article key={route.route_code} className="rounded-2xl border border-zinc-700 bg-black/50 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
+                        {isKickboxing ? 'Kickboxing · grado actual' : 'Boxeo · nivel actual'}
+                      </p>
+                      <p className="mt-1 text-lg font-black text-white">{route.stage_label}</p>
+                    </div>
+                    <span className="text-sm font-black text-yellow-400">
+                      {route.stage_progress_pct ?? 0}%
+                    </span>
+                  </div>
+
+                  {isKickboxing && (
+                    <div
+                      className="mt-3 h-4 rounded-full border border-zinc-600"
+                      style={{ background: beltBackground || '#27272a' }}
+                    />
+                  )}
+
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-yellow-500"
+                      style={{
+                        width: `${Math.max(0, Math.min(100, Number(route.stage_progress_pct || 0)))}%`,
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="rounded-xl bg-zinc-950 p-2">
+                      <strong className="block text-white">{route.stage_questions_approved ?? 0}/{route.stage_questions_total ?? 0}</strong>
+                      <span className="text-zinc-500">Teoría</span>
+                    </div>
+                    <div className="rounded-xl bg-zinc-950 p-2">
+                      <strong className="block text-white">{route.stage_cards_completed ?? 0}/{route.stage_cards_total ?? 0}</strong>
+                      <span className="text-zinc-500">Técnicas</span>
+                    </div>
+                    <div className="rounded-xl bg-zinc-950 p-2">
+                      <strong className="block text-white">{route.route_progress_pct ?? 0}%</strong>
+                      <span className="text-zinc-500">Total</span>
+                    </div>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 rounded-2xl border border-zinc-800 bg-black/40 p-4">
+            <p className="font-black text-zinc-200">Aún no tienes una ruta CPS activa.</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              Cuando estés inscrito en Boxeo o Kickboxing, tu nivel o grado aparecerá aquí.
+            </p>
+          </div>
+        )}
+      </section>
 
       <section className="bg-zinc-900 border border-emerald-700 rounded-2xl sm:rounded-3xl p-5">
         <h3 className="text-xl font-black text-emerald-400">Lo que comparte PowerFit contigo</h3>
