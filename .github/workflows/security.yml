@@ -2,7 +2,7 @@ name: Security
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/powerfit-premium-next]
   pull_request:
   schedule:
     - cron: '17 7 * * 1'
