@@ -3396,7 +3396,7 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
   )
 }
 
-function StudentHomePanel({ student, setSection }) {
+function StudentHomePanel({ student, setSection, asistencias = [] }) {
   const [planes, setPlanes] = useState([])
   const [completados, setCompletados] = useState({})
   const [cpsResumen, setCpsResumen] = useState([])
@@ -3562,6 +3562,8 @@ function StudentHomePanel({ student, setSection }) {
     })
   }
 
+  const asistenciaHome = resumenAsistenciaAlumno(student, asistencias)
+
   const planActivo = planes.find((plan) => !progresoHome(plan).complete) || planes[0] || null
   const objetivo = String(planActivo?.objetivo || '')
     .replace(/^coach_(personalizado_)?/, '')
@@ -3691,6 +3693,30 @@ function StudentHomePanel({ student, setSection }) {
           </div>
         </section>
       </div>
+
+      <section className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Mi constancia</p>
+          <p className="mt-1 text-2xl font-black text-white">{asistenciaHome.mes}</p>
+          <p className="text-sm text-zinc-500">asistencias este mes</p>
+        </div>
+        <div className="rounded-2xl border border-zinc-700 bg-zinc-900 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Última asistencia</p>
+          <p className="mt-1 text-lg font-black text-white">
+            {asistenciaHome.ultima ? new Date(asistenciaHome.ultima).toLocaleDateString('es-CL') : 'Sin registro'}
+          </p>
+          <p className="text-sm text-zinc-500">{asistenciaHome.total} registros totales</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setSection('AsistenciaQR')}
+          className="rounded-2xl border border-emerald-700 bg-emerald-950/30 p-4 text-left hover:border-emerald-400"
+        >
+          <p className="text-xs font-black uppercase tracking-wide text-emerald-400">Asistencia QR</p>
+          <p className="mt-1 font-black text-white">Mostrar mi QR</p>
+          <p className="mt-1 text-sm text-zinc-400">Acceso directo para registrar tu ingreso.</p>
+        </button>
+      </section>
 
       <section className="bg-zinc-900 border border-yellow-600/70 rounded-2xl sm:rounded-3xl p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -4782,7 +4808,7 @@ export default function App() {
       )}
 
       {!isAdmin && visibleSection === 'Inicio' && (
-        <StudentHomePanel student={student} setSection={setSection} />
+        <StudentHomePanel student={student} setSection={setSection} asistencias={asistencias} />
       )}
 
       {!isAdmin && editionAllows('MiEntrenamiento') && visibleSection === 'MiEntrenamiento' && (
