@@ -68,7 +68,7 @@ const statusLabel=s=>({
   VIDEO_CORRECTION_REQUIRED:'Corrección de video requerida',VIDEO_APPROVED:'Video aprobado',
   LIVE_PENDING:'Evaluación presencial pendiente',LIVE_CORRECTION_REQUIRED:'Corrección presencial requerida',
   LIVE_APPROVED:'Evaluación presencial aprobada',COMPLETED:'Completado',SUBMITTED:'Enviado',
-  CORRECTION_REQUIRED:'Corrección requerida',APPROVED:'Aprobado'
+  CORRECTION_REQUIRED:'Corrección requerida',APPROVED:'Aprobado',PROMOTED:'Promovido'
 })[String(s||'').toUpperCase()]||String(s||'Pendiente').replaceAll('_',' ');
 const pct=(done,total)=>total?Math.max(0,Math.min(100,Math.round(done*100/total))):0;
 const beltStyle=label=>{const k=String(label||'').toLowerCase();if(k.includes('café-negro')||k.includes('cafe-negro'))return'background:linear-gradient(90deg,#6b3f24 0 48%,#111 52% 100%)';if(k.includes('blanco'))return'background:#f5f5f5';if(k.includes('naranjo'))return'background:#ff8c00';if(k.includes('verde'))return'background:#2eaf5d';if(k.includes('azul'))return'background:#2878d8';if(k.includes('café')||k.includes('cafe'))return'background:#7b4b2a';if(k.includes('negro'))return'background:#111';return'background:#555'};
