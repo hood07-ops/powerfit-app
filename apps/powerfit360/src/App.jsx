@@ -1129,10 +1129,22 @@ function AdminAlumnoModal({
                 placeholder="Nombre"
               />
               <input
+                defaultValue={alumno.rut || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'rut', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+                placeholder="RUT"
+              />
+              <input
                 defaultValue={alumno.telefono || ''}
                 onBlur={(e) => onUpdate(alumno.id, 'telefono', e.target.value)}
                 className="bg-black p-3 rounded-xl"
                 placeholder="Teléfono"
+              />
+              <input
+                defaultValue={alumno.contacto_emergencia || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'contacto_emergencia', e.target.value)}
+                className="bg-black p-3 rounded-xl"
+                placeholder="Contacto de emergencia"
               />
               <label className="space-y-2 text-sm font-black text-zinc-300">
                 <span>Fecha de cumpleaños</span>
@@ -1147,9 +1159,20 @@ function AdminAlumnoModal({
               <input
                 type="number"
                 defaultValue={alumno.peso || ''}
-                onBlur={(e) => onUpdate(alumno.id, 'peso', Number(e.target.value))}
+                onBlur={(e) =>
+                  onUpdate(alumno.id, 'peso', e.target.value === '' ? null : Number(e.target.value))
+                }
                 className="bg-black p-3 rounded-xl"
-                placeholder="Peso"
+                placeholder="Peso (kg)"
+              />
+              <input
+                type="number"
+                defaultValue={alumno.altura || ''}
+                onBlur={(e) =>
+                  onUpdate(alumno.id, 'altura', e.target.value === '' ? null : Number(e.target.value))
+                }
+                className="bg-black p-3 rounded-xl"
+                placeholder="Estatura (cm)"
               />
               <input
                 type="number"
@@ -1175,6 +1198,16 @@ function AdminAlumnoModal({
                 }
                 className="bg-black p-3 rounded-xl"
                 placeholder="Generaciones"
+              />
+              <div className="rounded-xl border border-zinc-800 bg-black p-3">
+                <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Edad automática</p>
+                <p className="mt-1 text-lg font-black text-white">{alumno.edad ?? '-'}</p>
+              </div>
+              <textarea
+                defaultValue={alumno.observaciones || ''}
+                onBlur={(e) => onUpdate(alumno.id, 'observaciones', e.target.value)}
+                className="min-h-28 bg-black p-3 rounded-xl md:col-span-2"
+                placeholder="Observaciones"
               />
             </div>
 
@@ -4735,10 +4768,15 @@ export default function App() {
 
           <div className="grid md:grid-cols-2 gap-4">
             <Info label="Nombre" value={student?.nombre} />
+            <Info label="RUT" value={student?.rut} />
             <Info label="Correo" value={student?.email || user.email} />
             <Info label="Teléfono" value={student?.telefono} />
             <Info label="Fecha de cumpleaños" value={formatearFecha(student?.fecha_nacimiento)} />
-            <Info label="Peso" value={student?.peso} />
+            <Info label="Edad" value={student?.edad} />
+            <Info label="Peso" value={student?.peso ? `${student.peso} kg` : '-'} />
+            <Info label="Estatura" value={student?.altura ? `${student.altura} cm` : '-'} />
+            <Info label="Contacto de emergencia" value={student?.contacto_emergencia} />
+            <Info label="Observaciones" value={student?.observaciones} />
             <Info label="Fecha de inicio" value={formatearFecha(student?.fecha_ingreso)} />
             <Info label="Tiempo en PowerFit" value={antiguedadTexto(student?.fecha_ingreso)} />
             <Info label="Fecha de pago" value={formatearFecha(student?.fecha_pago)} />
@@ -4746,7 +4784,7 @@ export default function App() {
               label="Fecha de salida / término"
               value={formatearFecha(student?.fecha_salida || student?.fecha_vencimiento)}
             />
-            <Info label="Mensualidad" value={`$${student?.monto || 0}`} />
+            <Info label="Mensualidad" value={`${student?.monto || 0}`} />
             <Info label="Estado pago" value={student?.estado_pago} />
             <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
           </div>
