@@ -3586,7 +3586,7 @@ export default function App() {
 
   function canOpenSection(sectionName, adminStatus) {
     if (!editionAllows(sectionName)) return false
-    if (['Admin', 'Entrenamientos', 'Graduaciones', 'RegistroCompras', 'Reportes', 'Marca', 'Generador'].includes(sectionName)) {
+    if (['Admin', 'Entrenamientos', 'Graduaciones', 'RegistroCompras', 'Reportes', 'Marca', 'Constructor'].includes(sectionName)) {
       return adminStatus
     }
 
@@ -4538,11 +4538,11 @@ export default function App() {
 
       {editionAllows('Metodos') && visibleSection === 'Metodos' && <MetodosPage idioma={idioma} />}
 
-      {editionAllows('Generador') && visibleSection === 'Generador' && isAdmin && (
+      {editionAllows('Generador') && visibleSection === 'Generador' && (
         <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
-      {editionAllows('Constructor') && visibleSection === 'Constructor' && (
+      {editionAllows('Constructor') && visibleSection === 'Constructor' && isAdmin && (
         <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
       )}
 
