@@ -175,6 +175,66 @@ begin
 end;
 $$;
 
--- get_powerfit_student_directory_full_secure was updated in production by the same migration
--- to calculate age from fecha_nacimiento and reveal RUT only to admin/self. Keep that
--- function in sync when regenerating schema dumps.
+create or replace function public.get_powerfit_student_directory_full_secure()
+returns jsonb
+language plpgsql
+stable security definer
+set search_path = public
+as $
+declare
+  v_uid uuid := auth.uid();
+  v_role text;
+  v_rows jsonb;
+begin
+  if v_uid is null then raise exception 'Authentication required' using errcode='42501'; end if;
+  v_role := public.get_powerfit_effective_role();
+
+  with visible as (
+    select a.* from public.alumnos a
+    where v_role='admin'
+      or (v_role='alumno' and a.user_id=v_uid)
+      or (v_role='coach' and exists(
+        select 1 from public.powerfit_coach_assignments ca
+        where ca.coach_user_id=v_uid and ca.alumno_id=a.id and ca.active=true
+      ))
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id',id,'nombre',nombre,
+    'rut',case when v_role='admin' or user_id=v_uid then rut else null end,
+    'telefono',telefono,'categoria',categoria,'estado',estado,'created_at',created_at,'fecha_ingreso',fecha_ingreso,
+    'edad',case when fecha_nacimiento is null then null else extract(year from age(public.powerfit_finance_today(),fecha_nacimiento))::integer end,
+    'peso',peso,'altura',altura,'nivel',nivel,'bloque_actual',bloque_actual,'record_personal',record_personal,
+    'mejor_tiempo',mejor_tiempo,'estado_powerfit',estado_powerfit,'xp',xp,'rango',rango,'medalla',medalla,
+    'streak',streak,'puntos_semanales',puntos_semanales,'matatoa_mes',matatoa_mes,'record_semanal',record_semanal,
+    'record_historico',record_historico,
+    'user_id',case when v_role='admin' or user_id=v_uid then user_id else null end,
+    'email',case when v_role='admin' or user_id=v_uid then email else null end,
+    'plan',case when v_role='admin' or user_id=v_uid then plan else null end,
+    'estado_pago',case when v_role='admin' or user_id=v_uid then estado_pago else null end,
+    'fecha_pago',case when v_role='admin' or user_id=v_uid then fecha_pago else null end,
+    'fecha_vencimiento',case when v_role='admin' or user_id=v_uid then fecha_vencimiento else null end,
+    'monto',case when v_role='admin' or user_id=v_uid then monto else null end,
+    'contacto_emergencia',case when v_role='admin' or user_id=v_uid then contacto_emergencia else null end,
+    'observaciones',case when v_role='admin' or user_id=v_uid then observaciones else null end,
+    'role',case when v_role='admin' or user_id=v_uid then role else null end,
+    'bloques_premium',case when v_role='admin' or user_id=v_uid then bloques_premium else null end,
+    'generaciones_disponibles',case when v_role='admin' or user_id=v_uid then generaciones_disponibles else null end,
+    'fecha_ultima_generacion',case when v_role='admin' or user_id=v_uid then fecha_ultima_generacion else null end,
+    'nivel_matatoa',nivel_matatoa,'foto_url',foto_url,'foto_storage_path',foto_storage_path,'avatar_template',avatar_template,
+    'terminos_aceptados',case when v_role='admin' or user_id=v_uid then terminos_aceptados else null end,
+    'terminos_version',case when v_role='admin' or user_id=v_uid then terminos_version else null end,
+    'terminos_aceptados_at',case when v_role='admin' or user_id=v_uid then terminos_aceptados_at else null end,
+    'fecha_nacimiento',case when v_role='admin' or user_id=v_uid then fecha_nacimiento else null end
+  ) order by id desc),'[]'::jsonb)
+  into v_rows
+  from visible;
+
+  return jsonb_build_object(
+    'version','student-directory-full-secure-v2',
+    'viewer_role',v_role,
+    'count',jsonb_array_length(v_rows),
+    'students',v_rows,
+    'privacy_rule','Admin sees full operational fields; coach sees assigned athletes while RUT, finance, emergency-contact and auth-sensitive fields remain hidden; athlete sees self only.'
+  );
+end;
+$;
