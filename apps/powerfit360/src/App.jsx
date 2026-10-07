@@ -1,21 +1,30 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import './App.css'
 import { DEFAULT_BRANDING, POWERFIT_SIGNATURE, getAppEdition, loadBranding, saveBranding } from './appConfig'
 import { applyPowerFitUpdate, listenForPowerFitUpdate } from './pwa'
 import { supabase } from './supabase'
 
 import CheckInPage from './pages/CheckInPage'
-import CombatPathPage from './pages/CombatPathPage'
-import ConstructorPage from './pages/ConstructorPage'
-import GeneradorPage from './pages/GeneradorPage'
 import LoginPage from './pages/LoginPage'
-import MetodosPage from './pages/MetodosPage'
 import MiQRPage from './pages/MiQRPage'
-import RegistroComprasPage from './pages/RegistroComprasPage'
-import RutinasPage from './pages/RutinasPage'
-import AssignedTrainingPage from './pages/AssignedTrainingPage'
 import PremiumDesktopNav from './PremiumDesktopNav'
 import ChatWidget from './components/ChatWidget'
+
+const CombatPathPage = lazy(() => import('./pages/CombatPathPage'))
+const ConstructorPage = lazy(() => import('./pages/ConstructorPage'))
+const GeneradorPage = lazy(() => import('./pages/GeneradorPage'))
+const MetodosPage = lazy(() => import('./pages/MetodosPage'))
+const RegistroComprasPage = lazy(() => import('./pages/RegistroComprasPage'))
+const RutinasPage = lazy(() => import('./pages/RutinasPage'))
+const AssignedTrainingPage = lazy(() => import('./pages/AssignedTrainingPage'))
+
+function LazyPanelFallback() {
+  return (
+    <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-6 text-zinc-300">
+      Cargando módulo...
+    </div>
+  )
+}
 
 function Info({ label, value }) {
   return (
@@ -4497,10 +4506,12 @@ export default function App() {
       )}
 
       {!isAdmin && editionAllows('MiEntrenamiento') && visibleSection === 'MiEntrenamiento' && (
-        <AssignedTrainingPage
-          student={student}
-          onUpdateStudent={() => cargarUsuario()}
-        />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <AssignedTrainingPage
+            student={student}
+            onUpdateStudent={() => cargarUsuario()}
+          />
+        </Suspense>
       )}
 
       {editionAllows('AsistenciaQR') && visibleSection === 'AsistenciaQR' && (
@@ -4521,29 +4532,41 @@ export default function App() {
       )}
 
       {editionAllows('MiCamino') && visibleSection === 'MiCamino' && (
-        <CombatPathPage
-          student={student}
-          user={user}
-          isAdmin={isAdmin}
-        />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CombatPathPage
+            student={student}
+            user={user}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
       )}
 
       {editionAllows('Graduaciones') && visibleSection === 'Graduaciones' && isAdmin && (
-        <CombatPathPage
-          student={student}
-          user={user}
-          isAdmin={isAdmin}
-        />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <CombatPathPage
+            student={student}
+            user={user}
+            isAdmin={isAdmin}
+          />
+        </Suspense>
       )}
 
-      {editionAllows('Metodos') && visibleSection === 'Metodos' && <MetodosPage idioma={idioma} />}
+      {editionAllows('Metodos') && visibleSection === 'Metodos' && (
+        <Suspense fallback={<LazyPanelFallback />}>
+          <MetodosPage idioma={idioma} />
+        </Suspense>
+      )}
 
       {editionAllows('Generador') && visibleSection === 'Generador' && (
-        <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+        </Suspense>
       )}
 
       {editionAllows('Constructor') && visibleSection === 'Constructor' && isAdmin && (
-        <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <ConstructorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+        </Suspense>
       )}
 
       {editionAllows('Entrenamientos') && visibleSection === 'Entrenamientos' && isAdmin && (
@@ -4555,7 +4578,9 @@ export default function App() {
       )}
 
       {editionAllows('Rutinas') && visibleSection === 'Rutinas' && (
-        <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <RutinasPage student={student} onUpdateStudent={() => cargarUsuario()} />
+        </Suspense>
       )}
 
       {editionAllows('Premium') && visibleSection === 'Premium' && (
@@ -4697,13 +4722,15 @@ export default function App() {
       )}
 
       {editionAllows('RegistroCompras') && visibleSection === 'RegistroCompras' && isAdmin && (
-        <RegistroComprasPage
-          registroCompras={registroCompras}
-          avatarRequests={avatarRequests}
-          aprobarSolicitud={aprobarSolicitud}
-          actualizarSolicitudAvatarIA={actualizarSolicitudAvatarIA}
-          descargarCSV={descargarCSV}
-        />
+        <Suspense fallback={<LazyPanelFallback />}>
+          <RegistroComprasPage
+            registroCompras={registroCompras}
+            avatarRequests={avatarRequests}
+            aprobarSolicitud={aprobarSolicitud}
+            actualizarSolicitudAvatarIA={actualizarSolicitudAvatarIA}
+            descargarCSV={descargarCSV}
+          />
+        </Suspense>
       )}
 
       {edition.allowBranding && editionAllows('Marca') && visibleSection === 'Marca' && isAdmin && (
