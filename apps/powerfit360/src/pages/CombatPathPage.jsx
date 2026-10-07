@@ -108,15 +108,6 @@ function clp(value) {
   }).format(value || 0)
 }
 
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#039;')
-}
-
 function downloadStudyTomo(detail, routeLabel) {
   const content = detail?.study?.content || detail?.tomo?.study_content || ''
   if (!content) {
