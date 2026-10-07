@@ -1,12 +1,14 @@
-﻿POWERFIT 360 FRONTEND DIRECT DB AUDIT
-Generated: 2026-09-04 22:18:52
-Commit base: ae2d02e0ddbd7b5e56a168acb23a65bbc6b764ed
-Remaining broad lines containing .from(: 2
-Remaining direct database supabase.from calls: 0
+POWERFIT 360 FRONTEND DIRECT DB AUDIT
+Updated: 2026-10-07
+Scope: apps/powerfit360/src/App.jsx
 
-Approved Supabase Storage .from calls may remain.
+Direct database supabase.from(...) calls: 0
+Approved Supabase Storage calls: profile-photos-private
+
 TARGET: 0 direct database-table calls.
+STATUS: PASS
 
-BROAD .from LINES:
-src/App.jsx:2566:      const privatePhotos = supabase.storage.from('profile-photos-private')
-src/App.jsx:2782:    const privatePhotos = supabase.storage.from('profile-photos-private')
+Architecture rule:
+- Sensitive application data must be accessed through authenticated RPCs with server-side role/self checks.
+- Direct Storage access is allowed only for explicitly private buckets with RLS/storage policies.
+- Re-run this audit after introducing new frontend data flows.
