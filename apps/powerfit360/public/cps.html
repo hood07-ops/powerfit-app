@@ -210,7 +210,7 @@ function renderStageMap(route){
       <div class="stage-icon">${done?'✓':i+1}</div>
       <div class="stage-meta">
         <strong>Tomo ${esc(t.tomo_no)} · ${esc(t.title||'')}</strong>
-        <small>Teoría ${esc(t.questions_approved||0)}/${esc(t.questions_total||0)} · Técnicas ${esc(t.cards_completed||0)}/${esc(t.cards_total||0)} · Avance ${esc(t.progress_pct||0)}%</small>
+        <small>${t.shared_content?'<span class="status" style="margin-right:6px">Contenido transversal</span>':''}Teoría ${esc(t.questions_approved||0)}/${esc(t.questions_total||0)} · Técnicas ${esc(t.cards_completed||0)}/${esc(t.cards_total||0)} · Avance ${esc(t.progress_pct||0)}%</small>
       </div>
       <div class="stage-action">${esc(stageActionLabel(action))}</div>
     </article>`;
