@@ -80,7 +80,7 @@ function renderAdminStageMap(data){
   return '<div class="mini-map">'+rows.map((t,i)=>{
     const done=String(t.next_action)==='COMPLETE'||String(t.access_status)==='TOMO_COMPLETED';
     const current=!done&&String(t.next_action)!=='LOCKED';
-    return '<div class="mini-step '+(done?'done ':'')+(current?'current':'')+'"><div class="mini-dot">'+(done?'✓':(i+1))+'</div><div><strong>Tomo '+esc(t.tomo_no)+' · '+esc(t.title||'')+'</strong><br><small>Teoría '+esc(t.questions_approved||0)+'/'+esc(t.questions_total||0)+' · Técnicas '+esc(t.cards_completed||0)+'/'+esc(t.cards_total||0)+' · '+esc(t.progress_pct||0)+'%</small></div><div class="mini-action">'+esc(stageActionLabel(t.next_action))+'</div></div>';
+    return '<div class="mini-step '+(done?'done ':'')+(current?'current':'')+'"><div class="mini-dot">'+(done?'✓':(i+1))+'</div><div><strong>Tomo '+esc(t.tomo_no)+' · '+esc(t.title||'')+'</strong><br><small>'+(t.shared_content?'<span class="tag">Contenido transversal</span> ':'')+'Teoría '+esc(t.questions_approved||0)+'/'+esc(t.questions_total||0)+' · Técnicas '+esc(t.cards_completed||0)+'/'+esc(t.cards_total||0)+' · '+esc(t.progress_pct||0)+'%</small></div><div class="mini-action">'+esc(stageActionLabel(t.next_action))+'</div></div>';
   }).join('')+'</div>';
 }
 function adminActivityLabel(type){
