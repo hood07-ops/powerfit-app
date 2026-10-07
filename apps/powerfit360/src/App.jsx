@@ -3199,6 +3199,7 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
 
 function NotificacionesPanel({ students, registroCompras, avatarRequests, student, isAdmin }) {
   const [trainingAlert, setTrainingAlert] = useState(null)
+  const [cpsAlerts, setCpsAlerts] = useState([])
 
   useEffect(() => {
     async function cargarAvisoEntrenamiento() {
@@ -3295,6 +3296,78 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
     cargarAvisoEntrenamiento()
   }, [isAdmin, student?.id])
 
+  useEffect(() => {
+    let cancelled = false
+
+    async function cargarAvisosCps() {
+      if (isAdmin || !student?.id) {
+        setCpsAlerts([])
+        return
+      }
+
+      const [boxing, kickboxing] = await Promise.all([
+        supabase.rpc('get_powerfit_cps_route_progress_secure', {
+          p_alumno_id: student.id,
+          p_path_code: 'BOXING',
+        }),
+        supabase.rpc('get_powerfit_cps_route_progress_secure', {
+          p_alumno_id: student.id,
+          p_path_code: 'KICKBOXING',
+        }),
+      ])
+
+      if (cancelled) return
+
+      const routes = [boxing.data, kickboxing.data].filter((route) => route?.enrolled)
+      setCpsAlerts(
+        routes.map((route) => {
+          const theoryPending = Math.max(
+            0,
+            Number(route.stage_questions_total || 0) - Number(route.stage_questions_approved || 0),
+          )
+          const cardsPending = Math.max(
+            0,
+            Number(route.stage_cards_total || 0) - Number(route.stage_cards_completed || 0),
+          )
+          const tomosPending = Math.max(
+            0,
+            Number(route.stage_tomos_total || 0) - Number(route.stage_tomos_completed || 0),
+          )
+
+          let title = 'Continúa tu progreso CPS'
+          let detail = 'Abre Mi Camino para revisar tu siguiente actividad.'
+
+          if (theoryPending > 0) {
+            title = 'Teoría CPS pendiente'
+            detail = `${theoryPending} pregunta${theoryPending === 1 ? '' : 's'} por aprobar en ${route.stage_label}.`
+          } else if (cardsPending > 0) {
+            title = 'Evaluación técnica pendiente'
+            detail = `${cardsPending} técnica${cardsPending === 1 ? '' : 's'} por completar en ${route.stage_label}.`
+          } else if (tomosPending > 0) {
+            title = 'Tomo pendiente de cierre'
+            detail = `${tomosPending} tomo${tomosPending === 1 ? '' : 's'} por cerrar en ${route.stage_label}.`
+          } else if (route.stage_ready_for_exam) {
+            title = 'Listo para examen final'
+            detail = `${route.stage_label} cumple los requisitos académicos para avanzar al examen final.`
+          }
+
+          return {
+            routeCode: route.route_code,
+            stageLabel: route.stage_label,
+            title,
+            detail,
+            progress: Number(route.stage_progress_pct || 0),
+          }
+        }),
+      )
+    }
+
+    cargarAvisosCps()
+    return () => {
+      cancelled = true
+    }
+  }, [isAdmin, student?.id])
+
   const comprasPendientes = registroCompras.filter(
     (compra) => (compra.estado || compra.estado_pago || 'Pendiente') !== 'Aprobado'
   )
@@ -3319,12 +3392,29 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
         </p>
       </div>
 
-      <div className="grid md:grid-cols-4 gap-4">
-        <Info label="Compras pendientes" value={comprasPendientes.length} />
-        <Info label="Avatar IA" value={avatarsPendientes.length} />
-        <Info label="Membresías por vencer" value={alumnosPorVencer.length} />
-        <Info label="Morosos" value={morosos.length} />
-      </div>
+      {isAdmin ? (
+        <div className="grid md:grid-cols-4 gap-4">
+          <Info label="Compras pendientes" value={comprasPendientes.length} />
+          <Info label="Avatar IA" value={avatarsPendientes.length} />
+          <Info label="Membresías por vencer" value={alumnosPorVencer.length} />
+          <Info label="Morosos" value={morosos.length} />
+        </div>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-3">
+          <Info
+            label="Entrenamiento"
+            value={trainingAlert ? trainingAlert.estado : 'Sin pendientes'}
+          />
+          <Info
+            label="Rutas CPS activas"
+            value={cpsAlerts.length}
+          />
+          <Info
+            label="Mi membresía"
+            value={student?.estado_pago || 'Pendiente'}
+          />
+        </div>
+      )}
 
       {!isAdmin && trainingAlert && (
         <div className={`rounded-2xl border p-5 ${
@@ -3363,6 +3453,43 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
             </span>
           </div>
         </div>
+      )}
+
+      {!isAdmin && cpsAlerts.length > 0 && (
+        <section className="space-y-3">
+          <div>
+            <p className="text-sm font-black uppercase tracking-wide text-yellow-400">
+              Alertas de estudio CPS
+            </p>
+            <p className="mt-1 text-sm text-zinc-500">
+              Sólo aparecen tareas que requieren una acción académica tuya.
+            </p>
+          </div>
+          {cpsAlerts.map((alert) => (
+            <button
+              key={alert.routeCode}
+              type="button"
+              onClick={() => {
+                const event = new CustomEvent('powerfit:navigate', { detail: { section: 'MiCamino' } })
+                window.dispatchEvent(event)
+              }}
+              className="w-full rounded-2xl border border-yellow-800 bg-yellow-950/20 p-5 text-left hover:border-yellow-500"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
+                    {alert.routeCode === 'BOXING' ? 'Boxeo' : 'Kickboxing'} · {alert.stageLabel}
+                  </p>
+                  <h3 className="mt-1 text-xl font-black text-yellow-300">{alert.title}</h3>
+                  <p className="mt-2 text-sm text-zinc-300">{alert.detail}</p>
+                </div>
+                <span className="rounded-full border border-yellow-800 px-3 py-1 text-xs font-black text-yellow-200">
+                  {alert.progress}%
+                </span>
+              </div>
+            </button>
+          ))}
+        </section>
       )}
 
       {!isAdmin && misDias !== null && misDias <= 5 && (
