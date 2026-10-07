@@ -9,6 +9,7 @@ import LoginPage from './pages/LoginPage'
 import MiQRPage from './pages/MiQRPage'
 import PremiumDesktopNav from './PremiumDesktopNav'
 import ChatWidget from './components/ChatWidget'
+import SelfProfileEditor from './components/SelfProfileEditor'
 
 const CombatPathPage = lazy(() => import('./pages/CombatPathPage'))
 const ConstructorPage = lazy(() => import('./pages/ConstructorPage'))
@@ -4788,6 +4789,11 @@ export default function App() {
             <Info label="Estado pago" value={student?.estado_pago} />
             <Info label="Generaciones" value={student?.generaciones_disponibles || 0} />
           </div>
+
+          <SelfProfileEditor
+            student={student}
+            onSaved={() => cargarUsuario()}
+          />
 
           <ProgressDashboard
             records={recordsEntrenamiento}
