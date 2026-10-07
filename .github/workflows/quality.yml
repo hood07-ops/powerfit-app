@@ -2,7 +2,7 @@ name: PowerFit Quality
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/powerfit-premium-next]
   pull_request:
 
 jobs:
