@@ -188,6 +188,64 @@ function CombatMetric({ label, value }) {
   )
 }
 
+function nextTomoAction(detail, theory) {
+  const access = String(detail?.access_status || 'LOCKED').toUpperCase()
+  const cards = detail?.cards || []
+
+  if (access === 'TOMO_COMPLETED') {
+    return { tone: 'green', title: 'Tomo completado', body: 'Este tomo ya está aprobado. Continúa con el siguiente tomo habilitado de tu nivel o grado.' }
+  }
+
+  if (access === 'LOCKED') {
+    return { tone: 'yellow', title: 'Desbloquea este tomo', body: 'Cumple los requisitos de tiempo, asistencia y tomos previos. Cuando esté habilitado podrás comprarlo o recibir acceso administrativo.' }
+  }
+
+  if (theory.total > 0 && theory.correction > 0) {
+    return { tone: 'red', title: 'Corrige tus respuestas teóricas', body: `Tienes ${theory.correction} respuesta${theory.correction === 1 ? '' : 's'} marcada${theory.correction === 1 ? '' : 's'} para corrección. Revisa el feedback del coach y vuelve a enviarla.` }
+  }
+
+  if (theory.total > 0 && theory.answered < theory.total) {
+    const pending = theory.total - theory.answered
+    return { tone: 'blue', title: 'Completa la teoría del tomo', body: `Te falta responder ${pending} pregunta${pending === 1 ? '' : 's'}. Estudia el material y responde con tus propias palabras.` }
+  }
+
+  if (theory.total > 0 && theory.approved < theory.total) {
+    const pending = theory.total - theory.approved
+    return { tone: 'yellow', title: 'Teoría en revisión', body: `Ya respondiste las preguntas. El coach debe aprobar ${pending} respuesta${pending === 1 ? '' : 's'} antes de cerrar la teoría.` }
+  }
+
+  const videoCorrection = cards.find((card) => card.status === 'VIDEO_CORRECTION_REQUIRED')
+  if (videoCorrection) {
+    return { tone: 'red', title: 'Repite un video técnico', body: `${videoCorrection.name || 'Una técnica'} necesita corrección. Revisa el feedback y sube un nuevo intento.` }
+  }
+
+  const videoRequired = cards.find((card) => ['AVAILABLE', 'LEARNING', 'VIDEO_REQUIRED'].includes(String(card.status || '').toUpperCase()))
+  if (videoRequired) {
+    return { tone: 'blue', title: 'Sube tu siguiente video técnico', body: `Continúa con ${videoRequired.name || 'la siguiente técnica'}. Ejecuta la técnica con control y envía el video para revisión.` }
+  }
+
+  const videoReview = cards.find((card) => ['VIDEO_SUBMITTED', 'VIDEO_UNDER_REVIEW'].includes(String(card.status || '').toUpperCase()))
+  if (videoReview) {
+    return { tone: 'yellow', title: 'Video en revisión', body: `${videoReview.name || 'Tu técnica'} ya fue enviada. Espera la evaluación del coach antes de continuar esa tarjeta.` }
+  }
+
+  const liveCorrection = cards.find((card) => card.status === 'LIVE_CORRECTION_REQUIRED')
+  if (liveCorrection) {
+    return { tone: 'red', title: 'Repite la evaluación presencial', body: `${liveCorrection.name || 'Una técnica'} requiere corrección presencial antes de quedar completada.` }
+  }
+
+  const livePending = cards.find((card) => ['VIDEO_APPROVED', 'LIVE_PENDING'].includes(String(card.status || '').toUpperCase()))
+  if (livePending) {
+    return { tone: 'blue', title: 'Realiza la evaluación presencial', body: `${livePending.name || 'Tu técnica'} ya superó la etapa de video. El siguiente paso es demostrarla en vivo con el coach.` }
+  }
+
+  if (cards.length && cards.every((card) => ['LIVE_APPROVED', 'COMPLETED'].includes(String(card.status || '').toUpperCase()))) {
+    return { tone: 'green', title: 'Listo para la prueba del tomo', body: 'La teoría y las tarjetas técnicas están completas. Solicita al coach la evaluación final de este tomo.' }
+  }
+
+  return { tone: 'blue', title: 'Estudia y practica', body: 'Revisa el material del tomo, trabaja sus conceptos y continúa con las evaluaciones disponibles.' }
+}
+
 function buildFallbackDetail(pathCode, tomoNo) {
   const tomo = FALLBACK_TOMOS.find(([id]) => id === Number(tomoNo))
   return {
@@ -239,6 +297,8 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
       pct: total ? Math.round((approved / total) * 100) : 0,
     }
   }, [questions])
+
+  const nextAction = useMemo(() => nextTomoAction(detail, theory), [detail, theory])
 
   const loadHome = useCallback(async function loadHome() {
     setLoading(true)
@@ -709,6 +769,20 @@ export default function CombatPathPage({ student, user, isAdmin = false }) {
             )}
           </div>
         )}
+
+        <div className={`mt-6 rounded-2xl border p-4 sm:p-5 ${
+          nextAction.tone === 'green'
+            ? 'border-green-500/50 bg-green-950/20'
+            : nextAction.tone === 'red'
+              ? 'border-red-500/50 bg-red-950/20'
+              : nextAction.tone === 'yellow'
+                ? 'border-yellow-500/50 bg-yellow-950/20'
+                : 'border-blue-500/50 bg-blue-950/20'
+        }`}>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">Tu siguiente paso</p>
+          <h4 className="mt-1 text-xl font-black text-white">{nextAction.title}</h4>
+          <p className="mt-2 text-sm font-bold leading-6 text-zinc-300">{nextAction.body}</p>
+        </div>
 
         {(detail?.access_status !== 'LOCKED' || isAdmin) &&
           (detail?.study?.content || detail?.tomo?.study_content) && (
