@@ -45,8 +45,8 @@ export default function PremiumDesktopNav({
   const secondary = [
     ['XPRangos', t.xpRanks],
     ['Metodos', t.library],
-    ...(isAdmin ? [['Generador', t.aiGenerator]] : []),
-    ['Constructor', t.workoutBuilder],
+    ['Generador', t.aiGenerator],
+    ...(isAdmin ? [['Constructor', t.workoutBuilder]] : []),
     ['Rutinas', t.routines],
     ['Premium', t.premium],
     ['Estadísticas', t.stats],
