@@ -3926,6 +3926,10 @@ function StudentHomePanel({ student, setSection, asistencias = [] }) {
                     />
                   </div>
 
+                  <div className="mt-3 rounded-xl border border-yellow-900/60 bg-yellow-950/20 px-3 py-2 text-sm font-bold text-yellow-200">
+                    {cpsHomeNextStep(route)}
+                  </div>
+
                   <div className="mt-3 grid grid-cols-3 gap-2 text-center text-xs">
                     <div className="rounded-xl bg-zinc-950 p-2">
                       <strong className="block text-white">{route.stage_questions_approved ?? 0}/{route.stage_questions_total ?? 0}</strong>
