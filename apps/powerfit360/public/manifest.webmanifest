@@ -1,14 +1,19 @@
 {
   "name": "PowerFit 360",
   "short_name": "PowerFit",
-  "description": "Gestion de alumnos, pagos, asistencia y planificaciones PowerFit.",
+  "description": "Entrenamiento, estudio CPS, asistencia y progreso deportivo PowerFit 360.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#09090b",
-  "categories": ["fitness", "sports", "productivity", "education"],
+  "categories": [
+    "fitness",
+    "sports",
+    "productivity",
+    "education"
+  ],
   "lang": "es-CL",
   "icons": [
     {
@@ -32,25 +37,43 @@
   ],
   "shortcuts": [
     {
+      "name": "Mi entrenamiento",
+      "short_name": "Entrenar",
+      "description": "Abrir mi entrenamiento asignado.",
+      "url": "/?section=MiEntrenamiento",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Mi Camino CPS",
+      "short_name": "CPS",
+      "description": "Abrir mi nivel, grado y progreso CPS.",
+      "url": "/?section=MiCamino",
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
       "name": "Asistencia QR",
       "short_name": "QR",
-      "description": "Abrir control de asistencia PowerFit.",
+      "description": "Abrir mi control de asistencia PowerFit.",
       "url": "/?section=AsistenciaQR",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Generador IA",
-      "short_name": "IA",
-      "description": "Abrir generador de planificaciones PowerFit.",
-      "url": "/?section=Generador",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
-    },
-    {
-      "name": "Admin alumnos",
-      "short_name": "Admin",
-      "description": "Abrir administracion de alumnos.",
-      "url": "/?section=Admin",
-      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+      "icons": [
+        {
+          "src": "/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }
