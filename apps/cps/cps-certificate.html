@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Certificado CPS · PowerFit 360</title>
+  <style>
+    :root{color-scheme:dark;--bg:#08090c;--panel:#15181f;--line:#3a3f4f;--gold:#ffc400;--text:#f8f8fb;--muted:#b7bdca}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#1e1a08,#08090c 45%);color:var(--text);font-family:Inter,Arial,Helvetica,sans-serif}
+    main{max-width:980px;margin:0 auto;padding:24px 16px 56px}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+    button,a{border:0;border-radius:11px;padding:11px 14px;font-weight:900;text-decoration:none;cursor:pointer}.primary{background:var(--gold);color:#111}.secondary{background:#262b36;color:white;border:1px solid var(--line)}
+    .state{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}.cert{position:relative;overflow:hidden;background:linear-gradient(145deg,#17191f,#0f1116);border:2px solid #8c7218;border-radius:24px;padding:clamp(26px,6vw,64px);box-shadow:0 24px 80px #0009}
+    .cert:before,.cert:after{content:"";position:absolute;width:220px;height:220px;border:1px solid #ffc40022;border-radius:50%}.cert:before{right:-80px;top:-80px}.cert:after{left:-90px;bottom:-100px}
+    .brand{font-size:clamp(22px,4vw,34px);font-weight:1000;color:var(--gold);letter-spacing:.03em}.eyebrow{margin-top:8px;color:var(--muted);font-size:12px;font-weight:900;letter-spacing:.16em;text-transform:uppercase}
+    .title{margin:44px 0 8px;font-size:clamp(28px,6vw,54px);line-height:1.05}.student{font-size:clamp(24px,5vw,44px);font-weight:1000;color:white;margin:24px 0}.copy{max-width:760px;color:#d9dde7;font-size:clamp(16px,2.2vw,20px);line-height:1.7}
+    .meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:34px}.meta div{padding:14px;border:1px solid var(--line);border-radius:14px;background:#0c0f14}.meta small{display:block;color:var(--muted);font-weight:800;margin-bottom:5px}.meta strong{font-size:17px}
+    .code{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);font-family:ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);font-size:12px;word-break:break-all}
+    .error{border-color:#ef233c;color:#ffd4da}
+    @media print{
+      :root{color-scheme:light}body{background:white;color:#111}.actions,.state{display:none!important}main{max-width:none;padding:0}.cert{min-height:100vh;border-radius:0;box-shadow:none;background:white;color:#111;border:8px double #9b7b12}.student,.title{color:#111}.copy{color:#222}.brand{color:#8b6900}.eyebrow,.meta small,.code{color:#555}.meta div{background:white;border-color:#bbb}
+    }
+  </style>
+</head>
+<body>
+<main>
+  <div class="actions">
+    <button id="printBtn" class="primary" type="button">IMPRIMIR / GUARDAR PDF</button>
+    <a href="/cps.html" class="secondary">Volver a CPS</a>
+  </div>
+  <section id="state" class="state">Cargando certificado seguro...</section>
+  <section id="certificate" class="cert" style="display:none"></section>
+</main>
+<script type="module">
+import{createClient}from"https://esm.sh/@supabase/supabase-js@2.105.4";
+const supabase=createClient("https://sabsmurhriohwmczaktn.supabase.co","sb_publishable_tj-oblYhYqN5sKWFrrxe1g_NzimyN0p");
+const stateEl=document.querySelector('#state'),certEl=document.querySelector('#certificate');
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const params=new URLSearchParams(location.search),code=params.get('code')||'';
+document.querySelector('#printBtn').addEventListener('click',()=>window.print());
+
+async function load(){
+  const{data:userData}=await supabase.auth.getUser();
+  if(!userData.user){stateEl.classList.add('error');stateEl.textContent='Sesión requerida. Ingresa a PowerFit y vuelve a abrir el certificado.';return}
+  if(!code){stateEl.classList.add('error');stateEl.textContent='Falta el código del certificado.';return}
+  const{data,error}=await supabase.rpc('get_powerfit_cps_certificate_secure',{p_certificate_code:code});
+  if(error){stateEl.classList.add('error');stateEl.textContent=String(error.message||'No se pudo abrir el certificado.');return}
+  stateEl.style.display='none';certEl.style.display='block';
+  const issued=data.issued_at?new Date(data.issued_at).toLocaleDateString('es-CL',{year:'numeric',month:'long',day:'numeric'}):'—';
+  certEl.innerHTML=
+    '<div class="brand">PowerFit 360 · CPS</div>'+
+    '<div class="eyebrow">Combat Performance System</div>'+
+    '<h1 class="title">Certificado de progresión técnica</h1>'+
+    '<div class="copy">Se certifica que</div>'+
+    '<div class="student">'+esc(data.student_name||'Alumno CPS')+'</div>'+
+    '<div class="copy">ha completado satisfactoriamente los requisitos académicos, técnicos y de evaluación correspondientes a <strong>'+esc(data.title||data.stage_label||'la etapa CPS')+'</strong>.</div>'+
+    '<div class="meta">'+
+      '<div><small>Disciplina</small><strong>'+esc(data.route_code)+'</strong></div>'+
+      '<div><small>Nivel / grado</small><strong>'+esc(data.stage_label||('Etapa '+data.stage_order))+'</strong></div>'+
+      '<div><small>Puntaje final</small><strong>'+esc(data.final_score??'—')+'</strong></div>'+
+      '<div><small>Fecha de emisión</small><strong>'+esc(issued)+'</strong></div>'+
+    '</div>'+
+    '<div class="code">Código de certificado: '+esc(data.certificate_code||'')+'</div>';
+}
+load();
+</script>
+</body>
+</html>
