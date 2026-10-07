@@ -1,6 +1,6 @@
 import { createMcpHandler } from "mcp-handler";
 import { z } from "zod";
-import { findKnowledgeAnswer } from "../supabase/functions/powerfit-chat/knowledge.ts";
+import { findKnowledgeAnswer } from "../supabase/functions/powerfit-chat/knowledge";
 
 const handler = createMcpHandler((server) => {
   server.registerTool(
