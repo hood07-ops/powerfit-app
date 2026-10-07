@@ -3197,7 +3197,7 @@ function EstadísticasPanel({ students, asistencias, recordsEntrenamiento }) {
   )
 }
 
-function NotificacionesPanel({ students, registroCompras, avatarRequests, student, isAdmin }) {
+function NotificacionesPanel({ students, registroCompras, avatarRequests, student, isAdmin, setSection }) {
   const [trainingAlert, setTrainingAlert] = useState(null)
   const [cpsAlerts, setCpsAlerts] = useState([])
 
@@ -3469,10 +3469,7 @@ function NotificacionesPanel({ students, registroCompras, avatarRequests, studen
             <button
               key={alert.routeCode}
               type="button"
-              onClick={() => {
-                const event = new CustomEvent('powerfit:navigate', { detail: { section: 'MiCamino' } })
-                window.dispatchEvent(event)
-              }}
+              onClick={() => setSection('MiCamino')}
               className="w-full rounded-2xl border border-yellow-800 bg-yellow-950/20 p-5 text-left hover:border-yellow-500"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
@@ -5073,6 +5070,7 @@ export default function App() {
           avatarRequests={avatarRequests}
           student={student}
           isAdmin={isAdmin}
+          setSection={setSection}
         />
       )}
 
