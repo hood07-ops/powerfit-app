@@ -1356,23 +1356,113 @@ function AdminAlumnosPanel({
   abrirDetalle,
   registrarPago,
 }) {
+  const [filtroRapido, setFiltroRapido] = useState('todos')
+  const hoy = new Date()
+  hoy.setHours(0, 0, 0, 0)
+
+  const alumnoIdsHoy = new Set(
+    asistencias
+      .filter((item) => {
+        const fecha = new Date(fechaAsistencia(item) || 0)
+        fecha.setHours(0, 0, 0, 0)
+        return fecha.getTime() === hoy.getTime()
+      })
+      .map((item) => String(item.alumno_id)),
+  )
+
+  const resumenById = new Map(
+    students.map((alumno) => [String(alumno.id), resumenAsistenciaAlumno(alumno, asistencias)]),
+  )
+
+  const morosos = students.filter((alumno) => alumno.estado_pago === 'Moroso')
+  const porVencer = students.filter((alumno) => {
+    const dias = diferenciaDias(alumno.fecha_vencimiento)
+    return alumno.estado_pago === 'Pagado' && dias !== null && dias >= 0 && dias <= 5
+  })
+  const inactivos14 = students.filter((alumno) => {
+    const resumen = resumenById.get(String(alumno.id))
+    return resumen?.diasSinAsistir !== null && Number(resumen?.diasSinAsistir) >= 14
+  })
+
+  const visibles = alumnosFiltrados.filter((alumno) => {
+    if (filtroRapido === 'todos') return true
+    if (filtroRapido === 'hoy') return alumnoIdsHoy.has(String(alumno.id))
+    if (filtroRapido === 'morosos') return alumno.estado_pago === 'Moroso'
+    if (filtroRapido === 'por_vencer') {
+      const dias = diferenciaDias(alumno.fecha_vencimiento)
+      return alumno.estado_pago === 'Pagado' && dias !== null && dias >= 0 && dias <= 5
+    }
+    if (filtroRapido === 'inactivos') {
+      const resumen = resumenById.get(String(alumno.id))
+      return resumen?.diasSinAsistir !== null && Number(resumen?.diasSinAsistir) >= 14
+    }
+    return true
+  })
+
+  const filtros = [
+    ['todos', 'Todos', students.length],
+    ['hoy', 'Asistieron hoy', alumnoIdsHoy.size],
+    ['morosos', 'Morosos', morosos.length],
+    ['por_vencer', 'Por vencer', porVencer.length],
+    ['inactivos', 'Sin asistir 14+ días', inactivos14.length],
+  ]
+
   return (
     <div className="admin-students-shell bg-zinc-900 border border-red-500/40 rounded-2xl sm:rounded-3xl p-4 sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.22em] text-red-400">PowerFit 360</p>
           <h2 className="mt-1 text-3xl sm:text-4xl font-black text-white">
-            Buscar alumno
+            Panel diario de alumnos
           </h2>
           <p className="text-zinc-400 mt-2">
-            Busca un alumno y abre su ficha para editar datos, revisar asistencia,
-            mensualidad y resumen.
+            Prioriza asistencia, pagos y seguimiento antes de entrar a la ficha individual.
           </p>
         </div>
 
         <div className="rounded-2xl border border-red-500/20 bg-red-950/20 px-4 py-3 font-black text-white">
-          <span className="text-red-400">👥</span> {alumnosFiltrados.length} / {students.length} alumnos
+          <span className="text-red-400">👥</span> {visibles.length} / {students.length} alumnos
         </div>
+      </div>
+
+      <div className="mb-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="rounded-2xl border border-zinc-700 bg-black/40 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-zinc-500">Alumnos</p>
+          <p className="mt-1 text-3xl font-black text-white">{students.length}</p>
+        </div>
+        <div className="rounded-2xl border border-cyan-700/60 bg-cyan-950/20 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-cyan-400">Asistieron hoy</p>
+          <p className="mt-1 text-3xl font-black text-cyan-200">{alumnoIdsHoy.size}</p>
+        </div>
+        <div className="rounded-2xl border border-red-700/60 bg-red-950/20 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-red-400">Morosos</p>
+          <p className="mt-1 text-3xl font-black text-red-200">{morosos.length}</p>
+        </div>
+        <div className="rounded-2xl border border-yellow-700/60 bg-yellow-950/20 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-yellow-400">Por vencer ≤5 días</p>
+          <p className="mt-1 text-3xl font-black text-yellow-200">{porVencer.length}</p>
+        </div>
+        <div className="rounded-2xl border border-orange-700/60 bg-orange-950/20 p-4">
+          <p className="text-xs font-black uppercase tracking-wide text-orange-400">Sin asistir 14+ días</p>
+          <p className="mt-1 text-3xl font-black text-orange-200">{inactivos14.length}</p>
+        </div>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {filtros.map(([value, label, count]) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => setFiltroRapido(value)}
+            className={`rounded-xl border px-3 py-2 text-sm font-black transition ${
+              filtroRapido === value
+                ? 'border-red-500 bg-red-600 text-white'
+                : 'border-zinc-700 bg-zinc-950 text-zinc-300 hover:border-zinc-500'
+            }`}
+          >
+            {label} · {count}
+          </button>
+        ))}
       </div>
 
       <div className="student-search-shell mb-6">
@@ -1386,9 +1476,10 @@ function AdminAlumnosPanel({
       </div>
 
       <div className="space-y-3">
-        {alumnosFiltrados.map((alumno) => {
-          const resumen = resumenAsistenciaAlumno(alumno, asistencias)
+        {visibles.map((alumno) => {
+          const resumen = resumenById.get(String(alumno.id)) || resumenAsistenciaAlumno(alumno, asistencias)
           const diasVence = diferenciaDias(alumno.fecha_vencimiento)
+          const inactivo = resumen.diasSinAsistir !== null && Number(resumen.diasSinAsistir) >= 14
 
           return (
             <article
@@ -1406,6 +1497,18 @@ function AdminAlumnosPanel({
                   <p className="mt-1 truncate text-sm text-zinc-400">
                     {alumno.email || alumno.telefono || '-'}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {alumnoIdsHoy.has(String(alumno.id)) && (
+                      <span className="rounded-full border border-cyan-700 bg-cyan-950 px-2 py-1 text-[11px] font-black text-cyan-300">
+                        ASISTIÓ HOY
+                      </span>
+                    )}
+                    {inactivo && (
+                      <span className="rounded-full border border-orange-700 bg-orange-950 px-2 py-1 text-[11px] font-black text-orange-300">
+                        14+ DÍAS SIN ASISTIR
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="student-role-chip">{alumno.role || 'alumno'}</span>
               </div>
@@ -1461,8 +1564,8 @@ function AdminAlumnosPanel({
           )
         })}
 
-        {alumnosFiltrados.length === 0 && (
-          <p className="text-zinc-400">No hay alumnos para esa búsqueda.</p>
+        {visibles.length === 0 && (
+          <p className="text-zinc-400">No hay alumnos que coincidan con este filtro.</p>
         )}
       </div>
     </div>
