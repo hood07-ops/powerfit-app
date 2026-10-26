@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'powerfit-360-v2026-10-05-secure-cps-v1'
+const CACHE_VERSION = 'powerfit-360-v2026-10-25-local-planning-v1'
 
 const APP_SHELL = [
   '/',
