@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
-import { generarPlanMensual } from './workoutSystem'
+import { generarEntrenamiento, generarPlanMensual } from './workoutSystem'
+import { buildPhysicalConsultation, formatPhysicalConsultation } from '@powerfit/training-engine'
+import { PHYSICAL_CONSULTANT_ENABLED } from '../physicalConsultantConfig'
 import { generarSemanaTecnica, TECHNICAL_SPORTS, WEEKLY_LEVELS, COMBAT_STAGES, goalsForCombatStage } from './technicalPlanningSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
@@ -657,6 +659,8 @@ function VistaPlanMensual({ plan, nombreAlumno }) {
 
 export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' }) {
   const [tipoPlan, setTipoPlan] = useState('sesion')
+  const [usarOpenAi, setUsarOpenAi] = useState(false)
+  const [consultationNeedsReview, setConsultationNeedsReview] = useState(false)
   const [objetivo, setObjetivo] = useState('fighter')
   const [nivel, setNivel] = useState('intermedio')
   const [faseATR, setFaseATR] = useState('acumulacion')
@@ -682,6 +686,15 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
   const t = GENERADOR_TEXT[idioma] || GENERADOR_TEXT.es
+  const physicalConsultation = PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en'
+    ? buildPhysicalConsultation({
+        goal: tipoPlan === 'semanal' ? 'fighter' : objetivo,
+        level: nivel,
+        historyCount: planificaciones.length,
+        rmCount: rms.length,
+        needsReview: consultationNeedsReview,
+      })
+    : null
   const gradosNivelesTecnicos = COMBAT_STAGES[deporteTecnico] || COMBAT_STAGES.boxeo
   const objetivosTacticosDisponibles = goalsForCombatStage(deporteTecnico, gradoNivelTecnico)
 
@@ -895,6 +908,10 @@ Vuelta a la calma: dirigida en clase.
 
   async function generar() {
     if (!student || generando) return
+    if (physicalConsultation?.needsReview) {
+      setMensaje(physicalConsultation.review)
+      return
+    }
 
     setGenerando(true)
     setMensaje('')
@@ -973,6 +990,28 @@ Vuelta a la calma: dirigida en clase.
           p_source_ref: 'technical-week-v1',
         })
 
+        saveData = result.data
+        saveError = result.error
+      } else if (!usarOpenAi) {
+        const plan = generarEntrenamiento({
+          objetivo,
+          nivel,
+          faseATR,
+          rms,
+          faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
+          historial: planificaciones.map((item) => item.contenido),
+        })
+        contenidoGenerado = corregirNombresPowerFit(textoPlan(plan, planificaciones.length + 1))
+        if (physicalConsultation) {
+          contenidoGenerado += `\n\n${formatPhysicalConsultation(physicalConsultation)}`
+        }
+        const result = await supabase.rpc('save_powerfit_manual_plan_with_generation_secure', {
+          p_alumno_id: student.id,
+          p_objetivo: objetivo,
+          p_nivel: nivel,
+          p_contenido: contenidoGenerado,
+          p_source_ref: 'powerfit-session-local-v1',
+        })
         saveData = result.data
         saveError = result.error
       } else {
@@ -1220,7 +1259,7 @@ Vuelta a la calma: dirigida en clase.
               tipoPlan === 'sesion' ? 'bg-red-600' : 'bg-zinc-800'
             }`}
           >
-            {t.session}
+            {idioma === 'en' ? 'PowerFit session - uses 1 generation' : 'Sesión PowerFit - usa 1 generación'}
           </button>
 
           <button
@@ -1242,6 +1281,16 @@ Vuelta a la calma: dirigida en clase.
           </button>
         </div>
       </div>
+
+      {tipoPlan === 'sesion' && (
+        <label className="flex items-center gap-3 bg-zinc-900 border border-zinc-700 rounded-2xl p-4">
+          <input type="checkbox" checked={usarOpenAi} disabled={generando}
+            onChange={(event) => setUsarOpenAi(event.target.checked)} />
+          <span>{idioma === 'en'
+            ? 'Use OpenAI (optional). Leave off to generate with the original PowerFit engine.'
+            : 'Usar OpenAI (opcional). Desactivado: genera con el motor PowerFit de siempre.'}</span>
+        </label>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         <div className="bg-zinc-900 border border-blue-600 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">
@@ -1345,6 +1394,20 @@ Vuelta a la calma: dirigida en clase.
           </p>
         </div>
       </div>
+
+      {physicalConsultation && (
+        <section aria-label="Asesoría de preparación física" className="bg-zinc-900 border border-blue-500 rounded-2xl p-4 sm:p-6 space-y-4">
+          <h2 className="text-xl font-black text-blue-300">Tu preparación según el objetivo</h2>
+          <p className="text-sm text-zinc-400">La propuesta cambia con el objetivo y el nivel seleccionados. La semana técnica añade además el deporte y el objetivo táctico elegidos.</p>
+          <p className="text-sm text-zinc-400">Asesoría local para revisión: no analiza automáticamente el cumplimiento de las sesiones ni sustituye la evaluación del entrenador.</p>
+          <label className="flex items-start gap-3 text-sm text-zinc-200">
+            <input type="checkbox" checked={consultationNeedsReview} disabled={generando}
+              onChange={(event) => setConsultationNeedsReview(event.target.checked)} />
+            Tengo una limitación o molestia pendiente de revisar con mi entrenador.
+          </label>
+          <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">{formatPhysicalConsultation(physicalConsultation)}</pre>
+        </section>
+      )}
 
       {tipoPlan === 'semanal' ? (
         <div className="bg-zinc-900 border border-yellow-500 rounded-2xl sm:rounded-3xl p-4 sm:p-6 space-y-4">

@@ -1,0 +1,2 @@
+export const PHYSICAL_CONSULTANT_ENABLED =
+  import.meta.env.VITE_POWERFIT_PHYSICAL_CONSULTANT === 'true'

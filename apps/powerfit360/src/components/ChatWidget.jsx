@@ -1,11 +1,16 @@
 import { useMemo, useState } from 'react'
 import { buildChatPayload, CHAT_SURFACES } from '@powerfit/ai-chat'
 import { supabase } from '../supabase'
+import { respondToPhysicalConsultation } from '@powerfit/training-engine'
+import { PHYSICAL_CONSULTANT_ENABLED } from '../physicalConsultantConfig'
 
 export default function ChatWidget({ student, idioma = 'es' }) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
+  const [consultationGoal, setConsultationGoal] = useState(null)
+  const [consultationProfile, setConsultationProfile] = useState({})
+  const [consultationNeedsReview, setConsultationNeedsReview] = useState(false)
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
@@ -23,7 +28,9 @@ export default function ChatWidget({ student, idioma = 'es' }) {
 
   const suggestions = idioma === 'en'
     ? ['How many AI generations do I have?', 'How do I generate a workout?', 'Where do I upload a CPS video?', 'How do I advance in CPS?']
-    : ['¿Cuántas generaciones IA tengo?', '¿Cómo genero una planificación?', '¿Dónde subo un video CPS?', '¿Cómo avanzo en CPS?']
+    : PHYSICAL_CONSULTANT_ENABLED
+      ? ['Quiero un preparador físico según mi objetivo', 'Quiero mejorar fuerza', 'Quiero mejorar para boxeo', 'Quiero mejorar resistencia', '¿Cuántas generaciones IA tengo?']
+      : ['¿Cuántas generaciones IA tengo?', '¿Cómo genero una planificación?', '¿Dónde subo un video CPS?', '¿Cómo avanzo en CPS?']
 
   async function openChatGPT() {
     const transcript = messages
@@ -57,6 +64,26 @@ export default function ChatWidget({ student, idioma = 'es' }) {
     setSending(true)
 
     try {
+      if (PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en') {
+        const consultation = respondToPhysicalConsultation({
+          message,
+          previousGoal: consultationGoal,
+          profile: consultationProfile,
+          level: student?.nivel || null,
+        })
+        if (consultation) {
+          setConsultationGoal(consultation.goal)
+          if (consultation.profile) setConsultationProfile(consultation.profile)
+          if (consultation.needsReview) setConsultationNeedsReview(true)
+          setMessages((current) => [...current, {
+            role: 'assistant',
+            content: consultationNeedsReview && !consultation.needsReview
+              ? 'La asesoría de entrenamiento está pendiente de revisión profesional por la limitación indicada. Contacta a tu entrenador antes de continuar con una propuesta de ejercicio. Esta pantalla no ha enviado mensajes ni creado un caso automáticamente.'
+              : consultation.reply,
+          }])
+          return
+        }
+      }
       const { data, error } = await supabase.functions.invoke('powerfit-chat', {
         body: buildChatPayload({
           message,
@@ -132,7 +159,7 @@ export default function ChatWidget({ student, idioma = 'es' }) {
                 className={
                   item.role === 'user'
                     ? 'ml-10 rounded-2xl rounded-br-md bg-red-600 px-4 py-3 text-sm text-white'
-                    : 'mr-8 rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-100'
+                    : 'mr-8 whitespace-pre-line rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-100'
                 }
               >
                 {item.content}
