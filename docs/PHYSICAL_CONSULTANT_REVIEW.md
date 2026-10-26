@@ -65,6 +65,14 @@ Para revisión local, establecer `VITE_POWERFIT_PHYSICAL_CONSULTANT=true` antes 
 
 ## Entrega y reversión
 
+### Pruebas locales de la transacción y permisos
+
+Se añadió `npm run test:plan-rpc`: nueve pruebas con PostgreSQL PGlite en memoria, sin URLs ni credenciales. Con las 19 pruebas deportivas, se verifican 28 pruebas. El workflow ejecuta también esta integración SQL. Detalles y límites: `docs/PLAN_RPC_LOCAL_VALIDATION.md`.
+
+Se verificó localmente guardado/crédito atómico, errores y rollback, separación propietario/otro alumno, admin, restricción vigente para coach asignado y agotamiento de saldo. No se reemplaza la prueba HTTP/JWT/RLS/triggers ni se simula concurrencia multiconexión.
+
+La prueba reproduce una condición permisiva con propietario NULL en tres funciones inspeccionadas. Se preparó una propuesta SQL transaccional con guard de drift (`supabase/proposals/harden_plan_rpc_null_authorization.sql`), validada solo en memoria. NO está en migrations y NO se aplicó a producción. Su ejecución real requiere autorización específica y revisión fresca. El PR no debe considerarse autorización para aplicarla ni para activar la nueva asesoría.
+
 ### Continuación de validación del PR #34
 
 El primer CI pasó calidad y CodeQL, pero su auditoría detectó vulnerabilidades ya presentes en las dependencias base. Se fijaron versiones exactas de `@modelcontextprotocol/server` 2.4.0, `zod` 4.6.6 y `vite` 8.3.5, con lockfile actualizado. Ambas auditorías (`npm audit --audit-level=critical` y `npm audit --omit=dev --audit-level=high`) informan cero vulnerabilidades en la validación local.

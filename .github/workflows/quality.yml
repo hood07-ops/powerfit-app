@@ -34,6 +34,9 @@ jobs:
       - name: Test physical consultant rules and student isolation
         run: node --test packages/training-engine/src/*.test.js
 
+      - name: Test plan and credit SQL contracts in isolated PostgreSQL
+        run: npm run test:plan-rpc
+
       - name: Security check
         run: node scripts/security-check.mjs
 

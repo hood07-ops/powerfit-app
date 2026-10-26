@@ -24,6 +24,8 @@
     "build:professor": "npm run build:coach",
     "build:cps": "npm run build --workspace @powerfit/cps",
     "lint": "eslint .",
+    "test:training": "node --test packages/training-engine/src/*.test.js",
+    "test:plan-rpc": "node --test tests/plan-rpc.integration.test.mjs",
     "preview": "vite preview apps/powerfit360 --config apps/powerfit360/vite.config.js"
   },
   "dependencies": {
@@ -41,6 +43,7 @@
     "@capacitor/android": "8.4.3",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
+    "@electric-sql/pglite": "0.5.12",
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
