@@ -27,15 +27,15 @@
     "preview": "vite preview apps/powerfit360 --config apps/powerfit360/vite.config.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/server": "2.4.0",
     "@supabase/supabase-js": "^2.105.4",
     "@tailwindcss/vite": "^4.3.0",
+    "mcp-handler": "2.1.1",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-qr-code": "^2.0.21",
-    "mcp-handler": "2.1.1",
-    "@modelcontextprotocol/server": "2.0.0",
-    "zod": "^4.2.0"
+    "zod": "4.6.6"
   },
   "devDependencies": {
     "@capacitor/android": "8.4.3",
@@ -49,7 +49,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "vite": "^8.0.12"
+    "vite": "8.3.5"
   },
   "overrides": {
     "source-map-js": "1.2.2"

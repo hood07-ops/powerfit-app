@@ -65,6 +65,16 @@ Para revisión local, establecer `VITE_POWERFIT_PHYSICAL_CONSULTANT=true` antes 
 
 ## Entrega y reversión
 
+### Continuación de validación del PR #34
+
+El primer CI pasó calidad y CodeQL, pero su auditoría detectó vulnerabilidades ya presentes en las dependencias base. Se fijaron versiones exactas de `@modelcontextprotocol/server` 2.4.0, `zod` 4.6.6 y `vite` 8.3.5, con lockfile actualizado. Ambas auditorías (`npm audit --audit-level=critical` y `npm audit --omit=dev --audit-level=high`) informan cero vulnerabilidades en la validación local.
+
+Se incorporaron las pruebas del consultor y una compilación con el flag activado al workflow de calidad. El smoke test MCP prueba también tres clientes independientes que reutilizan el mismo identificador JSON-RPC, compatible con la fábrica de servidor existente. No se modificó el endpoint MCP ni sus permisos.
+
+La declaración de molestia prevalece aunque falten duración/esfuerzo, y el formulario marca revisión inmediatamente. ESLint ignora ahora `dist` en todos los paquetes para excluir únicamente artefactos generados. Las vistas temporales de prueba se retiraron.
+
+Revalidación local: 19 pruebas, MCP inicial e independiente, validación de paquetes CPS, escaneo de credenciales cliente, ESLint completo y builds estándar/Admin/Coach/Alumno/CPS/Coach con flag activado: PASS. Sigue pendiente la prueba autenticada de persistencia/créditos en staging y la validación profesional de dosis; no se ha fusionado ni publicado a producción.
+
 Diff en rama aislada `codex/physical-consultant-goals`; sin cambios a main ni despliegue productivo. El árbol de trabajo original y su índice se conservan.
 
 Reversión funcional: omitir el flag o establecerlo en `false` y volver a compilar la misma versión. Si se decide desplegar, conservar la versión anterior para rollback. Publicación, activación productiva, envío de mensajes o migraciones requieren autorización específica.

@@ -177,7 +177,7 @@ export function analyzeCompletedTraining(records = []) {
   const valid = records.filter((record) => record?.status === 'completed' && typeof record.durationMinutes === 'number' && Number.isFinite(record.durationMinutes) && record.durationMinutes > 0 && record.durationMinutes <= 300 && typeof record.srpe === 'number' && Number.isFinite(record.srpe) && record.srpe >= 1 && record.srpe <= 10)
   const totalMinutes = valid.reduce((sum, item) => sum + item.durationMinutes, 0)
   const totalLoad = valid.reduce((sum, item) => sum + item.durationMinutes * item.srpe, 0)
-  const needsReview = valid.some((item) => item.reportedConcern === true)
+  const needsReview = records.some((item) => item?.reportedConcern === true)
   return {
     sampleSize: valid.length, rejected: records.length - valid.length, totalMinutes,
     totalLoad: Math.round(totalLoad),

@@ -71,6 +71,7 @@ test('load analysis excludes planned, missing and invalid records', () => {
 test('reported concern takes precedence over adequate sample size', () => {
   const result = analyzeCompletedTraining(Array.from({ length: 5 }, () => ({ status: 'completed', durationMinutes: 30, srpe: 5, reportedConcern: true })))
   assert.equal(result.recommendation, 'human_review')
+  assert.equal(analyzeCompletedTraining([{ status: 'completed', reportedConcern: true }]).recommendation, 'human_review')
 })
 
 test('consultation memory isolates students, preserves review lock and supports shared subscription', () => {

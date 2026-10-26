@@ -54,7 +54,7 @@ export default function TrainingConsultantPanel({ student, goal, level, viewerId
         <label>Minutos realizados<input className={fieldClass} type="number" min="1" max="300" value={feedbackMinutes} onChange={(event) => setFeedbackMinutes(event.target.value)} /></label>
         <label>Esfuerzo sRPE (1–10)<input className={fieldClass} type="number" min="1" max="10" step="0.5" value={feedbackRpe} onChange={(event) => setFeedbackRpe(event.target.value)} /></label>
       </div>
-      <label className="flex gap-2 my-3"><input type="checkbox" checked={feedbackConcern} onChange={(event) => setFeedbackConcern(event.target.checked)} />Reporto una molestia que necesita revisión.</label>
+      <label className="flex gap-2 my-3"><input type="checkbox" checked={feedbackConcern} onChange={(event) => { setFeedbackConcern(event.target.checked); if (event.target.checked) updateProfile({ needsReview: true }) }} />Reporto una molestia que necesita revisión.</label>
       <button type="button" className="bg-blue-700 px-3 py-2 rounded-xl" onClick={recordFeedback}>Añadir registro de esta consulta</button>
       <p role="status" className="mt-2">{feedbackMessage}</p>
       <p>{feedback.sampleSize} sesiones declaradas · {feedback.totalMinutes} min · carga sRPE acumulada: {feedback.totalLoad} unidades arbitrarias.</p>
