@@ -40,7 +40,7 @@
     "zod": "4.6.6"
   },
   "devDependencies": {
-    "@capacitor/android": "8.4.3",
+    "@capacitor/android": "8.5.2",
     "@capacitor/cli": "^8.4.0",
     "@capacitor/core": "^8.4.0",
     "@electric-sql/pglite": "0.5.12",
