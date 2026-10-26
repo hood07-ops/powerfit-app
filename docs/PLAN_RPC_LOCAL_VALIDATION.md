@@ -27,15 +27,15 @@ Diez pruebas SQL ejecutan los cuerpos PL/pgSQL reales bajo rol `authenticated`, 
 9. Si las funciones cambian después del snapshot, el guard de hashes aborta y no sobrescribe esas modificaciones.
 10. El rol `anon` no puede ejecutar las tres entradas. En los catálogos reales se confirmó propietario `postgres`, SECURITY DEFINER, propietario con bypass de RLS, permiso de ejecución para `authenticated` y sin permiso para `anon`; el fixture reproduce esos permisos de entrada.
 
-## Hallazgo y propuesta pendiente
+## Hallazgo y corrección autorizada
 
 `IF NOT (permiso_a OR permiso_b)` no entra en el rechazo cuando la expresión vale NULL. `alumnos.user_id` admite NULL. En el fixture se puede guardar y consumir crédito de ese alumno sin ser su propietario ni administrador. Esto verifica la debilidad de los cuerpos SQL observados, no demuestra por sí solo una explotación extremo a extremo en producción.
 
-La propuesta `supabase/proposals/harden_plan_rpc_null_authorization.sql` cambia únicamente las tres condiciones de autorización a `(...) IS NOT TRUE`, conservando firmas, SECURITY DEFINER, search_path, zona horaria, validación y reglas de roles. Está fuera de migrations y NO se ha aplicado a ningún entorno real. Compara hashes de las definiciones antes de reemplazarlas para abortar si existe drift. El script es transaccional.
+El SQL revisado `supabase/proposals/harden_plan_rpc_null_authorization.sql` cambia únicamente las tres condiciones de autorización a `(...) IS NOT TRUE`, conservando firmas, SECURITY DEFINER, search_path, zona horaria, validación y reglas de roles. Se aplicó con autorización explícita a Boxeo Rapa Nui mediante la migración registrada `20261026195820_harden_plan_rpc_null_authorization`. El archivo conserva el SQL de revisión y su guard de hashes: no debe reaplicarse sobre funciones ya corregidas.
 
 El lector `get_powerfit_generator_state_secure` presenta el mismo patrón: se reproduce su acceso con datos ficticios y se incluye en la propuesta. No se probaron fugas con datos reales ni se afirma que todos los demás RPC del backend estén auditados.
 
-Antes de ejecutar la propuesta en un proyecto real: autorización específica, comparación fresca del SQL y privilegios, revisión del alcance y prueba de la transacción con una identidad de prueba autorizada. No fusionar ni activar la nueva asesoría por el hecho de que estos tests pasen.
+Antes de aplicar se confirmaron los tres hashes originales y sus permisos. Después se confirmaron las condiciones corregidas y los mismos privilegios: propietario postgres, SECURITY DEFINER, ejecución para authenticated y sin ejecución para anon. Una transacción READ ONLY bajo rol authenticated y sin identidad verificó que las tres funciones rechazan la llamada; no creó planes ni consumió créditos. La publicación de la asesoría fue autorizada por el usuario de forma separada en la continuación del trabajo.
 
 ## Límites de lo verificado
 
@@ -45,4 +45,4 @@ Antes de ejecutar la propuesta en un proyecto real: autorización específica, c
 - El RPC no implementa una clave de idempotencia para intentos repetidos con saldo suficiente. No se añadió una regla nueva de deduplicación ni se afirma que exista.
 - Un coach asignado es rechazado por el wrapper manual aunque el guardado base contemple gestión asignada. Se conserva y documenta este contrato; cambiarlo ampliaría permisos y requiere una decisión explícita.
 
-La revisión profesional de dosis y la prueba autenticada en staging real siguen pendientes. Ningún crédito ni dato de producción fue alterado.
+La revisión profesional de dosis y la prueba autenticada completa en staging real siguen pendientes. Se actualizaron solo las definiciones de las tres funciones; no se alteraron créditos ni filas de alumnos o planes.

@@ -59,7 +59,7 @@ Consultadas para criterios generales de individualización, constancia y combina
 - El estado `HUMAN_REQUIRED` bloquea propuestas locales en esa consulta. No existe bandeja humana persistida, asignación de entrenador ni confirmación real de atención. Borrar una consulta no acredita una aprobación profesional.
 - La recomendación según registros es conservadora y descriptiva. Faltan medidas comparables, contexto clínico y revisión humana para una prescripción individual avanzada.
 - El preview temporal local usa datos ficticios y no se incluye en el commit. No debe publicarse como ruta de producto.
-- Antes de activar en producción: prueba autenticada de guardado/cuota por rol en staging y revisión profesional de las reglas de dosis. Para permitir nuevas consultas API, cambiar credenciales o migrar persistencia, hace falta decisión específica; esta versión no requiere nada de eso para sus borradores locales.
+- La publicación autorizada ofrece borradores orientativos. La prueba autenticada completa de guardado/cuota por rol en staging y la revisión profesional de las reglas de dosis siguen siendo límites pendientes, no validaciones completadas. No se cambian claves API ni se persiste el perfil local.
 
 Para revisión local, establecer `VITE_POWERFIT_PHYSICAL_CONSULTANT=true` antes de compilar. No requiere migraciones ni nuevas credenciales.
 
@@ -71,7 +71,7 @@ Se añadió `npm run test:plan-rpc`: diez pruebas con PostgreSQL PGlite en memor
 
 Se verificó localmente guardado/crédito atómico, errores y rollback, separación propietario/otro alumno, admin, restricción vigente para coach asignado y agotamiento de saldo. No se reemplaza la prueba HTTP/JWT/RLS/triggers ni se simula concurrencia multiconexión.
 
-La prueba reproduce una condición permisiva con propietario NULL en tres funciones inspeccionadas. Se preparó una propuesta SQL transaccional con guard de drift (`supabase/proposals/harden_plan_rpc_null_authorization.sql`), validada solo en memoria. NO está en migrations y NO se aplicó a producción. Su ejecución real requiere autorización específica y revisión fresca. El PR no debe considerarse autorización para aplicarla ni para activar la nueva asesoría.
+La prueba reproduce una condición permisiva con propietario NULL en tres funciones inspeccionadas. El SQL revisado (`supabase/proposals/harden_plan_rpc_null_authorization.sql`) se validó en memoria y se aplicó después con autorización explícita: migración Supabase `20261026195820_harden_plan_rpc_null_authorization`. Se verificaron hashes y permisos antes/después y rechazo de identidad vacía en una transacción de solo lectura. No se alteraron filas de alumnos, planes ni saldos.
 
 ### Continuación de validación del PR #34
 
@@ -83,6 +83,6 @@ La declaración de molestia prevalece aunque falten duración/esfuerzo, y el for
 
 Revalidación local: 19 pruebas, MCP inicial e independiente, validación de paquetes CPS, escaneo de credenciales cliente, ESLint completo y builds estándar/Admin/Coach/Alumno/CPS/Coach con flag activado: PASS. Sigue pendiente la prueba autenticada de persistencia/créditos en staging y la validación profesional de dosis; no se ha fusionado ni publicado a producción.
 
-Diff en rama aislada `codex/physical-consultant-goals`; sin cambios a main ni despliegue productivo. El árbol de trabajo original y su índice se conservan.
+Trabajo preparado en `codex/physical-consultant-goals` y PR #34. La continuación fue autorizada para cambios reales, incluida publicación. Se conserva el árbol de trabajo original y su índice. La caché PWA identifica la versión `powerfit-360-v2026-10-26-physical-consultant-v2`.
 
 Reversión funcional: omitir el flag o establecerlo en `false` y volver a compilar la misma versión. Si se decide desplegar, conservar la versión anterior para rollback. Publicación, activación productiva, envío de mensajes o migraciones requieren autorización específica.

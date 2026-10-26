@@ -1,4 +1,6 @@
--- PROPOSAL ONLY. NOT APPLIED TO ANY LIVE PROJECT.
+-- REVIEWED CHANGE: applied with explicit user authorization on 2026-10-26.
+-- Supabase migration: 20261026195820_harden_plan_rpc_null_authorization.
+-- Historical reviewed SQL, also used by isolated tests; do not reapply blindly.
 -- Narrow authorization hardening: NULL is never treated as permission.
 -- Preserves existing owner/admin/assigned-coach rules and function attributes.
 BEGIN;
