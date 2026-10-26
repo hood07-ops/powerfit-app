@@ -33,6 +33,9 @@ before(async () => {
   await db.exec(await file('./fixtures/plan-rpc-observed.sql'))
   await db.exec(await file('./fixtures/generator-reader-schema.sql'))
   await db.exec(await file('./fixtures/generator-reader-observed.sql'))
+  for (const signature of ['save_powerfit_plan_secure(bigint,text,text,text,text,text)', 'save_powerfit_manual_plan_with_generation_secure(bigint,text,text,text,text)', 'get_powerfit_generator_state_secure(bigint)']) {
+    await db.exec(`revoke all on function public.${signature} from public, anon; grant execute on function public.${signature} to authenticated`)
+  }
 })
 after(async () => { await db?.close() })
 beforeEach(async () => {
@@ -57,6 +60,14 @@ test('unauthenticated and another student cannot save or consume a credit', asyn
     await assert.rejects(actingAs(uid, (tx) => save(tx)), (error) => error.code === '42501')
     assert.deepEqual(await snapshot(), { balance: 3, plans: 0, metadata: 0, events: 0, adjustments: 0 })
   }
+})
+
+test('anonymous role has no execute grant on the three observed entry points', async () => {
+  await assert.rejects(db.transaction(async (tx) => {
+    await tx.exec('set local role anon')
+    return save(tx)
+  }), (error) => error.code === '42501')
+  assert.deepEqual(await snapshot(), { balance: 3, plans: 0, metadata: 0, events: 0, adjustments: 0 })
 })
 
 test('admin may save, while manual credit RPC retains its existing coach restriction', async () => {

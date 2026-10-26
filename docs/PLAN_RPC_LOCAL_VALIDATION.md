@@ -14,7 +14,7 @@ Fixtures: seis tablas con tipos/defaults observados, cuatro tablas mínimas auxi
 
 ## Resultados
 
-Nueve pruebas SQL ejecutan los cuerpos PL/pgSQL reales bajo rol `authenticated`:
+Diez pruebas SQL ejecutan los cuerpos PL/pgSQL reales bajo rol `authenticated`, más una comprobación de ejecución anónima:
 
 1. El propietario guarda texto adaptado, metadata y evento, descontando exactamente un crédito.
 2. Un usuario sin identidad y otro alumno son rechazados sin escrituras parciales.
@@ -25,6 +25,7 @@ Nueve pruebas SQL ejecutan los cuerpos PL/pgSQL reales bajo rol `authenticated`:
 7. Se reproduce una brecha de autorización por propietario NULL en el SQL observado.
 8. La propuesta de endurecimiento rechaza el propietario NULL en los dos puntos de escritura y en el lector del generador, conservando guardados legítimos.
 9. Si las funciones cambian después del snapshot, el guard de hashes aborta y no sobrescribe esas modificaciones.
+10. El rol `anon` no puede ejecutar las tres entradas. En los catálogos reales se confirmó propietario `postgres`, SECURITY DEFINER, propietario con bypass de RLS, permiso de ejecución para `authenticated` y sin permiso para `anon`; el fixture reproduce esos permisos de entrada.
 
 ## Hallazgo y propuesta pendiente
 
