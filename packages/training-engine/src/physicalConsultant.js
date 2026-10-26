@@ -1,3 +1,5 @@
+import { generateAdaptiveSession, formatAdaptiveSession, buildAdaptiveMicrocycle, CONSULTANT_EQUIPMENT } from './adaptivePlanning.js'
+
 // Local, reviewable coaching rules. No network, clinical assessment or account actions.
 export const PHYSICAL_GOALS = Object.freeze({
   fighter: {
@@ -77,7 +79,7 @@ export function buildPhysicalConsultation({ goal, level, daysPerWeek, durationMi
     review: needsReview
       ? 'Se necesita revisión del entrenador antes de generar o progresar una sesión. Esta pantalla no contacta a un profesional automáticamente.'
       : 'Propuesta orientativa para revisar con tu entrenador. No garantiza resultados ni sustituye una evaluación individual.',
-    source: 'Reglas locales PowerFit · preparación física v1 · propuesta para revisión',
+    source: 'Reglas locales PowerFit · preparación física v2 · propuesta para revisión',
   }
 }
 
@@ -108,33 +110,59 @@ const GOAL_PATTERNS = {
 
 export function respondToPhysicalConsultation({ message, previousGoal = null, profile = {}, level = null } = {}) {
   const normalized = String(message || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
-  const goals = Object.entries(GOAL_PATTERNS).filter(([, pattern]) => pattern.test(normalized)).map(([goal]) => goal)
-  const trainingIntent = /objetivo|preparador|entren|progres|planifica|rutina|quiero mejorar|ganar|consultor/.test(normalized)
-  // Account/navigation questions continue to the existing authorized chat service.
-  if (/\b(pago|pagar|mensualidad|generaciones|credito|subir|video|cps|tomo)\b/.test(normalized)) return null
-  const daysMatch = normalized.match(/\b([1-7])\s*(?:dias|veces)\b/)
-  const minutesMatch = normalized.match(/\b(\d{2,3})\s*min/)
-  const levelMatch = normalized.match(/\b(inicial|principiante|basico|intermedio|avanzado|competidor)\b/)
-  const equipment = /\bsin material(?:es)?\b/.test(normalized) ? 'sin materiales'
-    : /\b(mancuernas|bandas|gimnasio completo)\b/.exec(normalized)?.[0]
-  const intakeReply = previousGoal && (daysMatch || minutesMatch || levelMatch || equipment)
-  if (!goals.length && !trainingIntent && !intakeReply && !previousGoal) return null
-  if (!goals.length && !trainingIntent && !intakeReply && !/dolor|lesion|mareo|desmayo|sintomas/.test(normalized)) return null
-  const concernText = normalized.replace(/\bsin (dolor|lesiones|lesion)\b/g, '')
+  let goals = Object.entries(GOAL_PATTERNS).filter(([, pattern]) => pattern.test(normalized)).map(([goal]) => goal)
+  const sportGoal = goals.find((goal) => ['fighter', 'tenis'].includes(goal))
+  const sportPriority = sportGoal && goals.every((goal) => [sportGoal, 'fuerza', 'cardio'].includes(goal)) && !/\by\b/.test(normalized)
+    ? goals.includes('cardio') ? 'resistencia' : goals.includes('fuerza') ? 'fuerza' : null
+    : null
+  if (sportPriority) goals = [sportGoal]
+  const trainingIntent = /objetivo|preparador|entren|progres|planifica|rutina|quiero mejorar|ganar|consultor|sesion|semana|ejercicio|sentadilla|flexion|repeticiones/.test(normalized)
+  const concernText = normalized.replace(/\b(?:sin|no tengo|no presento) (dolor|lesiones|lesion|mareo|sintomas)\b/g, '')
   if (/\b(dolor|lesion|lesiones|mareo|desmayo|sintomas)\b/.test(concernText)) {
     return { goal: previousGoal, needsReview: true, reply: 'Para adaptar una planificación con molestias o una lesión, solicita una evaluación al profesional competente y revisión de tu entrenador. No voy a proponer cargas ni ejercicios para tratar esos síntomas. No se ha enviado ninguna solicitud ni mensaje automáticamente.' }
   }
+  // Account/navigation questions continue to the existing authorized chat service.
+  if (/\b(pago|pagar|mensualidad|generaciones?|creditos?|subir|video|cps|tomo)\b/.test(normalized)) return null
+  const daysMatch = normalized.match(/\b([1-7])\s*(?:dias|veces)\b/)
+  const minutesMatch = normalized.match(/\b(\d{2,3})\s*min/)
+  const levelMatch = normalized.match(/\b(inicial|principiante|basico|intermedio|avanzado|competidor)\b/)
+  const adultDeclaration = /\b(soy adulto|soy adulta|mayor de edad)\b/.test(normalized) && !/\bno (soy|soy una persona|soy una|soy un)\b/.test(normalized)
+  const ageMatch = normalized.match(/\btengo (\d{1,3}) anos\b/)
+  const equipment = /\bsin material(?:es)?\b/.test(normalized) ? 'sin materiales'
+    : /\b(mancuernas|bandas|gimnasio completo)\b/.exec(normalized)?.[0]
+  const intakeReply = previousGoal && (daysMatch || minutesMatch || levelMatch || equipment || adultDeclaration || ageMatch)
+  if (!goals.length && !trainingIntent && !intakeReply && !previousGoal) return null
+  if (!goals.length && !trainingIntent && !intakeReply && !/dolor|lesion|mareo|desmayo|sintomas/.test(normalized)) return null
   if (goals.length > 1 || /\b(no quiero|no busco|ya no)\b/.test(normalized)) {
     return { goal: null, reply: 'Antes de orientar la preparación, confirma un objetivo principal: combate, tenis, fuerza, pérdida de grasa, resistencia o empezar en casa. Podemos coordinar objetivos secundarios después.' }
   }
   const goal = goals[0] || previousGoal
   const nextProfile = {
     ...profile,
+    ...(sportPriority ? { priority: sportPriority } : {}),
     ...(daysMatch ? { daysPerWeek: Number(daysMatch[1]) } : {}),
     ...(minutesMatch ? { durationMinutes: Number(minutesMatch[1]) } : {}),
     ...(equipment ? { equipment } : {}),
     ...(levelMatch ? { level: levelMatch[1] === 'principiante' ? 'inicial' : levelMatch[1] } : {}),
+    ...(adultDeclaration ? { adultConfirmed: true } : {}),
+    ...(ageMatch ? { adultConfirmed: Number(ageMatch[1]) >= 18 && Number(ageMatch[1]) < 120 } : {}),
   }
-  const report = buildPhysicalConsultation({ ...nextProfile, goal, level: nextProfile.level || level })
+  const effectiveProfile = { ...nextProfile, goal, level: nextProfile.level || level }
+  if (/\b(sesion|rutina|plan|semana|microciclo)\b/.test(normalized) && goal) {
+    const draft = generateAdaptiveSession(effectiveProfile)
+    if (!draft.ok) return { goal, profile: nextProfile, reply: `Antes de generar: ${draft.explanation} Puedes completar los datos en «Mi perfil, propuesta semanal y seguimiento».` }
+    if (/\b(semana|microciclo)\b/.test(normalized)) {
+      const cycle = buildAdaptiveMicrocycle(effectiveProfile)
+      return { goal, profile: nextProfile, reply: [
+        'PROPUESTA SEMANAL POWERFIT · para revisión',
+        ...cycle.days.map((day) => `Día ${day.day}: ${day.focus}${day.durationMinutes ? ` Hasta ${day.durationMinutes} min.` : ''}`),
+        ...cycle.weeks.map((week) => `Semana ${week.week}: ${week.focus}. ${week.condition}`),
+        ...cycle.warnings,
+        'Puedes revisar los ejercicios concretos de la sesión en el panel de esta consulta. No se guardó ni descontó una generación.',
+      ].join('\n\n') }
+    }
+    return { goal, profile: nextProfile, reply: `${formatAdaptiveSession(draft.session)}\n\nBorrador de consulta: no se guardó una planificación ni se descontaron créditos.` }
+  }
+  const report = buildPhysicalConsultation({ ...effectiveProfile, equipment: CONSULTANT_EQUIPMENT[nextProfile.equipment] || nextProfile.equipment })
   return { goal: goal || null, profile: nextProfile, reply: report ? formatPhysicalConsultation(report) : 'Para orientarte como preparador físico, dime tu objetivo principal, nivel actual, días y minutos disponibles, equipamiento y limitaciones. ¿Qué quieres mejorar primero?' }
 }

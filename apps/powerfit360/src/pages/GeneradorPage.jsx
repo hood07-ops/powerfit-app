@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../supabase'
 import { generarEntrenamiento, generarPlanMensual } from './workoutSystem'
-import { buildPhysicalConsultation, formatPhysicalConsultation } from '@powerfit/training-engine'
+import { buildPhysicalConsultation, formatPhysicalConsultation, generateAdaptiveSession, formatAdaptiveSession, CONSULTANT_EQUIPMENT } from '@powerfit/training-engine'
 import { PHYSICAL_CONSULTANT_ENABLED } from '../physicalConsultantConfig'
+import { useConsultantProfile } from '../useConsultantProfile'
+import TrainingConsultantPanel from '../components/TrainingConsultantPanel'
 import { generarSemanaTecnica, TECHNICAL_SPORTS, WEEKLY_LEVELS, COMBAT_STAGES, goalsForCombatStage } from './technicalPlanningSystem'
 
 const ADMIN_WHATSAPP = '56988497852'
@@ -657,12 +659,15 @@ function VistaPlanMensual({ plan, nombreAlumno }) {
   )
 }
 
-export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' }) {
+export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es', viewerId = null }) {
+  const { profile: consultantProfile, updateProfile } = useConsultantProfile(student, viewerId)
   const [tipoPlan, setTipoPlan] = useState('sesion')
   const [usarOpenAi, setUsarOpenAi] = useState(false)
-  const [consultationNeedsReview, setConsultationNeedsReview] = useState(false)
-  const [objetivo, setObjetivo] = useState('fighter')
-  const [nivel, setNivel] = useState('intermedio')
+  const [defaultGoal, setObjetivo] = useState('fighter')
+  const [defaultLevel, setNivel] = useState('intermedio')
+  const consultantEnabled = PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en'
+  const objetivo = consultantEnabled ? consultantProfile.goal || defaultGoal : defaultGoal
+  const nivel = consultantEnabled ? consultantProfile.level || defaultLevel : defaultLevel
   const [faseATR, setFaseATR] = useState('acumulacion')
   const [deporteTecnico, setDeporteTecnico] = useState('boxeo')
   const [objetivoTactico, setObjetivoTactico] = useState('control_distancia')
@@ -686,13 +691,16 @@ export default function GeneradorPage({ student, onUpdateStudent, idioma = 'es' 
   const [generando, setGenerando] = useState(false)
   const [guardandoRM, setGuardandoRM] = useState(false)
   const t = GENERADOR_TEXT[idioma] || GENERADOR_TEXT.es
-  const physicalConsultation = PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en'
+  const physicalConsultation = consultantEnabled
     ? buildPhysicalConsultation({
         goal: tipoPlan === 'semanal' ? 'fighter' : objetivo,
         level: nivel,
         historyCount: planificaciones.length,
         rmCount: rms.length,
-        needsReview: consultationNeedsReview,
+        daysPerWeek: consultantProfile.daysPerWeek,
+        durationMinutes: consultantProfile.durationMinutes,
+        equipment: CONSULTANT_EQUIPMENT[consultantProfile.equipment],
+        needsReview: consultantProfile.needsReview,
       })
     : null
   const gradosNivelesTecnicos = COMBAT_STAGES[deporteTecnico] || COMBAT_STAGES.boxeo
@@ -912,6 +920,13 @@ Vuelta a la calma: dirigida en clase.
       setMensaje(physicalConsultation.review)
       return
     }
+    const adapted = consultantEnabled && tipoPlan === 'sesion' && !usarOpenAi
+      ? generateAdaptiveSession({ ...consultantProfile, goal: objetivo, level: nivel })
+      : null
+    if (adapted && !adapted.ok) {
+      setMensaje(adapted.explanation)
+      return
+    }
 
     setGenerando(true)
     setMensaje('')
@@ -993,7 +1008,7 @@ Vuelta a la calma: dirigida en clase.
         saveData = result.data
         saveError = result.error
       } else if (!usarOpenAi) {
-        const plan = generarEntrenamiento({
+        const plan = adapted ? null : generarEntrenamiento({
           objetivo,
           nivel,
           faseATR,
@@ -1001,7 +1016,9 @@ Vuelta a la calma: dirigida en clase.
           faseMenstrual: usarCicloMenstrual ? faseMenstrual : null,
           historial: planificaciones.map((item) => item.contenido),
         })
-        contenidoGenerado = corregirNombresPowerFit(textoPlan(plan, planificaciones.length + 1))
+        contenidoGenerado = corregirNombresPowerFit(adapted
+          ? `POWERFIT 360\nAlumno: ${student.nombre}\n\n${formatAdaptiveSession(adapted.session)}`
+          : textoPlan(plan, planificaciones.length + 1))
         if (physicalConsultation) {
           contenidoGenerado += `\n\n${formatPhysicalConsultation(physicalConsultation)}`
         }
@@ -1010,7 +1027,7 @@ Vuelta a la calma: dirigida en clase.
           p_objetivo: objetivo,
           p_nivel: nivel,
           p_contenido: contenidoGenerado,
-          p_source_ref: 'powerfit-session-local-v1',
+          p_source_ref: adapted ? adapted.session.version : 'powerfit-session-local-v1',
         })
         saveData = result.data
         saveError = result.error
@@ -1400,11 +1417,8 @@ Vuelta a la calma: dirigida en clase.
           <h2 className="text-xl font-black text-blue-300">Tu preparación según el objetivo</h2>
           <p className="text-sm text-zinc-400">La propuesta cambia con el objetivo y el nivel seleccionados. La semana técnica añade además el deporte y el objetivo táctico elegidos.</p>
           <p className="text-sm text-zinc-400">Asesoría local para revisión: no analiza automáticamente el cumplimiento de las sesiones ni sustituye la evaluación del entrenador.</p>
-          <label className="flex items-start gap-3 text-sm text-zinc-200">
-            <input type="checkbox" checked={consultationNeedsReview} disabled={generando}
-              onChange={(event) => setConsultationNeedsReview(event.target.checked)} />
-            Tengo una limitación o molestia pendiente de revisar con mi entrenador.
-          </label>
+          <p className="text-sm text-blue-200">La adaptación de ejercicios por material y tiempo se aplica a la sesión PowerFit sin OpenAI. El plan mensual, la semana técnica y el modo OpenAI conservan sus motores actuales.</p>
+          <TrainingConsultantPanel student={student} viewerId={viewerId} goal={tipoPlan === 'semanal' ? 'fighter' : objetivo} level={nivel} />
           <pre className="whitespace-pre-wrap font-sans text-sm text-zinc-200">{formatPhysicalConsultation(physicalConsultation)}</pre>
         </section>
       )}
@@ -1443,7 +1457,7 @@ Vuelta a la calma: dirigida en clase.
             >
               {gradosNivelesTecnicos.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
-            <select value={nivel} onChange={(e) => setNivel(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
+            <select value={nivel} onChange={(e) => { setNivel(e.target.value); if (consultantEnabled) updateProfile({ level: e.target.value }) }} className="bg-zinc-800 p-4 rounded-2xl">
               {WEEKLY_LEVELS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
             <select value={objetivoTactico} onChange={(e) => setObjetivoTactico(e.target.value)} className="bg-zinc-800 p-4 rounded-2xl">
@@ -1464,7 +1478,7 @@ Vuelta a la calma: dirigida en clase.
               <div className="grid md:grid-cols-3 gap-4">
                 <select
                   value={objetivo}
-                  onChange={(e) => setObjetivo(e.target.value)}
+                  onChange={(e) => { setObjetivo(e.target.value); if (consultantEnabled) updateProfile({ goal: e.target.value }) }}
                   className="bg-zinc-800 p-4 rounded-2xl"
                 >
                   <option value="fighter">Fighter</option>
@@ -1477,7 +1491,7 @@ Vuelta a la calma: dirigida en clase.
         
                 <select
                   value={nivel}
-                  onChange={(e) => setNivel(e.target.value)}
+                  onChange={(e) => { setNivel(e.target.value); if (consultantEnabled) updateProfile({ level: e.target.value }) }}
                   className="bg-zinc-800 p-4 rounded-2xl"
                 >
                   <option value="basico">Básico</option>

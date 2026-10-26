@@ -12,8 +12,9 @@ Base inspeccionada: `origin/main`, commit `dfd8812`. Se conserva además la corr
 | Semana técnica por deporte y objetivo táctico | EXISTE | `apps/powerfit360/src/pages/technicalPlanningSystem.js` |
 | Asesoría por objetivos en chat y generador | EN PRUEBAS | `packages/training-engine/src/physicalConsultant.js` y sus dos consumidores |
 | Handoff con asignación humana y resolución persistida | NO IMPLEMENTADO | Solo aviso explícito de revisión y bloqueo local de nuevas propuestas de entrenamiento en la conversación actual |
-| Ajuste automático de ejercicios por equipamiento, días o síntomas | NO IMPLEMENTADO | El chat recoge disponibilidad/equipo para orientar y preguntar; no prescribe un programa completo ni modifica automáticamente ejercicios con estos datos |
-| Análisis del rendimiento realizado | NO IMPLEMENTADO | Se distingue planificación de cumplimiento; no se infiere progreso de planes guardados |
+| Sesión local adaptada por objetivo, prioridad, material y minutos | EN PRUEBAS | `packages/training-engine/src/adaptivePlanning.js`; no adapta ejercicios a lesiones |
+| Semana y cuatro semanas de revisión | EN PRUEBAS | Distribuye días declarados entre preparación física, práctica fácil y recuperación; progresión condicional, sin aumento automático |
+| Análisis de sesiones completadas declaradas | EN PRUEBAS | Registros manuales en memoria, sRPE descriptivo; no se consulta historial oficial ni se infiere progreso de planes guardados |
 | Asesor financiero/Meta/operaciones | FUERA DEL PEDIDO ACTUAL | No se modificaron |
 
 Se detectan nombres de archivos `.env` versionados en `apps/powerfit360/`: `.env`, `.env.management`, `.env.professor_full`, `.env.student`. No se leyeron sus valores para esta auditoría. La presencia de un archivo no demuestra que contenga un secreto. Revisar por separado; no se ejecutó saneamiento ni rotación.
@@ -24,21 +25,41 @@ Rapa Nui Tour AI no se consultó ni modificó: este pedido se resuelve extendien
 
 - Flag nuevo: `VITE_POWERFIT_PHYSICAL_CONSULTANT`; desactivado salvo valor literal `true`. La primera versión de asesoría es en español; el chat en inglés conserva su ruta actual.
 - Seis objetivos: combate, tenis, fuerza, pérdida de grasa, resistencia e inicio en casa. El chat solicita un objetivo principal si hay varios o una negación.
-- Nivel, disponibilidad y equipamiento declarados se conservan en memoria en el chat, sin consultas nuevas ni escritura de perfiles. No se comparte automáticamente ese contexto con el generador ni entre sesiones.
+- Nivel, disponibilidad, prioridad deportiva, equipamiento, meta y fecha de evento se conservan en memoria y se comparten entre chat y generador. El ámbito incluye usuario visor, gimnasio y alumno. No se escriben en localStorage, cookies ni backend; al recargar se borran.
 - Cada orientación explica prioridades, criterios de progreso, datos faltantes y procedencia local. No usa OpenAI ni necesita otra clave.
-- La asesoría visible en el generador sigue objetivo/nivel seleccionados. En la sesión local, se incorpora al contenido que se guarda y descarga. No se modifica el formato Excel mensual ni el contenido ya persistido por el proveedor IA.
+- La sesión local usa ejercicios compatibles con material declarado y asigna presupuestos de práctica/descanso cuya suma coincide con los minutos disponibles. No asume banco, silla, saco, anclaje ni balón. No calcula kilos desde RM. El contenido adaptado se guarda/descarga por la RPC existente y lleva referencia de versión. La vista de consulta y el chat solo crean borradores, sin consumir créditos.
+- El plan mensual, la semana técnica y la opción OpenAI conservan sus motores y formatos; la interfaz explica este límite. No se modifican Edge Functions ni llamadas OpenAI.
+- Los borradores adaptados requieren objetivo, nivel, disponibilidad, equipo y confirmación de persona adulta. Ante datos faltantes, se pide completar; ante molestia, se marca revisión. No constituye cribado médico ni autorización clínica.
+- Los registros manuales aceptan solo sesiones completadas con duración/esfuerzo válidos, conservan hasta 30 registros por consulta y calculan minutos y sRPE descriptivos. No predicen lesiones ni autorizan progresión automática.
 - Una limitación marcada en el generador detiene esa solicitud antes de consultar créditos o generar. En el chat, las propuestas de entrenamiento quedan pendientes de revisión durante la conversación actual; pagos y ayuda de navegación continúan por el servicio existente.
 - No se cambian políticas RLS, autorización, pagos, saldos, porcentajes, contratos ni canales externos. La persistencia de planes sigue las RPC existentes.
 
 ## Validación
 
-- PASS: 8 pruebas de reglas, continuidad de contexto, objetivos ambiguos/negados, revisión humana, ausencia de RM e independencia de consultas de pago.
+- PASS: 19 pruebas, incluidas 720 combinaciones de objetivo/nivel/material/duración, datos inválidos, minoría de edad declarada, fechas, prioridades deportivas, continuidad del chat, revisión, aislamiento de memoria y registros completados.
 - PASS: ESLint en los archivos cambiados.
 - PASS: compilación estándar con flag apagado.
 - PASS: compilaciones Admin, Coach y Alumno con flag activado.
-- Pendiente: revisión visual y prueba autenticada completa en staging; verificar persistencia, créditos y permisos contra el backend autorizado. No se hicieron llamadas de generación con coste ni cambios productivos.
+- PASS: compilación CPS y compilación estándar con flag explícitamente apagado.
+- PASS: revisión visual local con datos ficticios, escritorio y viewport 390×844; perfil compartido → sesión sin material → respuesta semanal en chat sin OpenAI. Se corrigió el desplazamiento del chat hacia la respuesta más reciente.
+- Pendiente: prueba autenticada completa en staging; verificar persistencia, créditos y permisos contra el backend autorizado. No se hicieron llamadas de generación con coste ni cambios productivos.
 
-Prueba del motor: `node --test packages/training-engine/src/physicalConsultant.test.js`.
+Prueba del motor: `node --test packages/training-engine/src/physicalConsultant.test.js packages/training-engine/src/adaptivePlanning.test.js`.
+
+## Fuentes y alcance deportivo
+
+- ACSM, actualización 2026: https://acsm.org/resistance-training-guidelines-update-2026/
+- OMS, actividad física por grupo de edad: https://www.who.int/initiatives/behealthy/physical-activity/
+
+Consultadas para criterios generales de individualización, constancia y combinación de actividad/fuerza. La biblioteca de ejercicios, reparto de minutos, límites de sesiones y estructura de cuatro semanas son decisiones locales de PowerFit para revisión, no protocolos prescritos ni validados clínicamente por estas fuentes. No se promete una preparación competitiva ni pérdida de peso en una fecha.
+
+## Limitaciones y siguiente validación
+
+- La conversación local tiene reconocimiento de patrones y formularios; no interpreta cualquier frase como un modelo de lenguaje. Mensajes de cuenta/navegación siguen el chat autorizado existente.
+- El estado `HUMAN_REQUIRED` bloquea propuestas locales en esa consulta. No existe bandeja humana persistida, asignación de entrenador ni confirmación real de atención. Borrar una consulta no acredita una aprobación profesional.
+- La recomendación según registros es conservadora y descriptiva. Faltan medidas comparables, contexto clínico y revisión humana para una prescripción individual avanzada.
+- El preview temporal local usa datos ficticios y no se incluye en el commit. No debe publicarse como ruta de producto.
+- Antes de activar en producción: prueba autenticada de guardado/cuota por rol en staging y revisión profesional de las reglas de dosis. Para permitir nuevas consultas API, cambiar credenciales o migrar persistencia, hace falta decisión específica; esta versión no requiere nada de eso para sus borradores locales.
 
 Para revisión local, establecer `VITE_POWERFIT_PHYSICAL_CONSULTANT=true` antes de compilar. No requiere migraciones ni nuevas credenciales.
 

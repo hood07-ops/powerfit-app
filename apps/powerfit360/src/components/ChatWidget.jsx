@@ -1,16 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { buildChatPayload, CHAT_SURFACES } from '@powerfit/ai-chat'
 import { supabase } from '../supabase'
 import { respondToPhysicalConsultation } from '@powerfit/training-engine'
 import { PHYSICAL_CONSULTANT_ENABLED } from '../physicalConsultantConfig'
+import { useConsultantProfile, consultantScope } from '../useConsultantProfile'
+import TrainingConsultantPanel from './TrainingConsultantPanel'
 
-export default function ChatWidget({ student, idioma = 'es' }) {
+export default function ChatWidget({ student, idioma = 'es', viewerId = null }) {
+  return <ChatSession key={consultantScope(student, viewerId)} student={student} idioma={idioma} viewerId={viewerId} />
+}
+
+function ChatSession({ student, idioma, viewerId }) {
   const [open, setOpen] = useState(false)
   const [input, setInput] = useState('')
   const [sending, setSending] = useState(false)
-  const [consultationGoal, setConsultationGoal] = useState(null)
-  const [consultationProfile, setConsultationProfile] = useState({})
-  const [consultationNeedsReview, setConsultationNeedsReview] = useState(false)
+  const messagesEndRef = useRef(null)
+  const { profile: consultationProfile, updateProfile } = useConsultantProfile(student, viewerId)
   const [messages, setMessages] = useState(() => [
     {
       role: 'assistant',
@@ -20,6 +25,9 @@ export default function ChatWidget({ student, idioma = 'es' }) {
           : 'Hola. Puedo ayudarte con PowerFit360, CPS, planificaciones, videos, evaluaciones y mensualidades.',
     },
   ])
+  useEffect(() => {
+    if (open) messagesEndRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [messages.length, sending, open])
 
   const title = useMemo(
     () => (idioma === 'en' ? 'PowerFit Assistant' : 'Asistente PowerFit'),
@@ -65,19 +73,19 @@ export default function ChatWidget({ student, idioma = 'es' }) {
 
     try {
       if (PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en') {
-        const consultation = respondToPhysicalConsultation({
+        const consultation = consultationProfile.needsReview && !/\b(pago|pagar|mensualidad|generaciones|cr[eé]dito|cps|tomo|video)\b/i.test(message)
+          ? { goal: consultationProfile.goal, needsReview: true, reply: 'La propuesta de ejercicio está pendiente de revisión profesional. Puedes consultar tus datos o contactar a tu entrenador. No se ha creado un caso ni enviado un mensaje automáticamente.' }
+          : respondToPhysicalConsultation({
           message,
-          previousGoal: consultationGoal,
+          previousGoal: consultationProfile.goal,
           profile: consultationProfile,
           level: student?.nivel || null,
         })
         if (consultation) {
-          setConsultationGoal(consultation.goal)
-          if (consultation.profile) setConsultationProfile(consultation.profile)
-          if (consultation.needsReview) setConsultationNeedsReview(true)
+          updateProfile({ ...consultation.profile, goal: consultation.goal, ...(consultation.needsReview ? { needsReview: true } : {}) })
           setMessages((current) => [...current, {
             role: 'assistant',
-            content: consultationNeedsReview && !consultation.needsReview
+            content: consultationProfile.needsReview && !consultation.needsReview
               ? 'La asesoría de entrenamiento está pendiente de revisión profesional por la limitación indicada. Contacta a tu entrenador antes de continuar con una propuesta de ejercicio. Esta pantalla no ha enviado mensajes ni creado un caso automáticamente.'
               : consultation.reply,
           }])
@@ -153,13 +161,17 @@ export default function ChatWidget({ student, idioma = 'es' }) {
           </header>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {PHYSICAL_CONSULTANT_ENABLED && idioma !== 'en' && <details className="bg-zinc-900 rounded-2xl p-3">
+              <summary className="cursor-pointer font-bold text-blue-300">Mi perfil, propuesta semanal y seguimiento</summary>
+              <div className="mt-3"><TrainingConsultantPanel student={student} viewerId={viewerId} /></div>
+            </details>}
             {messages.map((item, index) => (
               <div
                 key={index}
                 className={
                   item.role === 'user'
                     ? 'ml-10 rounded-2xl rounded-br-md bg-red-600 px-4 py-3 text-sm text-white'
-                    : 'mr-8 whitespace-pre-line rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-100'
+                    : 'mr-8 whitespace-pre-line break-words rounded-2xl rounded-bl-md bg-zinc-800 px-4 py-3 text-sm text-zinc-100'
                 }
               >
                 {item.content}
@@ -170,6 +182,7 @@ export default function ChatWidget({ student, idioma = 'es' }) {
                 {idioma === 'en' ? 'Thinking…' : 'Pensando…'}
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <div className="px-3 pt-2 border-t border-zinc-800 bg-black">
