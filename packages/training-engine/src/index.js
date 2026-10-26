@@ -1,4 +1,7 @@
 export const TRAINING_SESSION_STATUS = Object.freeze(['PLANNED','IN_PROGRESS','COMPLETED','SKIPPED']);
+export * from './physicalConsultant.js';
+export * from './adaptivePlanning.js';
+export * from './consultationMemory.js';
 export const SESSION_INTENSITY_SCALE = Object.freeze({ MIN: 1, MAX: 10 });
 
 export function calculateSessionLoad({ durationMinutes, srpe }) {

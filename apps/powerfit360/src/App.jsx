@@ -4462,7 +4462,7 @@ export default function App() {
     return (
       <>
         <LoginPage onLogin={checkUser} />
-        <ChatWidget student={null} idioma={idioma} />
+        <ChatWidget student={null} idioma={idioma} viewerId={user?.id || null} />
       </>
     )
   }
@@ -4485,7 +4485,7 @@ export default function App() {
     return (
       <>
         <LoginPage onLogin={checkUser} />
-        <ChatWidget student={null} idioma={idioma} />
+        <ChatWidget student={null} idioma={idioma} viewerId={user?.id || null} />
       </>
     )
   }
@@ -4736,7 +4736,7 @@ export default function App() {
 
       {editionAllows('Generador') && visibleSection === 'Generador' && (
         <Suspense fallback={<LazyPanelFallback />}>
-          <GeneradorPage student={student} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
+          <GeneradorPage key={`${user?.id}:${student?.id}`} student={student} viewerId={user?.id || null} onUpdateStudent={() => cargarUsuario()} idioma={idioma} />
         </Suspense>
       )}
 
@@ -4943,7 +4943,7 @@ export default function App() {
         onEliminarAlumno={eliminarAlumno}
           onReintegrarAlumno={reintegrarAlumno}
       />
-      <ChatWidget student={student} idioma={idioma} />
+      <ChatWidget student={student} idioma={idioma} viewerId={user?.id || null} />
       <div className="powerfit-signature fixed bottom-3 right-3 z-50 rounded-full border border-red-600/60 bg-black/80 px-3 py-2 text-[11px] font-black uppercase tracking-wide text-zinc-300 shadow-lg">
         {POWERFIT_SIGNATURE}
       </div>

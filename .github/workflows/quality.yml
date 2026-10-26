@@ -31,6 +31,12 @@ jobs:
       - name: Validate shared CPS packages
         run: node scripts/validate-cps-packages.mjs
 
+      - name: Test physical consultant rules and student isolation
+        run: node --test packages/training-engine/src/*.test.js
+
+      - name: Test plan and credit SQL contracts in isolated PostgreSQL
+        run: npm run test:plan-rpc
+
       - name: Security check
         run: node scripts/security-check.mjs
 
@@ -47,6 +53,11 @@ jobs:
         run: npm run build:admin
 
       - name: Build root coach
+        run: npm run build:coach
+
+      - name: Build coach with physical consultant enabled
+        env:
+          VITE_POWERFIT_PHYSICAL_CONSULTANT: 'true'
         run: npm run build:coach
 
       - name: Build root alumno
